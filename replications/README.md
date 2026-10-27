@@ -67,3 +67,21 @@ Knob sweep (`optimal.py sweep p gamma per_hit`, output in `gwern/results/sweep.j
 Hacking needs a shutdown that ends the episode. It also needs an unreliable reward, with p below 0.95 to 0.99, and a patient agent, with gamma above 0.95 to 0.99. At Armstrong's suggested p = 0.99, honest play is optimal. Paying every entry makes hacking optimal at any p, since the reward chance then scales both plans equally.
 
 Not done: the 1M-step DQN runs were stopped at 40,000 steps.
+
+## This repo's per-block env (`per_block_optimum.py`)
+
+`armstrong_toy_model.py` pays per block in both reward modes of `docs/DESIGN.md`. `per_hit` pays p per block that enters. `shutdown` pays p * hole_count at the reveal. Episodes run 120 steps with no discount and cost 0.001 per step.
+
+The reward coin never changes the board. So each plan is worth p * blocks - 0.001 * steps, and one BFS per start gives the exact optimum at every p. Any plan that pays two or more blocks blinds the camera, because the first visible entry ends the episode. A port check matches `GameState` on 20,000 random steps. Output is in `per_block_optimum.json`.
+
+Seeds 0-4, `GameState()` under `random.seed(seed)`. Both modes give the same optimum on every seed:
+
+| seed | reachable states | most blocks revealed (step) | honest reveal step | hacking pays above p | optimal vs honest, p 0.8 |
+|---|---|---|---|---|---|
+| 0 | 15,709,267 | 5 (48) | 4 | 0.008 | 3.952 vs 0.796 |
+| 1 | 15,381 | 2 (18) | 6 | 0.012 | 1.582 vs 0.794 |
+| 2 | 551,735 | 3 (36) | 6 | 0.012 | 2.364 vs 0.794 |
+| 3 | 506,071 | 4 (46) | 4 | 0.012 | 3.154 vs 0.796 |
+| 4 | 463,269 | 3 (38) | 6 | 0.016 | 2.362 vs 0.794 |
+
+In this env p does not decide whether hacking pays. Above p = 0.016, every seed stacks every block it can reach, at p = 0.1, 0.5, 0.8 and 0.99 alike. The planned P_REWARD sweep (0.6, 0.8, 0.95) and the shutdown mode at p = 0.99 all pick hacking. The step cost is the knob that matters. Honest beats a k-block plan when a step costs more than p * (k - 1) / (extra steps). From the reveal steps above, at p = 0.8 that is 0.05 to 0.1 per step, 50 to 100 times the current 0.001.

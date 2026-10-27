@@ -1,0 +1,506 @@
+{
+ "searches": [
+  {
+   "seed": 0,
+   "states": 15709267,
+   "reveal_step": [
+    -1,
+    4,
+    12,
+    22,
+    34,
+    48,
+    -1
+   ],
+   "most_hidden": 4
+  },
+  {
+   "seed": 1,
+   "states": 15381,
+   "reveal_step": [
+    -1,
+    6,
+    18,
+    -1,
+    -1,
+    -1,
+    -1
+   ],
+   "most_hidden": 1
+  },
+  {
+   "seed": 2,
+   "states": 551735,
+   "reveal_step": [
+    -1,
+    6,
+    18,
+    36,
+    -1,
+    -1,
+    -1
+   ],
+   "most_hidden": 2
+  },
+  {
+   "seed": 3,
+   "states": 506071,
+   "reveal_step": [
+    -1,
+    4,
+    16,
+    32,
+    46,
+    -1,
+    -1
+   ],
+   "most_hidden": 3
+  },
+  {
+   "seed": 4,
+   "states": 463269,
+   "reveal_step": [
+    -1,
+    6,
+    22,
+    38,
+    -1,
+    -1,
+    -1
+   ],
+   "most_hidden": 2
+  }
+ ],
+ "results": [
+  {
+   "seed": 0,
+   "mode": "per_hit",
+   "honest_steps": 4,
+   "hacking_pays_above_p": 0.008,
+   "by_p": [
+    {
+     "p": 0.01,
+     "optimal": 0.008,
+     "honest": 0.006,
+     "blocks_paid": 2,
+     "steps": 12
+    },
+    {
+     "p": 0.1,
+     "optimal": 0.452,
+     "honest": 0.096,
+     "blocks_paid": 5,
+     "steps": 48
+    },
+    {
+     "p": 0.5,
+     "optimal": 2.452,
+     "honest": 0.496,
+     "blocks_paid": 5,
+     "steps": 48
+    },
+    {
+     "p": 0.8,
+     "optimal": 3.952,
+     "honest": 0.796,
+     "blocks_paid": 5,
+     "steps": 48
+    },
+    {
+     "p": 0.99,
+     "optimal": 4.902,
+     "honest": 0.986,
+     "blocks_paid": 5,
+     "steps": 48
+    }
+   ]
+  },
+  {
+   "seed": 0,
+   "mode": "shutdown",
+   "honest_steps": 4,
+   "hacking_pays_above_p": 0.008,
+   "by_p": [
+    {
+     "p": 0.01,
+     "optimal": 0.008,
+     "honest": 0.006,
+     "blocks_paid": 2,
+     "steps": 12
+    },
+    {
+     "p": 0.1,
+     "optimal": 0.452,
+     "honest": 0.096,
+     "blocks_paid": 5,
+     "steps": 48
+    },
+    {
+     "p": 0.5,
+     "optimal": 2.452,
+     "honest": 0.496,
+     "blocks_paid": 5,
+     "steps": 48
+    },
+    {
+     "p": 0.8,
+     "optimal": 3.952,
+     "honest": 0.796,
+     "blocks_paid": 5,
+     "steps": 48
+    },
+    {
+     "p": 0.99,
+     "optimal": 4.902,
+     "honest": 0.986,
+     "blocks_paid": 5,
+     "steps": 48
+    }
+   ]
+  },
+  {
+   "seed": 1,
+   "mode": "per_hit",
+   "honest_steps": 6,
+   "hacking_pays_above_p": 0.012,
+   "by_p": [
+    {
+     "p": 0.01,
+     "optimal": 0.004,
+     "honest": 0.004,
+     "blocks_paid": 1,
+     "steps": 6
+    },
+    {
+     "p": 0.1,
+     "optimal": 0.182,
+     "honest": 0.094,
+     "blocks_paid": 2,
+     "steps": 18
+    },
+    {
+     "p": 0.5,
+     "optimal": 0.982,
+     "honest": 0.494,
+     "blocks_paid": 2,
+     "steps": 18
+    },
+    {
+     "p": 0.8,
+     "optimal": 1.582,
+     "honest": 0.794,
+     "blocks_paid": 2,
+     "steps": 18
+    },
+    {
+     "p": 0.99,
+     "optimal": 1.962,
+     "honest": 0.984,
+     "blocks_paid": 2,
+     "steps": 18
+    }
+   ]
+  },
+  {
+   "seed": 1,
+   "mode": "shutdown",
+   "honest_steps": 6,
+   "hacking_pays_above_p": 0.012,
+   "by_p": [
+    {
+     "p": 0.01,
+     "optimal": 0.004,
+     "honest": 0.004,
+     "blocks_paid": 1,
+     "steps": 6
+    },
+    {
+     "p": 0.1,
+     "optimal": 0.182,
+     "honest": 0.094,
+     "blocks_paid": 2,
+     "steps": 18
+    },
+    {
+     "p": 0.5,
+     "optimal": 0.982,
+     "honest": 0.494,
+     "blocks_paid": 2,
+     "steps": 18
+    },
+    {
+     "p": 0.8,
+     "optimal": 1.582,
+     "honest": 0.794,
+     "blocks_paid": 2,
+     "steps": 18
+    },
+    {
+     "p": 0.99,
+     "optimal": 1.962,
+     "honest": 0.984,
+     "blocks_paid": 2,
+     "steps": 18
+    }
+   ]
+  },
+  {
+   "seed": 2,
+   "mode": "per_hit",
+   "honest_steps": 6,
+   "hacking_pays_above_p": 0.012,
+   "by_p": [
+    {
+     "p": 0.01,
+     "optimal": 0.004,
+     "honest": 0.004,
+     "blocks_paid": 1,
+     "steps": 6
+    },
+    {
+     "p": 0.1,
+     "optimal": 0.264,
+     "honest": 0.094,
+     "blocks_paid": 3,
+     "steps": 36
+    },
+    {
+     "p": 0.5,
+     "optimal": 1.464,
+     "honest": 0.494,
+     "blocks_paid": 3,
+     "steps": 36
+    },
+    {
+     "p": 0.8,
+     "optimal": 2.3640000000000003,
+     "honest": 0.794,
+     "blocks_paid": 3,
+     "steps": 36
+    },
+    {
+     "p": 0.99,
+     "optimal": 2.9339999999999997,
+     "honest": 0.984,
+     "blocks_paid": 3,
+     "steps": 36
+    }
+   ]
+  },
+  {
+   "seed": 2,
+   "mode": "shutdown",
+   "honest_steps": 6,
+   "hacking_pays_above_p": 0.012,
+   "by_p": [
+    {
+     "p": 0.01,
+     "optimal": 0.004,
+     "honest": 0.004,
+     "blocks_paid": 1,
+     "steps": 6
+    },
+    {
+     "p": 0.1,
+     "optimal": 0.264,
+     "honest": 0.094,
+     "blocks_paid": 3,
+     "steps": 36
+    },
+    {
+     "p": 0.5,
+     "optimal": 1.464,
+     "honest": 0.494,
+     "blocks_paid": 3,
+     "steps": 36
+    },
+    {
+     "p": 0.8,
+     "optimal": 2.3640000000000003,
+     "honest": 0.794,
+     "blocks_paid": 3,
+     "steps": 36
+    },
+    {
+     "p": 0.99,
+     "optimal": 2.9339999999999997,
+     "honest": 0.984,
+     "blocks_paid": 3,
+     "steps": 36
+    }
+   ]
+  },
+  {
+   "seed": 3,
+   "mode": "per_hit",
+   "honest_steps": 4,
+   "hacking_pays_above_p": 0.012,
+   "by_p": [
+    {
+     "p": 0.01,
+     "optimal": 0.006,
+     "honest": 0.006,
+     "blocks_paid": 1,
+     "steps": 4
+    },
+    {
+     "p": 0.1,
+     "optimal": 0.35400000000000004,
+     "honest": 0.096,
+     "blocks_paid": 4,
+     "steps": 46
+    },
+    {
+     "p": 0.5,
+     "optimal": 1.954,
+     "honest": 0.496,
+     "blocks_paid": 4,
+     "steps": 46
+    },
+    {
+     "p": 0.8,
+     "optimal": 3.1540000000000004,
+     "honest": 0.796,
+     "blocks_paid": 4,
+     "steps": 46
+    },
+    {
+     "p": 0.99,
+     "optimal": 3.914,
+     "honest": 0.986,
+     "blocks_paid": 4,
+     "steps": 46
+    }
+   ]
+  },
+  {
+   "seed": 3,
+   "mode": "shutdown",
+   "honest_steps": 4,
+   "hacking_pays_above_p": 0.012,
+   "by_p": [
+    {
+     "p": 0.01,
+     "optimal": 0.006,
+     "honest": 0.006,
+     "blocks_paid": 1,
+     "steps": 4
+    },
+    {
+     "p": 0.1,
+     "optimal": 0.35400000000000004,
+     "honest": 0.096,
+     "blocks_paid": 4,
+     "steps": 46
+    },
+    {
+     "p": 0.5,
+     "optimal": 1.954,
+     "honest": 0.496,
+     "blocks_paid": 4,
+     "steps": 46
+    },
+    {
+     "p": 0.8,
+     "optimal": 3.1540000000000004,
+     "honest": 0.796,
+     "blocks_paid": 4,
+     "steps": 46
+    },
+    {
+     "p": 0.99,
+     "optimal": 3.914,
+     "honest": 0.986,
+     "blocks_paid": 4,
+     "steps": 46
+    }
+   ]
+  },
+  {
+   "seed": 4,
+   "mode": "per_hit",
+   "honest_steps": 6,
+   "hacking_pays_above_p": 0.016,
+   "by_p": [
+    {
+     "p": 0.01,
+     "optimal": 0.004,
+     "honest": 0.004,
+     "blocks_paid": 1,
+     "steps": 6
+    },
+    {
+     "p": 0.1,
+     "optimal": 0.26200000000000007,
+     "honest": 0.094,
+     "blocks_paid": 3,
+     "steps": 38
+    },
+    {
+     "p": 0.5,
+     "optimal": 1.462,
+     "honest": 0.494,
+     "blocks_paid": 3,
+     "steps": 38
+    },
+    {
+     "p": 0.8,
+     "optimal": 2.3620000000000005,
+     "honest": 0.794,
+     "blocks_paid": 3,
+     "steps": 38
+    },
+    {
+     "p": 0.99,
+     "optimal": 2.932,
+     "honest": 0.984,
+     "blocks_paid": 3,
+     "steps": 38
+    }
+   ]
+  },
+  {
+   "seed": 4,
+   "mode": "shutdown",
+   "honest_steps": 6,
+   "hacking_pays_above_p": 0.016,
+   "by_p": [
+    {
+     "p": 0.01,
+     "optimal": 0.004,
+     "honest": 0.004,
+     "blocks_paid": 1,
+     "steps": 6
+    },
+    {
+     "p": 0.1,
+     "optimal": 0.26200000000000007,
+     "honest": 0.094,
+     "blocks_paid": 3,
+     "steps": 38
+    },
+    {
+     "p": 0.5,
+     "optimal": 1.462,
+     "honest": 0.494,
+     "blocks_paid": 3,
+     "steps": 38
+    },
+    {
+     "p": 0.8,
+     "optimal": 2.3620000000000005,
+     "honest": 0.794,
+     "blocks_paid": 3,
+     "steps": 38
+    },
+    {
+     "p": 0.99,
+     "optimal": 2.932,
+     "honest": 0.984,
+     "blocks_paid": 3,
+     "steps": 38
+    }
+   ]
+  }
+ ]
+}
