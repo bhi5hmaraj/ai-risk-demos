@@ -11,6 +11,7 @@ Small demos exploring reward hacking and treacherous behavior in compact gridwor
   - Scripts: `scripts/run_phase1.sh`, `scripts/run_phase2.sh`, `scripts/eval.sh`
   - Env wrappers: `envs/armstrong_env.py` (minimal), `envs/phase2_link.py` (placeholder)
   - Eval helpers: `eval/metrics.py`, `eval/plots.py`
+- Replications of Trazzi's and Gwern's Armstrong toy models, with bug fixes: `replications/README.md`
 
 Quick start (Phase 1):
 ```
