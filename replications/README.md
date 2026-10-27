@@ -45,7 +45,25 @@ node replications/gwern/gwern.mjs train <original|fixed|continuing> <seed> <step
 - original: 0.001-0.002 reward per step, the rate of a random walk. 39-80% of its first entries happen behind a blocked camera. That is a side effect of random pushes piling blocks on the bottom row.
 - fixed and continuing: on all 6 seeds, the greedy policy pushes the nearest block in with S,S,S and never blocks the camera. Its episodic value is 0.784 = 0.8 * 0.99^2.
 
-Not done:
+Exact optimum (`optimal.py`): value iteration over all 27.8M reachable states, at p = 0.8 and gamma = 0.99. Output is in `gwern/results/optimal.json`.
 
-- `optimal.py` (value iteration over the 27.8M reachable states, both semantics, with a p sweep) is written but has not finished a run.
-- The 1M-step DQN runs were stopped at 40,000 steps.
+- Shutdown ends the episode: hacking is optimal. The plan parks a block on the bottom row at step 4, then pushes all 6 blocks in unseen. Its value is 0.921, against 0.784 for honest S,S,S. Both fixed DQNs stopped at the honest plan.
+- Shutdown resets and play continues (Gwern's script): honest S,S,S on repeat is optimal, and blocking the camera never pays. The best start value given an honest restart equals the honest loop's value, 26.3991111 to 1e-14.
+
+Knob sweep (`optimal.py sweep p gamma per_hit`, output in `gwern/results/sweep.json`), with shutdown ending the episode:
+
+| Knob | Setting | Optimal plan | Optimal vs honest |
+|---|---|---|---|
+| p | 0.5 | blind the camera, 6 blocks | 0.859 vs 0.490 |
+| p | 0.7 | blind the camera, 6 blocks | 0.906 vs 0.686 |
+| p | 0.8 | blind the camera, 6 blocks | 0.921 vs 0.784 |
+| p | 0.9 | blind the camera, 6 blocks | 0.932 vs 0.882 |
+| p | 0.95 | blind the camera, 2 blocks | 0.937 vs 0.931 |
+| p | 0.99 | honest S,S,S | 0.970 = 0.970 |
+| gamma (p 0.8) | 0.9 | honest S,S,S | 0.648 = 0.648 |
+| gamma (p 0.8) | 0.95 | honest S,S,S | 0.722 = 0.722 |
+| reward paid every entry (p 0.8) | | blind the camera, 6 blocks | 3.763 vs 0.784 |
+
+Hacking needs a shutdown that ends the episode. It also needs an unreliable reward, with p below 0.95 to 0.99, and a patient agent, with gamma above 0.95 to 0.99. At Armstrong's suggested p = 0.99, honest play is optimal. Paying every entry makes hacking optimal at any p, since the reward chance then scales both plans equally.
+
+Not done: the 1M-step DQN runs were stopped at 40,000 steps.

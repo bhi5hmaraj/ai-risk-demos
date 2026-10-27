@@ -1,0 +1,16 @@
+{
+ "reachable_states": 27812813,
+ "gamma": 0.99,
+ "p": 0.8,
+ "episodic": {
+  "optimal_value": 0.9212036918601979,
+  "honest_value": 0.78408,
+  "actions": "SSWSNESNNWWSSWSENNWWSESEENNWWWNEEENESSSNNWWWWWSSWSEEEEE",
+  "entries": 6,
+  "first_entry_blocked": true
+ },
+ "continuing": {
+  "honest_loop_value": 26.399111141039043,
+  "best_value_given_honest_restart": 26.399111141039036
+ }
+}

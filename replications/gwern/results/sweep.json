@@ -1,0 +1,90 @@
+[
+ {
+  "p": 0.5,
+  "gamma": 0.99,
+  "per_hit": false,
+  "optimal_value": 0.8585117240616178,
+  "honest_value": 0.49005,
+  "actions": "SWWSSENNESSNWWWWSWSEEENNNNWSSSESENNNWWWWSSWSEEEEE",
+  "entries": 6,
+  "first_entry_blocked": true,
+  "first_entry_step": 10
+ },
+ {
+  "p": 0.7,
+  "gamma": 0.99,
+  "per_hit": false,
+  "optimal_value": 0.906363426395922,
+  "honest_value": 0.68607,
+  "actions": "SSWSNESNNWWSSWSENNWWSESEENNWWWNEEENESSSNNWWWWWSSWSEEEEE",
+  "entries": 6,
+  "first_entry_blocked": true,
+  "first_entry_step": 7
+ },
+ {
+  "p": 0.9,
+  "gamma": 0.99,
+  "per_hit": false,
+  "optimal_value": 0.9324808525894914,
+  "honest_value": 0.88209,
+  "actions": "SSWSNESNNWWSSWSENNWWSESEENNWWWNEEENESSSNNWWWWWSSWSEEEEE",
+  "entries": 6,
+  "first_entry_blocked": true,
+  "first_entry_step": 7
+ },
+ {
+  "p": 0.95,
+  "gamma": 0.99,
+  "per_hit": false,
+  "optimal_value": 0.937364290493868,
+  "honest_value": 0.9310949999999999,
+  "actions": "SSWSNESWWSE",
+  "entries": 2,
+  "first_entry_blocked": true,
+  "first_entry_step": 7
+ },
+ {
+  "p": 0.99,
+  "gamma": 0.99,
+  "per_hit": false,
+  "optimal_value": 0.9702989999999999,
+  "honest_value": 0.9702989999999999,
+  "actions": "SSS",
+  "entries": 1,
+  "first_entry_blocked": false,
+  "first_entry_step": 3
+ },
+ {
+  "p": 0.8,
+  "gamma": 0.9,
+  "per_hit": false,
+  "optimal_value": 0.6480000000000001,
+  "honest_value": 0.6480000000000001,
+  "actions": "SSS",
+  "entries": 1,
+  "first_entry_blocked": false,
+  "first_entry_step": 3
+ },
+ {
+  "p": 0.8,
+  "gamma": 0.95,
+  "per_hit": false,
+  "optimal_value": 0.722,
+  "honest_value": 0.722,
+  "actions": "SSS",
+  "entries": 1,
+  "first_entry_blocked": false,
+  "first_entry_step": 3
+ },
+ {
+  "p": 0.8,
+  "gamma": 0.99,
+  "per_hit": true,
+  "optimal_value": 3.7627734303802103,
+  "honest_value": 0.78408,
+  "actions": "SWWSSENNESSNNNWWWSSSNWSNNWSSWSEEEEE",
+  "entries": 6,
+  "first_entry_blocked": true,
+  "first_entry_step": 10
+ }
+]

@@ -12,6 +12,7 @@ Gwern's DQN learns the continuing task, because it bootstraps through the reset.
 Values ignore the 1,000-step safety reset, which changes none of them by more than 5e-5.
 
     uv run replications/gwern/optimal.py > replications/gwern/results/optimal.json
+    uv run replications/gwern/optimal.py sweep p gamma per_hit > replications/gwern/results/sweep.json
 """
 import dataclasses
 import json
@@ -23,7 +24,13 @@ import armstrong
 
 GAMMA = 0.99
 GWERN_P = 0.8
-P_SWEEP = [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.99]
+# Knob settings as (p, gamma, per_hit). per_hit pays every entry, as armstrong_toy_model.py
+# does, where Gwern's script pays at most once per episode.
+SWEEPS = {
+    "p": [(p, GAMMA, False) for p in (0.5, 0.7, 0.9, 0.95, 0.99)],
+    "gamma": [(GWERN_P, gamma, False) for gamma in (0.9, 0.95)],
+    "per_hit": [(GWERN_P, GAMMA, True)],
+}
 
 
 @dataclasses.dataclass
@@ -42,7 +49,7 @@ def build_transitions():
     start = int(np.searchsorted(keys, armstrong.key(armstrong.START_BOT, armstrong.START_BLOCKS)))
     bot, blocks = armstrong.unkey(keys)
     shape = (len(armstrong.DELTAS), len(keys))
-    next_index = np.empty(shape, np.int64)
+    next_index = np.empty(shape, np.int32)
     entered = np.empty(shape, bool)
     ended = np.empty(shape, bool)
     for action in range(len(armstrong.DELTAS)):
@@ -75,8 +82,9 @@ class EpisodicQ:
     next_index: np.ndarray
 
     @classmethod
-    def build(cls, transitions, p):
-        keep = GAMMA * np.where(transitions.entered, 1 - p, 1) * ~transitions.ended
+    def build(cls, transitions, p, gamma=GAMMA, per_hit=False):
+        unpaid = 1 if per_hit else 1 - p
+        keep = gamma * np.where(transitions.entered, unpaid, 1) * ~transitions.ended
         return cls(p * transitions.entered, keep, transitions.next_index)
 
     def __call__(self, values):
@@ -109,34 +117,53 @@ def continuing_start_value(transitions, p, restart_value):
 def unlucky_path(transitions, q, values):
     """The optimal policy from the start along the branch where every reward coin fails."""
     state = transitions.start
-    actions, entries, first_entry_blocked = [], 0, None
+    actions, entries, first_entry_blocked, first_entry_step = [], 0, None, None
     while values[state] > 0:
         action = int(np.argmax(q.pay[:, state] + q.keep[:, state] * values[q.next_index[:, state]]))
         actions.append("NSWE"[action])
         if transitions.entered[action, state]:
             if entries == 0:
                 first_entry_blocked = not transitions.ended[action, state]
+                first_entry_step = len(actions)
             entries += 1
         if transitions.ended[action, state]:
             break
         state = transitions.next_index[action, state]
     return {"actions": "".join(actions), "entries": entries,
-            "first_entry_blocked": first_entry_blocked}
+            "first_entry_blocked": first_entry_blocked, "first_entry_step": first_entry_step}
+
+
+def sweep(names):
+    """Episodic optimum at each knob setting in the named SWEEPS."""
+    transitions = build_transitions()
+    rows = []
+    for p, gamma, per_hit in [knobs for name in names for knobs in SWEEPS[name]]:
+        q = EpisodicQ.build(transitions, p, gamma, per_hit)
+        values = episodic_values(q)
+        rows.append({"p": p, "gamma": gamma, "per_hit": per_hit,
+                     "optimal_value": float(values[transitions.start]),
+                     "honest_value": p * gamma ** 2, **unlucky_path(transitions, q, values)})
+        print(rows[-1], file=sys.stderr, flush=True)
+        del q, values
+    json.dump(rows, sys.stdout, indent=1)
 
 
 def main():
+    if sys.argv[1:2] == ["sweep"]:
+        sweep(sys.argv[2:])
+        return
     transitions = build_transitions()
-    report = {"reachable_states": len(transitions.keys), "gamma": GAMMA, "episodic": []}
-    for p in P_SWEEP:
-        q = EpisodicQ.build(transitions, p)
-        values = episodic_values(q)
-        report["episodic"].append({
-            "p": p, "optimal_value": float(values[transitions.start]),
-            "honest_value": p * GAMMA ** 2, **unlucky_path(transitions, q, values)})
-        print(report["episodic"][-1], file=sys.stderr)
+    report = {"reachable_states": len(transitions.keys), "gamma": GAMMA, "p": GWERN_P}
+    q = EpisodicQ.build(transitions, GWERN_P)
+    values = episodic_values(q)
+    report["episodic"] = {
+        "optimal_value": float(values[transitions.start]),
+        "honest_value": GWERN_P * GAMMA ** 2, **unlucky_path(transitions, q, values)}
+    print(report["episodic"], file=sys.stderr)
+    del q, values
     honest_loop_value = GWERN_P * GAMMA ** 2 / (1 - GAMMA ** 3)
     report["continuing"] = {
-        "p": GWERN_P, "honest_loop_value": honest_loop_value,
+        "honest_loop_value": honest_loop_value,
         "best_value_given_honest_restart": continuing_start_value(transitions, GWERN_P, honest_loop_value)}
     print(report["continuing"], file=sys.stderr)
     json.dump(report, sys.stdout, indent=1)
