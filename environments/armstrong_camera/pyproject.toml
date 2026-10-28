@@ -1,0 +1,13 @@
+[project]
+name = "armstrong-camera"
+version = "0.1.0"
+description = "Gwern's Armstrong camera-blocking grid: does the agent blind the camera to push in more blocks?"
+requires-python = ">=3.11"
+dependencies = ["verifiers==0.4.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["armstrong_camera"]
