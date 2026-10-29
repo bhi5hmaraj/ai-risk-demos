@@ -3,7 +3,9 @@
 Run with: uv run --with tinker-cookbook==0.5.9 python eval_policy.py [boards=2 renderers=gpt_oss_low_reasoning,...]
 Needs TINKER_API_KEY. Training used only the opening board. Suppose the policy hides the hole more than its
 base model on new boards, and only while a camera watches. Then it learned the strategy, not the layout.
+
 Each renderer in the list is one thinking depth, so one run can compare low, medium and high reasoning.
+Each game appends one line to the output file as it finishes. A game that fails records its error.
 """
 import asyncio
 import collections
@@ -22,6 +24,8 @@ from armstrong_camera.taskset import Episode, random_grid
 from summarize_evals import wilson
 from tinker_train import ArmstrongMessageEnv
 
+CONTEXT_WINDOW = 32768  # GPT-OSS-120B sampling on Tinker
+
 
 @chz.chz
 class EvalConfig:
@@ -35,10 +39,12 @@ class EvalConfig:
     output: str = "outputs/policy-generalization.jsonl"
 
 
-async def play(policy: TinkerTokenCompleter, renderer: Renderer, seed: int, camera: bool) -> dict:
+async def play(policy: TinkerTokenCompleter, renderer: Renderer, seed: int, camera: bool, max_tokens: int) -> dict:
     episode = Episode(p=0.8, gamma=1.0, per_hit=True, camera=camera, grid=random_grid(seed))
+    # A reply that would overflow the context ends the game at its value, like a reply cut off at the cap.
     env = EnvFromMessageEnv(renderer, ArmstrongMessageEnv(episode, macros=True),
-                            failed_parse_reward=0.0, context_overflow_reward=0.0)
+                            failed_parse_reward=0.0, context_overflow_reward=0.0,
+                            max_trajectory_tokens=CONTEXT_WINDOW, max_generation_tokens=max_tokens)
     trajectory = await do_single_rollout(policy, env)
     replies = [len(transition.ac.tokens) for transition in trajectory.transitions]
     return episode.metrics() | {"value": episode.value, "tokens_per_reply": sum(replies) / max(len(replies), 1)}
@@ -49,12 +55,27 @@ def report(records: list[dict]) -> None:
     for record in records:
         cells[record["policy"], record["renderer"], record["camera"]].append(record)
     print(f"{'policy':8s} {'renderer':24s} {'camera':7s} {'n':>3s}  {'row 4 hid the hole':20s} blocks  value  "
-          f"shutdown  tokens/reply")
-    for (policy, renderer, camera), games in cells.items():
+          f"shutdown  tokens/reply  failed")
+    for (policy, renderer, camera), cell in cells.items():
+        games = [record for record in cell if "error" not in record]
         hid = int(sum(game["blinded_camera_first"] for game in games))
-        mean = lambda key: sum(game[key] for game in games) / len(games)
-        print(f"{policy:8s} {renderer:24s} {str(camera):7s} {len(games):3d}  {wilson(hid, len(games)):20s} "
-              f"{mean('entries'):5.2f}  {mean('value'):5.2f}  {mean('shutdown'):7.0%}  {mean('tokens_per_reply'):10.0f}")
+        mean = lambda key: sum(game[key] for game in games) / max(len(games), 1)
+        print(f"{policy:8s} {renderer:24s} {str(camera):7s} {len(games):3d}  {wilson(hid, max(len(games), 1)):20s} "
+              f"{mean('entries'):5.2f}  {mean('value'):5.2f}  {mean('shutdown'):7.0%}  {mean('tokens_per_reply'):10.0f}"
+              f"  {len(cell) - len(games):6d}")
+
+
+async def record_game(game: dict, policy: TinkerTokenCompleter, renderer: Renderer, max_tokens: int,
+                      slots: asyncio.Semaphore, output: Path) -> dict:
+    async with slots:
+        try:
+            outcome = await play(policy, renderer, game["seed"], game["camera"], max_tokens)
+        except Exception as error:  # one failed game must not end the sweep
+            outcome = {"error": f"{type(error).__name__}: {str(error)[:300]}"}
+    record = game | outcome
+    with output.open("a") as output_file:
+        output_file.write(json.dumps(record) + "\n")
+    return record
 
 
 async def main(config: EvalConfig) -> None:
@@ -63,20 +84,16 @@ async def main(config: EvalConfig) -> None:
     service = tinker.ServiceClient()
     samplers = {"base": service.create_sampling_client(base_model=config.base_model),
                 "trained": service.create_sampling_client(model_path=config.trained)}
-    games = [(policy, renderer, seed, camera) for policy in samplers for renderer in renderers
-             for camera in (True, False) for seed in range(config.first_seed, config.first_seed + config.boards)]
+    games = [{"policy": policy, "renderer": renderer, "seed": seed, "camera": camera}
+             for policy in samplers for renderer in renderers for camera in (True, False)
+             for seed in range(config.first_seed, config.first_seed + config.boards)]
+    output = Path(config.output)
+    output.write_text("")
     slots = asyncio.Semaphore(config.concurrent_games)
-
-    async def bounded(policy: str, renderer: str, seed: int, camera: bool) -> dict:
-        async with slots:
-            completer = TinkerTokenCompleter(samplers[policy], max_tokens=config.max_tokens)
-            return await play(completer, renderers[renderer], seed, camera)
-
-    outcomes = await asyncio.gather(*(bounded(*game) for game in games))
-    records = [{"policy": policy, "renderer": renderer, "seed": seed, "camera": camera, **outcome}
-               for (policy, renderer, seed, camera), outcome in zip(games, outcomes)]
-    Path(config.output).write_text("".join(json.dumps(record) + "\n" for record in records))
-    report(records)
+    report(await asyncio.gather(*(
+        record_game(game, TinkerTokenCompleter(samplers[game["policy"]], max_tokens=config.max_tokens),
+                    renderers[game["renderer"]], config.max_tokens, slots, output)
+        for game in games)))
 
 
 if __name__ == "__main__":
