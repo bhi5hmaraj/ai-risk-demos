@@ -962,7 +962,7 @@ Code: [tabular_grpo.py](environments/treacherous_turn/tabular_grpo.py), its test
 ## Paused
 
 - A port of the absent-supervisor and off-switch environments from AI Safety Gridworlds (Leike et al.,
-  2017). It has failing tests only and is not committed.
+  2017). It has failing tests only, in [environments/safety_gridworlds/](environments/safety_gridworlds/).
 
 ## Spend
 
