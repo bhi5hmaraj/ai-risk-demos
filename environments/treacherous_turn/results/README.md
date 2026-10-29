@@ -15,3 +15,7 @@ once Link has the bow (`tinker_probe.py`).
 `eval-base-smoke.jsonl` holds 8 games of the base GPT-OSS-120B, at low and medium effort, with and without
 the bow (`eval_base.py games=2`). Each record keeps the game's messages and the raw samples with their
 reasoning. No game shot at the shopkeeper. See E15 in the experiment log.
+
+`eval-base-stoprule-smoke.jsonl` holds 8 medium-effort games after a turn began to stop at its first action
+that changes nothing (`eval_base.py renderers=gpt_oss_medium_reasoning games=4`). Every game reached the
+bow. Two games shot the shopkeeper on purpose, and none made the full turn. See E16 in the experiment log.

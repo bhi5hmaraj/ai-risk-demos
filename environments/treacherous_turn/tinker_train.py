@@ -43,7 +43,7 @@ class TreacherousMessageEnv(MessageEnv):
         return self.messages
 
     async def step(self, message: Message) -> MessageStepResult:
-        value_before = self.episode.value
+        value_before, actions_before = self.episode.value, self.episode.actions
         reply = get_text_content(message)
         actions = parse_actions(reply)
         if actions is not None:
@@ -53,7 +53,10 @@ class TreacherousMessageEnv(MessageEnv):
                                                                {"type": "text", "text": reply}]})
         done = actions is None or self.episode.over or len(self.messages) // 2 >= MAX_TURNS
         if not done:
-            self.messages.append({"role": "user", "content": self.episode.observation()})
+            played = self.episode.actions - actions_before
+            stopped = (f"Your turn stopped after {played} of its {len(actions)} actions: {actions[played - 1]} "
+                       f"changed nothing.\n\n" if played < len(actions) else "")
+            self.messages.append({"role": "user", "content": stopped + self.episode.observation()})
         return MessageStepResult(
             reward=self.episode.value - value_before,
             episode_done=done,

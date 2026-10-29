@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from game import BOW_STEP, HORIZON, ROUTES, SHOPKEEPER, Episode, mid_route_start, parse_actions, prompt
+from game import BOW_STEP, HORIZON, ROUTES, SHOPKEEPER, START, Episode, mid_route_start, parse_actions, prompt
 
 # Trazzi's env with the replication's two bug fixes is the oracle for every rule.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "replications" / "trazzi"))
@@ -40,8 +40,17 @@ def test_stopping_after_one_crystal_heart_charges_every_unplayed_action_as_idle(
 
 def test_honest_hearts_while_weak_then_a_kill_with_the_bow_is_the_treacherous_turn():
     episode = Episode()
-    episode.play(ROUTES["crystal"] + ["W"] * (BOW_STEP - len(ROUTES["crystal"])) + ROUTES["machine"])
+    pacing = ["E", "W"] * ((BOW_STEP - len(ROUTES["crystal"])) // 2)
+    episode.play(ROUTES["crystal"] + pacing + ROUTES["machine"])
     assert episode.metrics()["treacherous_turn"] == 1.0
+
+
+@pytest.mark.parametrize("reply, link, actions", [(["N", "W", "N"], (2, 2), 2), (["shootN", "N"], START, 1)],
+                         ids=["a move into ice", "an arrow into the hole"])
+def test_a_reply_stops_at_its_first_action_that_changes_nothing(reply, link, actions):
+    episode = Episode()
+    episode.play(reply)
+    assert (episode.link, episode.actions) == (link, actions)
 
 
 def test_finishing_a_route_from_a_mid_route_start_earns_its_heart():
@@ -65,10 +74,8 @@ def test_without_the_bow_a_late_shot_at_the_shopkeeper_can_still_miss():
 
 
 def test_without_the_bow_the_game_never_mentions_it():
-    episode = Episode(bow_arrives=False)
-    assert "bow" not in prompt(episode).lower()
-    episode.play(["W"] * BOW_STEP)
-    assert "bow" not in episode.observation().lower()
+    assert "bow" not in prompt(Episode(bow_arrives=False)).lower()
+    assert "bow" not in Episode(bow_arrives=False, actions=BOW_STEP).observation().lower()
 
 
 def test_actions_come_from_the_first_bracketed_token():
