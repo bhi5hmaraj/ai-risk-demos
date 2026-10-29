@@ -26,6 +26,9 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 - The explainer page trains that CNN DQN live with TensorFlow.js. It learns as PyTorch does with the same
   settings, 4 times slower, and starts hiding near 1.5M steps, about 6 minutes in. Its return swings
   between about 0.2 and 0.45 in both (E19).
+- On that grid, SARSA hides on 23 to 25 of 100 boards after 300M steps, and Q-learning on 79 to 83. SARSA's
+  target includes its own random moves, which spoil long plans. E14 stopped Q-learning at 20M steps, too
+  few for it to hide (E21).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -48,6 +51,7 @@ flowchart TD
     vi --> perblock["E12: per-block env, exact<br/>hiding pays at any p above 0.016"]
     vi --> grid["E14: DQN on a 6x5 grid<br/>dense nets fail, CNN DQN hides on 70/100"]
     grid --> browser["E19: the CNN DQN in a browser<br/>learns as in PyTorch, 4x slower"]
+    grid --> sarsa["E21: SARSA against Q-learning<br/>SARSA hides on 24/100, Q on 82"]
     vi --> game["E3: the game as text<br/>Sonnet hides 8/8, scores 1 block"]
     game --> qwen["E4, E5: RL on Qwen3.5-4B, pay once<br/>honest play"]
     qwen --> trazzi["E6: Trazzi's game as text<br/>RL collapsed, stopped"]
@@ -688,6 +692,38 @@ Code: [ppo.py](environments/treacherous_turn/ppo.py), its test
 [test_ppo.py](environments/treacherous_turn/test_ppo.py), and
 [plot_learning.py](environments/treacherous_turn/plot_learning.py) for both E18 and E20. Data:
 [ppo.json](environments/treacherous_turn/results/ppo.json). Cost: local, about 13 minutes on 15 cores.
+
+## E21. SARSA against Q-learning on the 6 x 5 grid (2026-10-30)
+
+Question: SARSA's target is the move it takes next, random moves included. Does that make it hide less
+than Q-learning?
+
+Setup: [sarsa_vs_q.js](replications/grid_dqn/sarsa_vs_q.js) runs both tables through one loop that differs
+only in the target. Both explore with epsilon 0.2 and learn at alpha 0.5, as in the explainer page. Three
+seeds of each ran to 300M steps and were scored greedily on E14's 100 test boards. At 20M steps Q-learning
+returned 0.708 to 0.722 and hid on 7 to 12 boards, in line with E14's 0.701 and 8.
+
+![SARSA against Q-learning](replications/grid_dqn/results/sarsa_vs_q.png)
+
+| At 300M steps | Return (optimum 0.831) | Scores on | Hides first |
+|---|---|---|---|
+| Q-learning, 3 seeds | 0.798 to 0.803 | 97/100 | 79 to 83/100 |
+| SARSA, 3 seeds | 0.609 to 0.671 | 79 to 88/100 | 23 to 25/100 |
+
+Result:
+
+- SARSA hides far less. It learns the value of its own play, which is random one move in five. A long
+  hiding plan has more moves that can go wrong, so SARSA values it lower. Through 50M steps it hid on at
+  most 1 board.
+- SARSA also scores on fewer boards: 79 to 88, against Q-learning's 97.
+- Q-learning does learn to hide when it gets enough steps. E14 stopped it at 20M, where it hid on 8. By
+  300M it hides on 79 to 83 boards, near value iteration's 86.
+
+The explainer page now trains SARSA next to Q-learning, 25k steps each per tick.
+
+Code: [sarsa_vs_q.js](replications/grid_dqn/sarsa_vs_q.js) and
+[plot_grid.py](replications/grid_dqn/plot_grid.py). Data:
+[sarsa_vs_q.log](replications/grid_dqn/results/sarsa_vs_q.log). Cost: local, about 2 minutes on 6 cores.
 
 ## Paused
 

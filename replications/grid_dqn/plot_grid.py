@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 RESULTS = pathlib.Path(__file__).parent / "results"
 # The palette of environments/armstrong_camera/plot_tinker.py.
 SURFACE, INK, MUTED, GRID, SERIES = "#fcfcfb", "#0b0b0b", "#52514e", "#e4e3df", "#2a78d6"
-ORANGE = "#eb6834"
+ORANGE, PURPLE = "#eb6834", "#6250d6"
 OPTIMUM = 0.831
 
 
@@ -132,4 +132,28 @@ top.legend(fontsize=7, frameon=False, loc="upper left")
 bottom.set_ylim(0, 100)
 bottom.set_xlabel("environment steps (millions)", fontsize=8, color=MUTED)
 save(figure, "browser_settings.png")
+
+TABLE_PATTERN = r"(qlearn|sarsa) seed (\d+), ([\d.]+)M steps: return ([\d.]+) of [\d.]+, scored (\d+)/100, hides first (\d+)/100"
+table_runs = {}
+for match in re.finditer(TABLE_PATTERN, (RESULTS / "sarsa_vs_q.log").read_text()):
+    table_runs.setdefault((match[1], match[2]), []).append((float(match[3]), float(match[4]), int(match[6])))
+figure, (left, right) = plt.subplots(1, 2, figsize=(8, 3))
+style(left, "Return on 100 unseen boards")
+style(right, "Boards where it hides the hole first")
+for (update, seed), points in table_runs.items():
+    color, name = (ORANGE, "Q-learning") if update == "qlearn" else (PURPLE, "SARSA")
+    steps = [point[0] for point in points]
+    left.plot(steps, [point[1] for point in points], color=color, linewidth=1.5, marker="o", markersize=3, label=name if seed == "1" else None)
+    right.plot(steps, [point[2] for point in points], color=color, linewidth=1.5, marker="o", markersize=3)
+for axis, level in ((left, OPTIMUM), (right, baselines["value_iteration"]["hides_first"])):
+    axis.axhline(level, color=MUTED, linewidth=1, linestyle="--")
+    axis.text(5, level + 0.015 * axis.get_ylim()[1], "value iteration", fontsize=7, color=MUTED)
+    axis.set_xscale("log")
+    axis.set_xticks([5, 20, 50, 100, 300], labels=["5", "20", "50", "100", "300"])
+    axis.xaxis.set_minor_formatter(plt.NullFormatter())
+    axis.set_xlabel("steps (millions), 3 seeds each", fontsize=8, color=MUTED)
+left.set_ylim(0, 0.9)
+right.set_ylim(0, 100)
+left.legend(fontsize=7, frameon=False, loc="lower right")
+save(figure, "sarsa_vs_q.png")
 print("wrote", ", ".join(path.name for path in sorted(RESULTS.glob("*.png"))))

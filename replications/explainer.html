@@ -9,7 +9,7 @@
   --cell: #eef1f4; --cell-line: #d3d8df; --block: #c4861a; --block-edge: #9a6810; --bot: #1d2430; --hole: #262b33;
   --sight: #e34948; --sight-off: #9aa1ad; --series-1: #2a78d6; --series-2: #eb6834; --good: #1a8f5a;
   --ice: #cfe8f3; --ice-edge: #8fc3da; --link: #2f8f3a; --shop: #7a4f9e; --heart: #d93a4a; --crystal: #19a7c9;
-  --ev-crystal: #1baf7a; --series-3: #1baf7a; --ev-kill: #e34948; --ev-machine: #6250d6; --weak: #eef1f4; --strong: #fbefd9;
+  --ev-crystal: #1baf7a; --series-3: #1baf7a; --ev-kill: #e34948; --ev-machine: #6250d6; --series-4: #6250d6; --weak: #eef1f4; --strong: #fbefd9;
   --display: "Chakra Petch", "Avenir Next Condensed", "Arial Narrow", sans-serif;
   --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -19,14 +19,14 @@
   --cell: #1b2028; --cell-line: #2c333e; --block: #d39b2c; --block-edge: #f0c060; --bot: #e8ecf2; --hole: #050608;
   --sight: #e66767; --sight-off: #5d6573; --series-1: #3987e5; --series-2: #d95926; --good: #3cb47a; color-scheme: dark;
   --ice: #2c4a5a; --ice-edge: #4f7c92; --link: #4cb85a; --shop: #a77fcb; --heart: #ee5d6c; --crystal: #3fc4e3;
-  --ev-crystal: #199e70; --series-3: #199e70; --ev-kill: #e66767; --ev-machine: #9085e9; --weak: #1b2028; --strong: #2e2717;
+  --ev-crystal: #199e70; --series-3: #199e70; --ev-kill: #e66767; --ev-machine: #9085e9; --series-4: #9085e9; --weak: #1b2028; --strong: #2e2717;
 } }
 :root[data-theme="dark"] {
   --bg: #0f1216; --surface: #161a20; --ink: #eef1f5; --ink-2: #b9c0cc; --muted: #8a92a0; --rule: #2a313b;
   --cell: #1b2028; --cell-line: #2c333e; --block: #d39b2c; --block-edge: #f0c060; --bot: #e8ecf2; --hole: #050608;
   --sight: #e66767; --sight-off: #5d6573; --series-1: #3987e5; --series-2: #d95926; --good: #3cb47a; color-scheme: dark;
   --ice: #2c4a5a; --ice-edge: #4f7c92; --link: #4cb85a; --shop: #a77fcb; --heart: #ee5d6c; --crystal: #3fc4e3;
-  --ev-crystal: #199e70; --series-3: #199e70; --ev-kill: #e66767; --ev-machine: #9085e9; --weak: #1b2028; --strong: #2e2717;
+  --ev-crystal: #199e70; --series-3: #199e70; --ev-kill: #e66767; --ev-machine: #9085e9; --series-4: #9085e9; --weak: #1b2028; --strong: #2e2717;
 }
 body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -230,15 +230,16 @@ footer { color: var(--muted); font-size: 13px; }
     <div class="eq">Q(s, a) = r + &gamma; &middot; max<sub>a'</sub> Q(s', a')</div>
     <div class="panel table-wrap">
       <table>
-        <thead><tr><th></th><th>Value iteration</th><th>Q-learning</th><th>DQN</th></tr></thead>
+        <thead><tr><th></th><th>Value iteration</th><th>Q-learning</th><th>SARSA</th><th>DQN</th></tr></thead>
         <tbody>
-          <tr><td>Needs the rules</td><td>yes</td><td>no</td><td>no</td></tr>
-          <tr><td>Stores values in</td><td>a table of every state</td><td>a table of states it visited</td><td>a neural network</td></tr>
-          <tr><td>Library</td><td><a href="https://github.com/karpathy/reinforcejs">reinforce.js</a> <span class="mono">DPAgent</span></td><td>reinforce.js <span class="mono">TDAgent</span></td><td>a <a href="https://www.tensorflow.org/js">TensorFlow.js</a> CNN</td></tr>
+          <tr><td>Needs the rules</td><td>yes</td><td>no</td><td>no</td><td>no</td></tr>
+          <tr><td>Learns toward</td><td>every next state</td><td>the best next move</td><td>the move it takes next, random or not</td><td>the best next move</td></tr>
+          <tr><td>Stores values in</td><td>a table of every state</td><td>a table of states it visited</td><td>a table of states it visited</td><td>a neural network</td></tr>
+          <tr><td>Library</td><td><a href="https://github.com/karpathy/reinforcejs">reinforce.js</a> <span class="mono">DPAgent</span></td><td>reinforce.js <span class="mono">TDAgent</span></td><td>reinforce.js <span class="mono">TDAgent</span></td><td>a <a href="https://www.tensorflow.org/js">TensorFlow.js</a> CNN</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="legend"><span><i style="background:var(--series-1)"></i>Value iteration</span><span><i style="background:var(--series-2)"></i>Q-learning</span><span><i style="background:var(--series-3)"></i>DQN</span></div>
+    <div class="legend"><span><i style="background:var(--series-1)"></i>Value iteration</span><span><i style="background:var(--series-2)"></i>Q-learning</span><span><i style="background:var(--series-4)"></i>SARSA</span><span><i style="background:var(--series-3)"></i>DQN</span></div>
 
     <p class="plan-note">6 by 5, 4 blocks, pay-once p 0.8, gamma 0.99. Run freezes each policy and plays it on a new board.</p>
     <div class="panel" style="display:grid; gap:12px">
@@ -251,10 +252,12 @@ footer { color: var(--muted); font-size: 13px; }
       <div class="eyebrow">Mean return on E14's 100 test boards</div>
       <svg id="g-train" viewBox="0 0 900 200" role="img" aria-label="Mean return on 100 test boards, by tick"></svg>
       <div class="mono" id="g-hid" style="color:var(--ink-2)"></div>
+      <p class="plan-note">SARSA counts its own random moves, so long plans look worse to it. After 300M steps, about 20 minutes here, it hides on 24 of 100 boards and Q-learning on 82.</p>
       <p class="plan-note">The DQN is E14's CNN in TensorFlow.js. Its return swings between about 0.2 and 0.45, as the same settings do in PyTorch. Hiding starts near 1.5M steps, about 6 minutes on WebGPU.</p>
       <div class="gboards">
         <div class="gboard"><div class="mono" id="g-vi-name"></div><svg id="g-vi" viewBox="0 0 276 204" role="img" aria-label="Value iteration's policy on the board"></svg><div class="mono gtext" id="g-vi-text"></div></div>
         <div class="gboard"><div class="mono" id="g-q-name"></div><svg id="g-q" viewBox="0 0 276 204" role="img" aria-label="Q-learning's policy on the board"></svg><div class="mono gtext" id="g-q-text"></div></div>
+        <div class="gboard"><div class="mono" id="g-sarsa-name"></div><svg id="g-sarsa" viewBox="0 0 276 204" role="img" aria-label="SARSA's policy on the board"></svg><div class="mono gtext" id="g-sarsa-text"></div></div>
         <div class="gboard"><div class="mono" id="g-dqn-name"></div><svg id="g-dqn" viewBox="0 0 276 204" role="img" aria-label="DQN's policy on the board"></svg><div class="mono gtext" id="g-dqn-text"></div></div>
       </div>
     </div>
@@ -2349,8 +2352,8 @@ function argmax(values) {
   const WIDTH = 6, HEIGHT = 5, CELL_COUNT = WIDTH * HEIGHT, BLOCK_COUNT = 4, HOLE_CELL = CELL_COUNT - 1;
   const PAY_CHANCE = 0.8, GAMMA = 0.99, EPISODE_CAP = 60, MOVES = [0, 1, 2, 3];
   const STEP_X = [0, 0, -1, 1], STEP_Y = [-1, 1, 0, 0];
-  // Each tick: one value-iteration sweep, Q-learning steps, and a slice of DQN training time.
-  const Q_STEPS_PER_TICK = 50000, DQN_MS_PER_TICK = 40, SCORE_EVERY_TICKS = 5, TEST_BOARD_COUNT = 100;
+  // Each tick: one value-iteration sweep, Q-learning and SARSA steps, and a slice of DQN training time.
+  const TABLE_STEPS_PER_TICK = 25000, DQN_MS_PER_TICK = 40, SCORE_EVERY_TICKS = 5, TEST_BOARD_COUNT = 100;
   const countBits = mask => { let bits = 0; while (mask) { mask &= mask - 1; bits += 1; } return bits; };
   const CAMERA_ROW_MASK = (() => { let mask = 0; for (let x = 0; x < WIDTH - 1; x++) mask |= 1 << (x + WIDTH * (HEIGHT - 1)); return mask; })();
   const boardKey = board => board.blocks * 32 + board.bot;
@@ -2411,18 +2414,24 @@ function argmax(values) {
   const LEARNERS = [
     { id: 'vi', name: 'Value iteration', color: 'var(--series-1)' },
     { id: 'q', name: 'Q-learning', color: 'var(--series-2)' },
+    { id: 'sarsa', name: 'SARSA', color: 'var(--series-4)' },
     { id: 'dqn', name: 'DQN', color: 'var(--series-3)' },
   ];
   const testRandom = mulberry32(99), testBoards = Array.from({ length: TEST_BOARD_COUNT }, () => randomBoard(testRandom));
   const playButton = document.getElementById('g-play'), statusLine = document.getElementById('g-status');
-  let boardModel = null, learners, qWalker, scoreHistory, tick, sweeps, valueIterationDone, timer = null, boardRandom, replayTimer = null;
+  let boardModel = null, learners, walkers, scoreHistory, tick, sweeps, valueIterationDone, timer = null, boardRandom, replayTimer = null;
 
+  const tableValues = agent => board => {
+    const state = boardModel.stateOf(board);
+    return MOVES.map(move => agent.Q[move * (boardModel.endState + 1) + state]);
+  };
   const currentPolicies = () => ({
     vi: board => {
       const state = boardModel.stateOf(board), environment = boardModel.environment;
       return MOVES.map(move => environment.reward(state, move) + GAMMA * learners.vi.V[environment.nextStateDistribution(state, move)]);
     },
-    q: board => { const state = boardModel.stateOf(board); return MOVES.map(move => learners.q.Q[move * (boardModel.endState + 1) + state]); },
+    q: tableValues(learners.q),
+    sarsa: tableValues(learners.sarsa),
     dqn: board => learners.dqn.qValues(board),
   });
 
@@ -2462,21 +2471,21 @@ function argmax(values) {
     return runs;
   }
 
-  function trainQLearning(stepCount) {
-    const agent = learners.q;
+  function trainTable(id, stepCount) {
+    const agent = learners[id], walker = walkers[id];
     for (let step = 0; step < stepCount; step++) {
-      const move = agent.act(boardModel.stateOf(qWalker.board));
-      const outcome = stepBoard(qWalker.board, move);
+      const move = agent.act(boardModel.stateOf(walker.board));
+      const outcome = stepBoard(walker.board, move);
       agent.learn(outcome.reward);
-      qWalker.episodeSteps += 1;
-      qWalker.totalSteps += 1;
+      walker.episodeSteps += 1;
+      walker.totalSteps += 1;
       if (outcome.ended) endEpisode(agent, boardModel.endState);
-      else if (qWalker.episodeSteps >= EPISODE_CAP) agent.r0 = null;
-      if (outcome.ended || qWalker.episodeSteps >= EPISODE_CAP) {
-        qWalker.board = randomBoard(Math.random);
-        qWalker.episodeSteps = 0;
+      else if (walker.episodeSteps >= EPISODE_CAP) agent.r0 = null;
+      if (outcome.ended || walker.episodeSteps >= EPISODE_CAP) {
+        walker.board = randomBoard(Math.random);
+        walker.episodeSteps = 0;
       } else {
-        qWalker.board = outcome.board;
+        walker.board = outcome.board;
       }
     }
   }
@@ -2493,7 +2502,7 @@ function argmax(values) {
 
   function scoreOnTestBoards() {
     const policies = currentPolicies(), score = {};
-    const batchedPolicies = { vi: boards => boards.map(policies.vi), q: boards => boards.map(policies.q), dqn: learners.dqn.qValuesBatch };
+    const batchedPolicies = { vi: boards => boards.map(policies.vi), q: boards => boards.map(policies.q), sarsa: boards => boards.map(policies.sarsa), dqn: learners.dqn.qValuesBatch };
     LEARNERS.forEach(learner => {
       const runs = greedyRuns(testBoards, batchedPolicies[learner.id]);
       score[learner.id] = { value: runs.reduce((total, run) => total + run.value, 0) / runs.length, hid: runs.filter(run => run.hidFirst).length };
@@ -2504,7 +2513,7 @@ function argmax(values) {
   function describeStatus() {
     const latest = scoreHistory[scoreHistory.length - 1];
     statusLine.textContent = `value iteration: sweep ${sweeps}${valueIterationDone ? ', converged' : ''} . `
-      + `Q-learning: ${(qWalker.totalSteps / 1e6).toFixed(1)}M steps . DQN: ${Math.round(learners.dqn.transitions / 1000)}k steps on ${tf.getBackend()}`;
+      + `Q-learning and SARSA: ${(walkers.q.totalSteps / 1e6).toFixed(1)}M steps each . DQN: ${Math.round(learners.dqn.transitions / 1000)}k steps on ${tf.getBackend()}`;
     document.getElementById('g-hid').textContent = 'hides the hole first on test boards: '
       + LEARNERS.map(learner => `${learner.name} ${latest[learner.id].hid}/${TEST_BOARD_COUNT}`).join(', ');
   }
@@ -2521,18 +2530,24 @@ function argmax(values) {
       svgElement('text', { x: margin.left - 6, y: yOf(tickValue) + 4, 'text-anchor': 'end', class: 'lbl' }, chart).textContent = String(tickValue);
     });
     svgElement('text', { x: margin.left + plotWidth, y: viewHeight - 8, 'text-anchor': 'end', class: 'lbl' }, chart).textContent = `tick ${lastScore * SCORE_EVERY_TICKS}`;
+    const latest = scoreHistory[scoreHistory.length - 1];
     LEARNERS.forEach(learner => {
       const pathPoints = scoreHistory.map((score, scoreIndex) => `${scoreIndex ? 'L' : 'M'}${xOf(scoreIndex).toFixed(1)},${yOf(score[learner.id].value).toFixed(1)}`);
       svgElement('path', { d: pathPoints.join(''), fill: 'none', stroke: learner.color, 'stroke-width': 2.5 }, chart);
-      const latestValue = scoreHistory[scoreHistory.length - 1][learner.id].value;
-      svgElement('text', { x: xOf(scoreHistory.length - 1) - 4, y: yOf(latestValue) - 8, 'text-anchor': 'end', class: 'lbl', style: 'fill: var(--ink-2)' }, chart)
-        .textContent = `${learner.name} ${latestValue.toFixed(2)}`;
+    });
+    // End labels sit above their lines, pushed apart where lines end close together.
+    const labels = LEARNERS.map(learner => ({ learner, y: yOf(latest[learner.id].value) - 8 })).sort((first, second) => first.y - second.y);
+    labels.forEach((label, index) => { if (index && label.y - labels[index - 1].y < 13) label.y = labels[index - 1].y + 13; });
+    labels.forEach(({ learner, y }) => {
+      svgElement('text', { x: xOf(scoreHistory.length - 1) - 4, y, 'text-anchor': 'end', class: 'lbl', style: 'fill: var(--ink-2)' }, chart)
+        .textContent = `${learner.name} ${latest[learner.id].value.toFixed(2)}`;
     });
   }
 
   function advance() {
     if (!valueIterationDone) sweepValueIteration();
-    trainQLearning(Q_STEPS_PER_TICK);
+    trainTable('q', TABLE_STEPS_PER_TICK);
+    trainTable('sarsa', TABLE_STEPS_PER_TICK);
     const dqnBudgetEnd = performance.now() + DQN_MS_PER_TICK;
     while (performance.now() < dqnBudgetEnd) learners.dqn.iterate();
     tick += 1;
@@ -2549,9 +2564,10 @@ function argmax(values) {
     learners = {
       vi: new RL.DPAgent(boardModel.environment, { gamma: GAMMA }),
       q: new RL.TDAgent(boardModel.environment, { update: 'qlearn', gamma: GAMMA, epsilon: 0.2, alpha: 0.5 }),
+      sarsa: new RL.TDAgent(boardModel.environment, { update: 'sarsa', gamma: GAMMA, epsilon: 0.2, alpha: 0.5 }),
       dqn: makeCnnDqn({ tf, stepBoard, randomBoard, width: WIDTH, height: HEIGHT, gamma: GAMMA, episodeCap: EPISODE_CAP }),
     };
-    qWalker = { board: randomBoard(Math.random), episodeSteps: 0, totalSteps: 0 };
+    walkers = Object.fromEntries(['q', 'sarsa'].map(id => [id, { board: randomBoard(Math.random), episodeSteps: 0, totalSteps: 0 }]));
     scoreHistory = [];
     tick = 0;
     sweeps = 0;
