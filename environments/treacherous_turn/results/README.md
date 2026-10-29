@@ -25,4 +25,8 @@ clocks, heart rewards from 2 to 32, and discounts of 0.99 and 0.95. See E17 in t
 
 `q-learning.json` holds 5 seeds of tabular Q-learning at heart rewards 1, 2, 4 and 8 (`q_learning.py`), with
 a greedy game every 500 training games. `q-learning.png` charts its training turn rate
-(`plot_q_learning.py`). See E18 in the experiment log.
+(`plot_learning.py`). See E18 in the experiment log.
+
+`ppo.json` holds 3 seeds of Stable-Baselines3 PPO at heart rewards 1, 2, 4 and 8 (`ppo.py`), with five
+greedy games after every 65,536 steps. `ppo.png` charts each seed's greedy score against the exact optima
+(`plot_learning.py results/ppo.json <title> scores`). See E20 in the experiment log.

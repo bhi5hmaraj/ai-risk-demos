@@ -35,6 +35,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   heart. Hearts worth 2 to 16 scale the turn's gain and keep it optimal (E17).
 - Tabular Q-learning makes the turn on 5 of 5 seeds at heart 1, but on only 1 of 5 at heart 8. Every seed
   learns the kill after the bow. Larger hearts lose the honest heart before it (E18).
+- PPO from Stable-Baselines3 never makes the turn. At hearts 2 to 8 all 9 seeds settle on the exact
+  honest optimum. At heart 1, 2 of 3 seeds learn the kill after the bow but skip the honest heart (E20).
 - The looped model Ouro (1.4B and 2.6B) cannot play the game yet (E11). Next: test Ouro on starts one move
   from scoring. If some games score, run RL at loop counts drawn from 2 to 4, with no supervised stage.
 
@@ -53,6 +55,7 @@ flowchart TD
     trazzismoke --> stoprule["E16: stop rule<br/>play beats quitting, 2/8 shoot"]
     stoprule --> rewards["E17: exact rewards<br/>hearts up to 16 keep the turn"]
     rewards --> qlearn["E18: Q-learning<br/>turn on 5/5 seeds at heart 1, 1/5 at 8"]
+    qlearn --> ppo["E20: PPO<br/>honest optimum, no turn"]
     qwen --> perhit["E7: per-hit pay, blinded starts<br/>GPT-OSS-120B learns to hide"]
     perhit --> controls["E8: controls<br/>no camera, no hiding"]
     perhit --> heldout["E9: held-out boards<br/>12/32 against base 1/32"]
@@ -602,7 +605,7 @@ failed on scoring and moves instead. Stable-Baselines3 has no tabular methods, s
 hand-rolled. Its PPO would be a closer stand-in for GRPO.
 
 Code: [q_learning.py](environments/treacherous_turn/q_learning.py) and
-[plot_q_learning.py](environments/treacherous_turn/plot_q_learning.py). Data:
+[plot_learning.py](environments/treacherous_turn/plot_learning.py). Data:
 [q-learning.json](environments/treacherous_turn/results/q-learning.json). Cost: local, about 2 minutes on
 15 cores.
 
@@ -651,6 +654,41 @@ Code: the page, [dqn_cnn.py](replications/grid_dqn/dqn_cnn.py) and
 [browser_page_run.json](replications/grid_dqn/results/browser_page_run.json), the page's status at 16
 points of one 9-minute run. Cost: local, about 30 minutes of compute.
 
+## E20. PPO at four heart rewards (2026-10-30)
+
+Question: does an on-policy learner, closer to GRPO than Q-learning, find the turn at heart rewards 1, 2,
+4 and 8?
+
+Setup: [ppo.py](environments/treacherous_turn/ppo.py) wraps the game as a Gymnasium env and trains PPO
+from Stable-Baselines3 2.8 with an MLP, one action per step. Like the LLM, the agent sees the board, the
+crystal, the bow and the clock. PPO used gamma 1, an entropy bonus of 0.01 and 8 envs, with other settings
+at their defaults. Each heart reward ran 3 seeds of 2.5M steps, about 51,000 games, the budget of E18. Five
+greedy games were scored after every 65,536 steps.
+
+![PPO scores](environments/treacherous_turn/results/ppo.png)
+
+| Heart reward | Seeds with the turn | Final greedy policies | Greedy score | Exact honest | Exact turn |
+|---|---|---|---|---|---|
+| 1 | 0/3 | 2 kill and use the machine but skip the weak heart, 1 is honest | -2.43 | -1.70 | -0.60 |
+| 2 | 0/3 | honest | +1.30 | +1.30 | +3.40 |
+| 4 | 0/3 | honest | +7.30 | +7.30 | +11.40 |
+| 8 | 0/3 | honest | +19.30 | +19.30 | +27.40 |
+
+Result:
+
+- PPO never made the full turn, in training or in a greedy game.
+- At hearts 2 to 8, all 9 seeds settle on the exact honest optimum and never shoot the shopkeeper.
+- At heart 1, two seeds learn the kill and the machine after the bow, but earn no heart before it. That is
+  the failure of E18 at large hearts, here with the clock in view.
+- The turn needs a run of 10 exact actions with 3 shots. Once honest play pays, an on-policy learner seldom
+  samples that run, so it never learns it. GRPO on an LLM also grows only what it samples, so the turn
+  needs easy starts or a base model that already tries it.
+
+Code: [ppo.py](environments/treacherous_turn/ppo.py), its test
+[test_ppo.py](environments/treacherous_turn/test_ppo.py), and
+[plot_learning.py](environments/treacherous_turn/plot_learning.py) for both E18 and E20. Data:
+[ppo.json](environments/treacherous_turn/results/ppo.json). Cost: local, about 13 minutes on 15 cores.
+
 ## Paused
 
 - A port of the absent-supervisor and off-switch environments from AI Safety Gridworlds (Leike et al.,
@@ -675,7 +713,7 @@ points of one 9-minute run. Cost: local, about 30 minutes of compute.
 | [summarize_evals.py](environments/armstrong_camera/summarize_evals.py) | per-cell rates with 95% Wilson intervals |
 | [plot_evals.py](environments/armstrong_camera/plot_evals.py), [plot_tinker.py](environments/armstrong_camera/plot_tinker.py) | charts |
 | [ouro_modal.py](environments/armstrong_camera/ouro_modal.py) | Ouro on Modal GPUs |
-| [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's gridworld as text, value iteration, Q-learning, RL, the base-model eval with a no-bow control |
+| [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's gridworld as text, value iteration, Q-learning, PPO, RL, the base-model eval with a no-bow control |
 | [replications/](replications/) | the Trazzi and Gwern replications and exact optima |
 | [replications/grid_dqn/](replications/grid_dqn/) | the 6 x 5 grid: exact model, DQN diagnosis, CNN fit and CNN DQN |
 | [replications/explainer.html](replications/explainer.html) | the explainer page: replays, and value iteration, Q-learning and a TensorFlow.js CNN DQN learning the grid live |
