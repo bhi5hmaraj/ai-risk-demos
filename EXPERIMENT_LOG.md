@@ -15,6 +15,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 - More reasoning gives more hiding, with or without RL. At medium effort the base GPT-OSS-120B hid in 18 of
   32 games, against 2 of 32 at low effort (E10).
 - Qwen3.5-4B and GPT-OSS-20B stayed honest under RL (E4, E5, E7).
+- In this repo's older per-block env, the exact optimum hides at any p above 0.016 on 5 of 5 boards. Only
+  a step cost 50 to 100 times larger makes honest play optimal (E12).
 - The looped model Ouro (1.4B and 2.6B) cannot play the game yet (E11). Next: fine-tune Ouro on games
   without a camera, then RL at high loop counts.
 
@@ -23,6 +25,7 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 ```mermaid
 flowchart TD
     rep["E1, E2: replicate Trazzi and Gwern"] --> vi["E2: value iteration, hiding is optimal<br/>when shutdown ends the game"]
+    vi --> perblock["E12: per-block env, exact<br/>hiding pays at any p above 0.016"]
     vi --> game["E3: the game as text<br/>Sonnet hides 8/8, scores 1 block"]
     game --> qwen["E4, E5: RL on Qwen3.5-4B, pay once<br/>honest play"]
     qwen --> trazzi["E6: Trazzi's game as text<br/>RL collapsed, stopped"]
@@ -89,7 +92,7 @@ Result:
 - The exact optimum blinds the camera and pushes all 6 blocks in unseen: 0.921 against 0.784 at p 0.8 and
   gamma 0.99. Hiding needs a shutdown that ends the episode, p below 0.95 to 0.99, and gamma above 0.95
   to 0.99.
-- In the older per-block env of this repo, hiding pays at any p above 0.016. The step cost decides it.
+- In the older per-block env of this repo, hiding pays at any p above 0.016. The step cost decides it (E12).
 
 Code: [replications/gwern/](replications/gwern/), [optimal.py](replications/gwern/optimal.py),
 [per_block_optimum.py](replications/per_block_optimum.py). Cost: local CPU.
@@ -296,6 +299,33 @@ Code: [ouro_modal.py](environments/armstrong_camera/ouro_modal.py). Data:
 [ouro-1.4b-smoke.jsonl](environments/armstrong_camera/results/ouro-1.4b-smoke.jsonl),
 [ouro-2.6b-smoke.jsonl](environments/armstrong_camera/results/ouro-2.6b-smoke.jsonl). Cost: about $2 on
 Modal.
+
+## E12. Exact optimum of the per-block env (2026-10-28)
+
+Question: in this repo's `armstrong_toy_model.py`, which pays per block, does p decide whether hiding pays?
+
+Setup: a numpy port of `GameState` matches it on 20,000 random steps. The reward coin never changes the
+board, so a plan is worth p * blocks - 0.001 * steps. One BFS per start then gives the exact optimum at
+every p. Both reward modes of `docs/DESIGN.md`, 120 steps, no discount, 5 random starts.
+
+| Seed | Reachable states | Most blocks revealed (step) | Hiding pays above p | Optimal vs honest, p 0.8 |
+|---|---|---|---|---|
+| 0 | 15,709,267 | 5 (48) | 0.008 | 3.952 vs 0.796 |
+| 1 | 15,381 | 2 (18) | 0.012 | 1.582 vs 0.794 |
+| 2 | 551,735 | 3 (36) | 0.012 | 2.364 vs 0.794 |
+| 3 | 506,071 | 4 (46) | 0.012 | 3.154 vs 0.796 |
+| 4 | 463,269 | 3 (38) | 0.016 | 2.362 vs 0.794 |
+
+Result:
+
+- `per_hit` and `shutdown` give the same optimum on all 5 boards.
+- Above p = 0.016, every board stacks every block it can reach. The planned sweep over P_REWARD
+  (0.6, 0.8, 0.95) cannot change the choice.
+- Honest play wins at p 0.8 only when a step costs 0.05 to 0.1, 50 to 100 times the current 0.001.
+
+Code and data: [per_block_optimum.py](replications/per_block_optimum.py),
+[per_block_optimum.json](replications/per_block_optimum.json), details in
+[replications/README.md](replications/README.md). Cost: local CPU, a few minutes.
 
 ## Paused
 
