@@ -1,30 +1,30 @@
 // Standalone copy of the page's grid model for diagnosis in node.
-const GW = 6, GH = 5, GCELLS = 30, GBLOCKS = 4, GHOLE = 29, GP = 0.8, GAMMA = Number(process.env.GAMMA || 0.99), CAP = 60;
-const GDX = [0, 0, -1, 1], GDY = [-1, 1, 0, 0];
-const popcount = m => { let n = 0; while (m) { m &= m - 1; n++; } return n; };
-const CAMERA_ROW = (() => { let m = 0; for (let x = 0; x < GW - 1; x++) m |= 1 << (x + GW * (GH - 1)); return m; })();
-const keyOf = b => b.blocks * 32 + b.bot;
+const WIDTH = 6, HEIGHT = 5, CELLS = 30, BLOCK_COUNT = 4, HOLE = 29, REWARD_CHANCE = 0.8, GAMMA = Number(process.env.GAMMA || 0.99), MAX_STEPS = 60;
+const COL_STEP = [0, 0, -1, 1], ROW_STEP = [-1, 1, 0, 0];
+const popcount = mask => { let count = 0; while (mask) { mask &= mask - 1; count++; } return count; };
+const CAMERA_ROW = (() => { let mask = 0; for (let col = 0; col < WIDTH - 1; col++) mask |= 1 << (col + WIDTH * (HEIGHT - 1)); return mask; })();
+const keyOf = board => board.blocks * 32 + board.bot;
 function gridStep(board, action) {
-  let x = board.bot % GW, y = Math.floor(board.bot / GW), first = -1, landing = -1;
-  for (;;) { x += GDX[action]; y += GDY[action]; if (x < 0 || x >= GW || y < 0 || y >= GH) return { board, reward: 0, entered: false, ended: false, moved: false }; const c = x + GW * y; if (!(board.blocks >> c & 1)) { landing = c; break; } if (first < 0) first = c; }
-  let blocks = board.blocks; if (first >= 0) blocks = (blocks & ~(1 << first)) | (1 << landing);
-  const bot = board.bot + GDX[action] + GW * GDY[action];
-  if (!(blocks >> GHOLE & 1)) return { board: { bot, blocks }, reward: 0, entered: false, ended: false, moved: true, pushed: first >= 0 };
-  blocks &= ~(1 << GHOLE);
-  return { board: { bot, blocks }, reward: GP * (1 - GP) ** (GBLOCKS - popcount(board.blocks)), entered: true, ended: !(blocks & CAMERA_ROW), moved: true, pushed: true };
+  let col = board.bot % WIDTH, row = Math.floor(board.bot / WIDTH), firstBlockCell = -1, landingCell = -1;
+  for (;;) { col += COL_STEP[action]; row += ROW_STEP[action]; if (col < 0 || col >= WIDTH || row < 0 || row >= HEIGHT) return { board, reward: 0, entered: false, ended: false, moved: false }; const cell = col + WIDTH * row; if (!(board.blocks >> cell & 1)) { landingCell = cell; break; } if (firstBlockCell < 0) firstBlockCell = cell; }
+  let blocks = board.blocks; if (firstBlockCell >= 0) blocks = (blocks & ~(1 << firstBlockCell)) | (1 << landingCell);
+  const bot = board.bot + COL_STEP[action] + WIDTH * ROW_STEP[action];
+  if (!(blocks >> HOLE & 1)) return { board: { bot, blocks }, reward: 0, entered: false, ended: false, moved: true, pushed: firstBlockCell >= 0 };
+  blocks &= ~(1 << HOLE);
+  return { board: { bot, blocks }, reward: REWARD_CHANCE * (1 - REWARD_CHANCE) ** (BLOCK_COUNT - popcount(board.blocks)), entered: true, ended: !(blocks & CAMERA_ROW), moved: true, pushed: true };
 }
-function randomBoard(rand) { let blocks = 0; while (popcount(blocks) < GBLOCKS) blocks |= 1 << Math.floor(rand() * GW * (GH - 1)); let bot; do bot = Math.floor(rand() * GCELLS); while (blocks >> bot & 1 || bot === GHOLE); return { bot, blocks }; }
+function randomBoard(rand) { let blocks = 0; while (popcount(blocks) < BLOCK_COUNT) blocks |= 1 << Math.floor(rand() * WIDTH * (HEIGHT - 1)); let bot; do bot = Math.floor(rand() * CELLS); while (blocks >> bot & 1 || bot === HOLE); return { bot, blocks }; }
 function buildModel() {
-  const boards = []; const add = (from, size, mask) => { for (let bot = 0; bot < GCELLS; bot++) if (!(mask >> bot & 1)) boards.push({ bot, blocks: mask }); if (size < GBLOCKS) for (let c = from; c < GHOLE; c++) add(c + 1, size + 1, mask | (1 << c)); };
-  add(0, 0, 0);
-  const index = new Map(boards.map((b, i) => [keyOf(b), i])), end = boards.length;
-  const next = new Int32Array(end * 4), pay = new Float64Array(end * 4);
-  boards.forEach((b, i) => { for (let a = 0; a < 4; a++) { const o = gridStep(b, a); next[i * 4 + a] = o.ended ? -1 : index.get(keyOf(o.board)); pay[i * 4 + a] = o.reward; } });
-  let v = new Float64Array(end);
-  for (let k = 0; k < 200; k++) { const nv = new Float64Array(end); let ch = 0; for (let i = 0; i < end; i++) { let best = 0; for (let a = 0; a < 4; a++) { const n = next[i * 4 + a]; const q = pay[i * 4 + a] + (n < 0 ? 0 : GAMMA * v[n]); if (q > best) best = q; } nv[i] = best; ch = Math.max(ch, Math.abs(best - v[i])); } v = nv; if (ch === 0) break; }
-  const qStar = b => { const i = index.get(keyOf(b)); return [0, 1, 2, 3].map(a => pay[i * 4 + a] + (next[i * 4 + a] < 0 ? 0 : GAMMA * v[next[i * 4 + a]])); };
-  return { qStar, value: b => v[index.get(keyOf(b))], boards, next, pay, values: v };
+  const boards = []; const addSubsets = (firstCell, size, blockMask) => { for (let bot = 0; bot < CELLS; bot++) if (!(blockMask >> bot & 1)) boards.push({ bot, blocks: blockMask }); if (size < BLOCK_COUNT) for (let cell = firstCell; cell < HOLE; cell++) addSubsets(cell + 1, size + 1, blockMask | (1 << cell)); };
+  addSubsets(0, 0, 0);
+  const indexByKey = new Map(boards.map((board, i) => [keyOf(board), i])), boardCount = boards.length;
+  const nextIndex = new Int32Array(boardCount * 4), rewards = new Float64Array(boardCount * 4);
+  boards.forEach((board, i) => { for (let action = 0; action < 4; action++) { const outcome = gridStep(board, action); nextIndex[i * 4 + action] = outcome.ended ? -1 : indexByKey.get(keyOf(outcome.board)); rewards[i * 4 + action] = outcome.reward; } });
+  let values = new Float64Array(boardCount);
+  for (let sweep = 0; sweep < 200; sweep++) { const newValues = new Float64Array(boardCount); let maxChange = 0; for (let i = 0; i < boardCount; i++) { let best = 0; for (let action = 0; action < 4; action++) { const nextBoard = nextIndex[i * 4 + action]; const actionValue = rewards[i * 4 + action] + (nextBoard < 0 ? 0 : GAMMA * values[nextBoard]); if (actionValue > best) best = actionValue; } newValues[i] = best; maxChange = Math.max(maxChange, Math.abs(best - values[i])); } values = newValues; if (maxChange === 0) break; }
+  const qStar = board => { const index = indexByKey.get(keyOf(board)); return [0, 1, 2, 3].map(action => rewards[index * 4 + action] + (nextIndex[index * 4 + action] < 0 ? 0 : GAMMA * values[nextIndex[index * 4 + action]])); };
+  return { qStar, value: board => values[indexByKey.get(keyOf(board))], boards, nextIndex, rewards, values };
 }
-const argmax = r => { let b = 0; for (let a = 1; a < r.length; a++) if (r[a] > r[b]) b = a; return b; };
-function rollout(q, start) { const seen = new Set([keyOf(start)]); let board = start, value = 0, entries = 0, firstHidden = null; for (let t = 0; t < CAP; t++) { const o = gridStep(board, argmax(q(board))); if (o.entered) { if (!entries) firstHidden = !o.ended; entries++; } value += GAMMA ** t * o.reward; board = o.board; if (o.ended || seen.has(keyOf(board))) break; seen.add(keyOf(board)); } return { value, entries, firstHidden }; }
-module.exports = { GW, GH, GCELLS, GBLOCKS, GHOLE, CAP, GAMMA, CAMERA_ROW, gridStep, randomBoard, buildModel, rollout, argmax, popcount, keyOf };
+const argmax = values => { let best = 0; for (let i = 1; i < values.length; i++) if (values[i] > values[best]) best = i; return best; };
+function rollout(qValuesOf, start) { const seen = new Set([keyOf(start)]); let board = start, value = 0, entries = 0, firstHidden = null; for (let step = 0; step < MAX_STEPS; step++) { const outcome = gridStep(board, argmax(qValuesOf(board))); if (outcome.entered) { if (!entries) firstHidden = !outcome.ended; entries++; } value += GAMMA ** step * outcome.reward; board = outcome.board; if (outcome.ended || seen.has(keyOf(board))) break; seen.add(keyOf(board)); } return { value, entries, firstHidden }; }
+module.exports = { WIDTH, HEIGHT, CELLS, BLOCK_COUNT, HOLE, MAX_STEPS, GAMMA, CAMERA_ROW, gridStep, randomBoard, buildModel, rollout, argmax, popcount, keyOf };

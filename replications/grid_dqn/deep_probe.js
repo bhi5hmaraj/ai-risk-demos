@@ -1,47 +1,47 @@
-const g = require('./gridcore.js');
-const mulberry32 = seed => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
-const model = g.buildModel();
-const tr = mulberry32(99), tests = Array.from({ length: 100 }, () => g.randomBoard(tr));
-const opt = tests.reduce((s, b) => s + model.value(b), 0) / 100;
-const sr = mulberry32(7), wr = mulberry32(3);
-function sampleState() { let b = g.randomBoard(sr); const k = Math.floor(sr() * 30); for (let i = 0; i < k; i++) { const o = g.gridStep(b, Math.floor(sr() * 4)); if (o.ended) break; b = o.board; } return b; }
-const IN = 60, H = 256;
-const layer = (n, m) => ({ w: Float32Array.from({ length: n * m }, () => (wr() - 0.5) * 2 * Math.sqrt(6 / (n + m))), b: new Float32Array(m), n, m });
-const L = [layer(IN, H), layer(H, H), layer(H, 4)];
-const adam = L.map(l => ({ mw: new Float32Array(l.w.length), vw: new Float32Array(l.w.length), mb: new Float32Array(l.b.length), vb: new Float32Array(l.b.length) }));
-const active = b => { const a = [b.bot]; for (let c = 0; c < 30; c++) if (b.blocks >> c & 1) a.push(30 + c); return a; };
-function forward(b) {
-  const act = active(b), h1 = new Float32Array(H), h2 = new Float32Array(H), out = new Float32Array(4);
-  for (let j = 0; j < H; j++) { let s = L[0].b[j]; for (const i of act) s += L[0].w[i * H + j]; h1[j] = s > 0 ? s : 0; }
-  for (let j = 0; j < H; j++) { let s = L[1].b[j]; for (let i = 0; i < H; i++) if (h1[i]) s += h1[i] * L[1].w[i * H + j]; h2[j] = s > 0 ? s : 0; }
-  for (let a = 0; a < 4; a++) { let s = L[2].b[a]; for (let i = 0; i < H; i++) if (h2[i]) s += h2[i] * L[2].w[i * 4 + a]; out[a] = s; }
-  return { act, h1, h2, out };
+const grid = require('./gridcore.js');
+const mulberry32 = seed => { let state = seed >>> 0; return () => { state = (state + 0x6D2B79F5) >>> 0; let mixed = Math.imul(state ^ (state >>> 15), 1 | state); mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed; return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296; }; };
+const model = grid.buildModel();
+const testRandom = mulberry32(99), tests = Array.from({ length: 100 }, () => grid.randomBoard(testRandom));
+const optimum = tests.reduce((sum, board) => sum + model.value(board), 0) / 100;
+const sampleRandom = mulberry32(7), weightRandom = mulberry32(3);
+function sampleState() { let board = grid.randomBoard(sampleRandom); const walkLength = Math.floor(sampleRandom() * 30); for (let i = 0; i < walkLength; i++) { const outcome = grid.gridStep(board, Math.floor(sampleRandom() * 4)); if (outcome.ended) break; board = outcome.board; } return board; }
+const INPUT_SIZE = 60, HIDDEN_SIZE = 256;
+const makeLayer = (inputs, outputs) => ({ weights: Float32Array.from({ length: inputs * outputs }, () => (weightRandom() - 0.5) * 2 * Math.sqrt(6 / (inputs + outputs))), biases: new Float32Array(outputs), inputs, outputs });
+const layers = [makeLayer(INPUT_SIZE, HIDDEN_SIZE), makeLayer(HIDDEN_SIZE, HIDDEN_SIZE), makeLayer(HIDDEN_SIZE, 4)];
+const adamState = layers.map(layer => ({ weightMean: new Float32Array(layer.weights.length), weightVariance: new Float32Array(layer.weights.length), biasMean: new Float32Array(layer.biases.length), biasVariance: new Float32Array(layer.biases.length) }));
+const activeInputs = board => { const inputs = [board.bot]; for (let cell = 0; cell < 30; cell++) if (board.blocks >> cell & 1) inputs.push(30 + cell); return inputs; };
+function forward(board) {
+  const active = activeInputs(board), hidden1 = new Float32Array(HIDDEN_SIZE), hidden2 = new Float32Array(HIDDEN_SIZE), output = new Float32Array(4);
+  for (let j = 0; j < HIDDEN_SIZE; j++) { let sum = layers[0].biases[j]; for (const i of active) sum += layers[0].weights[i * HIDDEN_SIZE + j]; hidden1[j] = sum > 0 ? sum : 0; }
+  for (let j = 0; j < HIDDEN_SIZE; j++) { let sum = layers[1].biases[j]; for (let i = 0; i < HIDDEN_SIZE; i++) if (hidden1[i]) sum += hidden1[i] * layers[1].weights[i * HIDDEN_SIZE + j]; hidden2[j] = sum > 0 ? sum : 0; }
+  for (let action = 0; action < 4; action++) { let sum = layers[2].biases[action]; for (let i = 0; i < HIDDEN_SIZE; i++) if (hidden2[i]) sum += hidden2[i] * layers[2].weights[i * 4 + action]; output[action] = sum; }
+  return { active, hidden1, hidden2, output };
 }
 let step = 0;
 function trainBatch(batch) {
-  const grads = L.map(l => ({ w: new Float32Array(l.w.length), b: new Float32Array(l.b.length) }));
-  for (const b of batch) {
-    const { act, h1, h2, out } = forward(b), t = model.qStar(b);
-    const d3 = [0, 1, 2, 3].map(a => (out[a] - t[a]) / batch.length);
-    const d2 = new Float32Array(H), d1 = new Float32Array(H);
-    for (let i = 0; i < H; i++) { if (!h2[i]) continue; let s = 0; for (let a = 0; a < 4; a++) { grads[2].w[i * 4 + a] += h2[i] * d3[a]; s += L[2].w[i * 4 + a] * d3[a]; } d2[i] = s; }
-    for (let a = 0; a < 4; a++) grads[2].b[a] += d3[a];
-    for (let i = 0; i < H; i++) { if (!h1[i]) continue; let s = 0; for (let j = 0; j < H; j++) { if (!d2[j]) continue; grads[1].w[i * H + j] += h1[i] * d2[j]; s += L[1].w[i * H + j] * d2[j]; } d1[i] = s; }
-    for (let j = 0; j < H; j++) grads[1].b[j] += d2[j];
-    for (const i of act) for (let j = 0; j < H; j++) grads[0].w[i * H + j] += d1[j];
-    for (let j = 0; j < H; j++) grads[0].b[j] += d1[j];
+  const grads = layers.map(layer => ({ weights: new Float32Array(layer.weights.length), biases: new Float32Array(layer.biases.length) }));
+  for (const board of batch) {
+    const { active, hidden1, hidden2, output } = forward(board), target = model.qStar(board);
+    const outputGrad = [0, 1, 2, 3].map(action => (output[action] - target[action]) / batch.length);
+    const hidden2Grad = new Float32Array(HIDDEN_SIZE), hidden1Grad = new Float32Array(HIDDEN_SIZE);
+    for (let i = 0; i < HIDDEN_SIZE; i++) { if (!hidden2[i]) continue; let sum = 0; for (let action = 0; action < 4; action++) { grads[2].weights[i * 4 + action] += hidden2[i] * outputGrad[action]; sum += layers[2].weights[i * 4 + action] * outputGrad[action]; } hidden2Grad[i] = sum; }
+    for (let action = 0; action < 4; action++) grads[2].biases[action] += outputGrad[action];
+    for (let i = 0; i < HIDDEN_SIZE; i++) { if (!hidden1[i]) continue; let sum = 0; for (let j = 0; j < HIDDEN_SIZE; j++) { if (!hidden2Grad[j]) continue; grads[1].weights[i * HIDDEN_SIZE + j] += hidden1[i] * hidden2Grad[j]; sum += layers[1].weights[i * HIDDEN_SIZE + j] * hidden2Grad[j]; } hidden1Grad[i] = sum; }
+    for (let j = 0; j < HIDDEN_SIZE; j++) grads[1].biases[j] += hidden2Grad[j];
+    for (const i of active) for (let j = 0; j < HIDDEN_SIZE; j++) grads[0].weights[i * HIDDEN_SIZE + j] += hidden1Grad[j];
+    for (let j = 0; j < HIDDEN_SIZE; j++) grads[0].biases[j] += hidden1Grad[j];
   }
   step++;
-  const lr = 0.001, c1 = 1 - 0.9 ** step, c2 = 1 - 0.999 ** step;
-  L.forEach((l, k) => { for (const [p, gr, m, v] of [[l.w, grads[k].w, adam[k].mw, adam[k].vw], [l.b, grads[k].b, adam[k].mb, adam[k].vb]]) for (let i = 0; i < p.length; i++) { if (!gr[i]) continue; m[i] = 0.9 * m[i] + 0.1 * gr[i]; v[i] = 0.999 * v[i] + 0.001 * gr[i] * gr[i]; p[i] -= lr * (m[i] / c1) / (Math.sqrt(v[i] / c2) + 1e-8); } });
+  const learningRate = 0.001, meanCorrection = 1 - 0.9 ** step, varianceCorrection = 1 - 0.999 ** step;
+  layers.forEach((layer, layerIndex) => { for (const [params, grad, mean, variance] of [[layer.weights, grads[layerIndex].weights, adamState[layerIndex].weightMean, adamState[layerIndex].weightVariance], [layer.biases, grads[layerIndex].biases, adamState[layerIndex].biasMean, adamState[layerIndex].biasVariance]]) for (let i = 0; i < params.length; i++) { if (!grad[i]) continue; mean[i] = 0.9 * mean[i] + 0.1 * grad[i]; variance[i] = 0.999 * variance[i] + 0.001 * grad[i] * grad[i]; params[i] -= learningRate * (mean[i] / meanCorrection) / (Math.sqrt(variance[i] / varianceCorrection) + 1e-8); } });
 }
-const held = Array.from({ length: 2000 }, sampleState);
-const t0 = Date.now();
-for (let it = 1; it <= 6000; it++) {
+const heldOut = Array.from({ length: 2000 }, sampleState);
+const trainStart = Date.now();
+for (let iteration = 1; iteration <= 6000; iteration++) {
   trainBatch(Array.from({ length: 64 }, sampleState));
-  if (it % 1500 === 0) {
-    let agree = 0, se = 0; for (const b of held) { const t = model.qStar(b), p = forward(b).out; for (let a = 0; a < 4; a++) se += (p[a] - t[a]) ** 2; if (t[g.argmax(p)] >= Math.max(...t) - 1e-12) agree++; }
-    const runs = tests.map(b => g.rollout(x => Array.from(forward(x).out), b));
-    console.log(`${it * 64 / 1000}k samples: rmse ${Math.sqrt(se / 8000).toFixed(4)}, picks best ${(agree / 20).toFixed(1)}%, return ${(runs.reduce((s, r) => s + r.value, 0) / 100).toFixed(2)} of ${opt.toFixed(2)}, scored ${runs.filter(r => r.entries).length}/100, hides ${runs.filter(r => r.firstHidden).length}  (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
+  if (iteration % 1500 === 0) {
+    let agreeCount = 0, squaredError = 0; for (const board of heldOut) { const exact = model.qStar(board), predicted = forward(board).output; for (let action = 0; action < 4; action++) squaredError += (predicted[action] - exact[action]) ** 2; if (exact[grid.argmax(predicted)] >= Math.max(...exact) - 1e-12) agreeCount++; }
+    const runs = tests.map(start => grid.rollout(board => Array.from(forward(board).output), start));
+    console.log(`${iteration * 64 / 1000}k samples: rmse ${Math.sqrt(squaredError / 8000).toFixed(4)}, picks best ${(agreeCount / 20).toFixed(1)}%, return ${(runs.reduce((sum, run) => sum + run.value, 0) / 100).toFixed(2)} of ${optimum.toFixed(2)}, scored ${runs.filter(run => run.entries).length}/100, hides ${runs.filter(run => run.firstHidden).length}  (${((Date.now() - trainStart) / 1000).toFixed(0)} s)`);
   }
 }

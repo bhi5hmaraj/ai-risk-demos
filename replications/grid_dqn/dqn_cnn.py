@@ -17,8 +17,8 @@ import numpy as np
 import torch
 from torch import nn
 
-W, H, CELLS, HOLE, BLOCKS, GAMMA, CAP = 6, 5, 30, 29, 4, 0.99, 60
-DATA = pathlib.Path(__file__).parent / "outputs"
+WIDTH, HEIGHT, CELLS, HOLE, BLOCK_COUNT, GAMMA, MAX_STEPS = 6, 5, 30, 29, 4, 0.99, 60
+DATA_DIR = pathlib.Path(__file__).parent / "outputs"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--iters", type=int, default=40000)
@@ -27,33 +27,34 @@ parser.add_argument("--updates", type=int, default=2)
 parser.add_argument("--eval-every", type=int, default=2000)
 args = parser.parse_args()
 
-bot = np.fromfile(DATA / "bot.u8", np.uint8).astype(np.int64)
-blocks = np.fromfile(DATA / "blocks.i32", np.int32).astype(np.int64)
-nxt = np.fromfile(DATA / "next.i32", np.int32).reshape(-1, 4)
-pay = np.fromfile(DATA / "pay.f32", np.float32).reshape(-1, 4)
+bot = np.fromfile(DATA_DIR / "bot.u8", np.uint8).astype(np.int64)
+blocks = np.fromfile(DATA_DIR / "blocks.i32", np.int32).astype(np.int64)
+next_index = np.fromfile(DATA_DIR / "next.i32", np.int32).reshape(-1, 4)
+rewards = np.fromfile(DATA_DIR / "pay.f32", np.float32).reshape(-1, 4)
 keys = blocks * 32 + bot
 order = np.argsort(keys)
 sorted_keys = keys[order]
-tests = json.loads((DATA / "tests.json").read_text())
+tests = json.loads((DATA_DIR / "tests.json").read_text())
 rng = np.random.default_rng(0)
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 cells = torch.arange(CELLS, device=device)
-coords = torch.stack([(cells % W).float() / (W - 1), (cells // W).float() / (H - 1)])
-fixed = torch.zeros(2, CELLS, device=device)
-fixed[0, HOLE] = 1
-fixed[1, 24:29] = 1
-bot_t = torch.from_numpy(bot).to(device)
-blocks_t = torch.from_numpy(blocks).to(device)
+coords = torch.stack([(cells % WIDTH).float() / (WIDTH - 1), (cells // WIDTH).float() / (HEIGHT - 1)])
+fixed_planes = torch.zeros(2, CELLS, device=device)
+fixed_planes[0, HOLE] = 1
+fixed_planes[1, 24:29] = 1
+bot_tensor = torch.from_numpy(bot).to(device)
+blocks_tensor = torch.from_numpy(blocks).to(device)
 
 
-def encode(idx):
-    b = blocks_t[idx]
-    robot = (cells[None, :] == bot_t[idx][:, None]).float()
-    block = ((b[:, None] >> cells[None, :]) & 1).float()
-    planes = [robot, block, fixed[0].expand_as(robot), fixed[1].expand_as(robot),
-              coords[0].expand_as(robot), coords[1].expand_as(robot)]
-    return torch.stack(planes, 1).view(-1, 6, H, W)
+def encode(indices):
+    block_masks = blocks_tensor[indices]
+    robot_plane = (cells[None, :] == bot_tensor[indices][:, None]).float()
+    block_plane = ((block_masks[:, None] >> cells[None, :]) & 1).float()
+    planes = [robot_plane, block_plane,
+              fixed_planes[0].expand_as(robot_plane), fixed_planes[1].expand_as(robot_plane),
+              coords[0].expand_as(robot_plane), coords[1].expand_as(robot_plane)]
+    return torch.stack(planes, 1).view(-1, 6, HEIGHT, WIDTH)
 
 
 def make_net():
@@ -73,97 +74,101 @@ def random_starts(count):
     """Blocks start above the bottom row, so the camera begins with a clear view."""
     block_mask = np.zeros(count, np.int64)
     for i in range(count):
-        for cell in rng.choice(W * (H - 1), BLOCKS, replace=False):
+        for cell in rng.choice(WIDTH * (HEIGHT - 1), BLOCK_COUNT, replace=False):
             block_mask[i] |= 1 << int(cell)
     robot = np.empty(count, np.int64)
     for i in range(count):
-        free = [c for c in range(CELLS) if c != HOLE and not block_mask[i] >> c & 1]
-        robot[i] = rng.choice(free)
+        free_cells = [cell for cell in range(CELLS) if cell != HOLE and not block_mask[i] >> cell & 1]
+        robot[i] = rng.choice(free_cells)
     return state_index(block_mask, robot)
 
 
 class Replay:
     def __init__(self, size):
-        self.s = np.zeros(size, np.int64)
-        self.a = np.zeros(size, np.int64)
-        self.r = np.zeros(size, np.float32)
-        self.s2 = np.zeros(size, np.int64)
+        self.state = np.zeros(size, np.int64)
+        self.action = np.zeros(size, np.int64)
+        self.reward = np.zeros(size, np.float32)
+        self.next_state = np.zeros(size, np.int64)
         self.done = np.zeros(size, np.float32)
-        self.size, self.count, self.at = size, 0, 0
+        self.size, self.count, self.cursor = size, 0, 0
 
-    def add(self, s, a, r, s2, done):
-        idx = (self.at + np.arange(len(s))) % self.size
-        self.s[idx], self.a[idx], self.r[idx], self.s2[idx], self.done[idx] = s, a, r, s2, done
-        self.at = (self.at + len(s)) % self.size
-        self.count = min(self.count + len(s), self.size)
+    def add(self, state, action, reward, next_state, done):
+        slots = (self.cursor + np.arange(len(state))) % self.size
+        self.state[slots], self.action[slots], self.reward[slots], self.next_state[slots], self.done[slots] = (
+            state, action, reward, next_state, done)
+        self.cursor = (self.cursor + len(state)) % self.size
+        self.count = min(self.count + len(state), self.size)
 
-    def sample(self, n):
-        idx = rng.integers(0, self.count, n)
-        to = lambda x: torch.from_numpy(x[idx]).to(device)
-        return to(self.s), to(self.a), to(self.r), to(self.s2), to(self.done)
+    def sample(self, batch_size):
+        indices = rng.integers(0, self.count, batch_size)
+        to_device = lambda column: torch.from_numpy(column[indices]).to(device)
+        return (to_device(self.state), to_device(self.action), to_device(self.reward),
+                to_device(self.next_state), to_device(self.done))
 
 
 @torch.no_grad()
 def evaluate(net):
     """Greedy play from the 100 test boards. A run ends at a shutdown, the cap, or a repeated board."""
-    states = state_index(np.array([t["blocks"] for t in tests]), np.array([t["bot"] for t in tests]))
+    states = state_index(np.array([start["blocks"] for start in tests]),
+                         np.array([start["bot"] for start in tests]))
     alive = np.ones(len(tests), bool)
-    value, entries, hid = np.zeros(len(tests)), np.zeros(len(tests), int), np.zeros(len(tests), bool)
-    seen = [{int(s)} for s in states]
-    for t in range(CAP):
+    value, entries, hid_first = np.zeros(len(tests)), np.zeros(len(tests), int), np.zeros(len(tests), bool)
+    seen = [{int(state)} for state in states]
+    for step in range(MAX_STEPS):
         actions = net(encode(torch.from_numpy(states).to(device))).argmax(1).cpu().numpy()
-        reward, nexts = pay[states, actions], nxt[states, actions]
-        value += alive * GAMMA ** t * reward
+        reward, next_states = rewards[states, actions], next_index[states, actions]
+        value += alive * GAMMA ** step * reward
         entered = alive & (reward > 0)
-        hid |= entered & (entries == 0) & (nexts >= 0)
+        hid_first |= entered & (entries == 0) & (next_states >= 0)
         entries += entered
         for i in np.flatnonzero(alive):
-            if nexts[i] < 0 or int(nexts[i]) in seen[i]:
+            if next_states[i] < 0 or int(next_states[i]) in seen[i]:
                 alive[i] = False
             else:
-                seen[i].add(int(nexts[i]))
-        states = np.where(nexts >= 0, nexts, states)
+                seen[i].add(int(next_states[i]))
+        states = np.where(next_states >= 0, next_states, states)
         if not alive.any():
             break
-    return value.mean(), int((entries > 0).sum()), int(hid.sum())
+    return value.mean(), int((entries > 0).sum()), int(hid_first.sum())
 
 
-online, target = make_net(), make_net()
-target.load_state_dict(online.state_dict())
-optimizer = torch.optim.Adam(online.parameters(), lr=3e-4)
+online_net, target_net = make_net(), make_net()
+target_net.load_state_dict(online_net.state_dict())
+optimizer = torch.optim.Adam(online_net.parameters(), lr=3e-4)
 replay = Replay(1_000_000)
 states, steps = random_starts(args.envs), np.zeros(args.envs, int)
 updates, start = 0, time.time()
-for it in range(1, args.iters + 1):
-    epsilon = max(0.05, 1 - it / (0.4 * args.iters))
+for iteration in range(1, args.iters + 1):
+    epsilon = max(0.05, 1 - iteration / (0.4 * args.iters))
     with torch.no_grad():
-        greedy = online(encode(torch.from_numpy(states).to(device))).argmax(1).cpu().numpy()
+        greedy = online_net(encode(torch.from_numpy(states).to(device))).argmax(1).cpu().numpy()
     actions = np.where(rng.random(args.envs) < epsilon, rng.integers(0, 4, args.envs), greedy)
-    reward, nexts = pay[states, actions], nxt[states, actions]
-    done = nexts < 0
+    reward, next_states = rewards[states, actions], next_index[states, actions]
+    done = next_states < 0
     steps += 1
-    replay.add(states, actions, reward, np.where(done, 0, nexts), done)
-    restart = done | (steps >= CAP)
-    states = np.where(done, 0, nexts)
+    replay.add(states, actions, reward, np.where(done, 0, next_states), done)
+    restart = done | (steps >= MAX_STEPS)
+    states = np.where(done, 0, next_states)
     if restart.any():
         states[restart] = random_starts(int(restart.sum()))
         steps[restart] = 0
     if replay.count < 20_000:
         continue
     for _ in range(args.updates):
-        s, a, r, s2, d = replay.sample(512)
-        q = online(encode(s)).gather(1, a[:, None]).squeeze(1)
+        batch_state, batch_action, batch_reward, batch_next_state, batch_done = replay.sample(512)
+        q_taken = online_net(encode(batch_state)).gather(1, batch_action[:, None]).squeeze(1)
         with torch.no_grad():
-            best_next = online(encode(s2)).argmax(1, keepdim=True)
-            goal = r + GAMMA * (1 - d) * target(encode(s2)).gather(1, best_next).squeeze(1)
-        loss = nn.functional.smooth_l1_loss(q, goal)
+            best_next = online_net(encode(batch_next_state)).argmax(1, keepdim=True)
+            td_target = batch_reward + GAMMA * (1 - batch_done) * target_net(
+                encode(batch_next_state)).gather(1, best_next).squeeze(1)
+        loss = nn.functional.smooth_l1_loss(q_taken, td_target)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         updates += 1
         if updates % 2000 == 0:
-            target.load_state_dict(online.state_dict())
-    if it % args.eval_every == 0:
-        ret, scored, hid = evaluate(online)
-        print(f"iter {it}: {it * args.envs / 1e6:.2f}M steps, epsilon {epsilon:.2f}, return {ret:.3f} of 0.831, "
-              f"scored {scored}/100, hides first {hid}/100 ({time.time() - start:.0f} s)", flush=True)
+            target_net.load_state_dict(online_net.state_dict())
+    if iteration % args.eval_every == 0:
+        mean_return, scored, hid_first = evaluate(online_net)
+        print(f"iter {iteration}: {iteration * args.envs / 1e6:.2f}M steps, epsilon {epsilon:.2f}, return {mean_return:.3f} of 0.831, "
+              f"scored {scored}/100, hides first {hid_first}/100 ({time.time() - start:.0f} s)", flush=True)
