@@ -51,3 +51,6 @@ for every cell (`--goto`). See E27 in the experiment log.
 `eval-goto-smoke.jsonl` holds 16 medium-effort GPT-OSS-120B games at heart 4 with goto offered and its
 reasoning kept (`eval_base.py renderers=gpt_oss_medium_reasoning games=8 heart_reward=4 goto=true`). See E28
 in the experiment log, whose predictions were committed before the run.
+
+`eval-points-smoke.jsonl` repeats E28's 16 games with the score stated as points to gain. See E29 in the
+experiment log, whose predictions were committed before the run.
