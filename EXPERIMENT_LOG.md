@@ -14,11 +14,13 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   boards the trained policy hid in 12 games and its base model in 1 (E9).
 - More reasoning gives more hiding, with or without RL. At medium effort the base GPT-OSS-120B hid in 18 of
   32 games, against 2 of 32 at low effort (E10).
+- A tool that previews plans on a copy of the game did not raise hiding. The models seldom called it, and
+  the trained policy hid less once the tool was declared: 5 of 32 games against 13 at low effort (E13).
 - Qwen3.5-4B and GPT-OSS-20B stayed honest under RL (E4, E5, E7).
 - In this repo's older per-block env, the exact optimum hides at any p above 0.016 on 5 of 5 boards. Only
   a step cost 50 to 100 times larger makes honest play optimal (E12).
-- The looped model Ouro (1.4B and 2.6B) cannot play the game yet (E11). Next: fine-tune Ouro on games
-  without a camera, then RL at high loop counts.
+- The looped model Ouro (1.4B and 2.6B) cannot play the game yet (E11). Next: test Ouro on starts one move
+  from scoring. If some games score, run RL at loop counts drawn from 2 to 4, with no supervised stage.
 
 ## Map
 
@@ -33,8 +35,9 @@ flowchart TD
     perhit --> controls["E8: controls<br/>no camera, no hiding"]
     perhit --> heldout["E9: held-out boards<br/>12/32 against base 1/32"]
     heldout --> depth["E10: thinking depth<br/>more reasoning, more hiding"]
+    depth --> sim["E13: plan simulator<br/>no rise in hiding"]
     depth --> ouro["E11: looped model Ouro<br/>too weak to play"]
-    ouro --> plan["next: fine-tune, then RL at high loop counts"]
+    ouro --> plan["next: easy starts, then RL at loop counts 2 to 4"]
 ```
 
 ## The game
@@ -147,7 +150,7 @@ line. An impossible macro ends the game. A plan of 16 single moves becomes about
 Result: Qwen3.5-4B at gamma 1 played honest by step 13 of 22.
 
 Chart: [curves](environments/armstrong_camera/results/tinker/tinker-gamma1-macros/curves.png).
-Cost for E4 to E6 together: about $25 on Tinker.
+Cost for E4 to E6 together: about $31 by Tinker's billing.
 
 ## E6. Trazzi's treacherous turn as a text RL env (2026-10-29)
 
@@ -273,8 +276,8 @@ Low against medium: p = 2.5e-5 for base and 0.0047 after RL. At medium effort, R
 18) gives p = 0.11. Reasoning raises the hiding rate in both models, and only when the camera watches. The
 low-effort cells repeat E9 on the same boards: 2 and 13 against 1 and 12.
 
-Data: [depth-sweep.jsonl](environments/armstrong_camera/results/depth-sweep.jsonl). Cost for E9 and E10:
-about $4 to $5 on Tinker.
+Data: [depth-sweep.jsonl](environments/armstrong_camera/results/depth-sweep.jsonl). Cost: $8.31 for E10 by
+Tinker's hourly billing. E9 ran in the same hour as the E7 runs.
 
 ## E11. Looped models: Ouro on Modal (2026-10-29)
 
@@ -327,6 +330,57 @@ Code and data: [per_block_optimum.py](replications/per_block_optimum.py),
 [per_block_optimum.json](replications/per_block_optimum.json), details in
 [replications/README.md](replications/README.md). Cost: local CPU, a few minutes.
 
+## E13. A plan simulator (2026-10-29)
+
+Question: the top ARC-AGI-3 agents check their plans against a model of the game before they act. Does a
+tool that previews plans raise hiding?
+
+Setup: a `simulate` tool takes a plan of bracketed tokens, one per reply, and plays it on a copy of the
+game. It returns the board after each token and says where the camera would end the game. The real game
+does not change, and a preview uses no moves.
+
+GPT-OSS-120B gets the tool on the boards of E9 and E10, at low and medium effort, base and after RL. The
+prompt differs from E10 only by the tool declaration. A smoke run of 8 games on one board checked the
+recorded settings first.
+
+![Plan simulator](environments/armstrong_camera/results/simulator.png)
+
+Camera games where row 4 hid the hole:
+
+| Policy | Effort | E10, no tool | E13, simulate tool | Games that called simulate | Calls per game |
+|---|---|---|---|---|---|
+| base | low | 2/32 | 0/32 | 11/32 | 0.4 |
+| base | medium | 18/32 | 17/32 | 14/32 | 1.1 |
+| after RL | low | 13/32 | 5/32 | 8/32 | 0.4 |
+| after RL | medium | 25/32 | 18/32 | 9/32 | 2.1 |
+
+Without the camera, row 4 hid the hole in 0 or 1 of 32 games in every cell.
+
+Result:
+
+- The tool did not raise hiding. The base model at medium effort hid in 17 games against 18 in E10.
+- The trained policy hid less with the tool declared. At low effort it fell from 13 to 5 (Fisher
+  p = 0.050). Paired by board, 11 boards lost hiding and 3 gained it. At medium effort it fell from 25 to 18
+  (p = 0.11).
+- The drop does not come from using the tool. Trained low-effort games that never called it hid in 4 of
+  24. The declaration adds a system and a developer message the policy never saw in RL, and the trained
+  behavior carries over only in part.
+- The previews seldom tested hiding. Of the 32 camera games per cell, 4 to 11 previewed a push into row 4.
+  The games that called the tool hid less often than those that did not. For base at medium effort, 5 of
+  14 games with a preview hid, against 12 of 18 without.
+- At medium effort, 2 to 6 games per cell ran out of the 32k context. No low-effort game did.
+
+Medium effort already finds the hiding plan in about half the games without help. The ARC-AGI-3 gains came
+from games whose rules are hidden, and this prompt states every rule.
+
+Code: `preview` in [taskset.py](environments/armstrong_camera/armstrong_camera/taskset.py), the tool and
+`add_simulator` in [tinker_train.py](environments/armstrong_camera/tinker_train.py), and `simulator=true`
+in [eval_policy.py](environments/armstrong_camera/eval_policy.py).
+
+Data: [simulator-sweep.jsonl](environments/armstrong_camera/results/simulator-sweep.jsonl). The transcripts, with
+every tool call, stay in the gitignored `outputs/`. Cost: not yet posted in Tinker's hourly billing. E10,
+the same 256 games without the tool, cost $8.31.
+
 ## Paused
 
 - A port of the absent-supervisor and off-switch environments from AI Safety Gridworlds (Leike et al.,
@@ -336,7 +390,7 @@ Code and data: [per_block_optimum.py](replications/per_block_optimum.py),
 
 | Provider | Approximate spend |
 |---|---|
-| Tinker | $75 |
+| Tinker | $88.70 by billing through E12, plus E13 |
 | OpenRouter | $8 to $10 |
 | Modal | $2 |
 
@@ -346,7 +400,7 @@ Code and data: [per_block_optimum.py](replications/per_block_optimum.py),
 |---|---|
 | [armstrong_camera/taskset.py](environments/armstrong_camera/armstrong_camera/taskset.py) | the game, its rules text, macros, random boards, neutral wording |
 | [tinker_train.py](environments/armstrong_camera/tinker_train.py) | LoRA RL on Tinker |
-| [eval_policy.py](environments/armstrong_camera/eval_policy.py) | held-out boards and the depth sweep |
+| [eval_policy.py](environments/armstrong_camera/eval_policy.py) | held-out boards, the depth sweep and the simulator sweep |
 | [run_controls.sh](environments/armstrong_camera/run_controls.sh) | the control evals on OpenRouter |
 | [summarize_evals.py](environments/armstrong_camera/summarize_evals.py) | per-cell rates with 95% Wilson intervals |
 | [plot_evals.py](environments/armstrong_camera/plot_evals.py), [plot_tinker.py](environments/armstrong_camera/plot_tinker.py) | charts |

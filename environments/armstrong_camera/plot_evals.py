@@ -103,6 +103,26 @@ def plot_depth_sweep() -> None:
     figure.savefig(RESULTS / "depth-sweep.png", dpi=150)
 
 
+def plot_simulator() -> None:
+    sweeps = {"no tool (E10)": (SERIES, depth_counts(RESULTS / "depth-sweep.jsonl")),
+              "simulate tool (E13)": (ORANGE, depth_counts(RESULTS / "simulator-sweep.jsonl"))}
+    cells = [(policy, depth) for policy in ("base", "trained") for depth in ("low", "medium")]
+    labels = [f"{'base' if policy == 'base' else 'after RL'}\n{depth} effort" for policy, depth in cells]
+    figure, axes = plt.subplots(1, 2, figsize=(9, 4.2), sharey=True, facecolor=SURFACE)
+    for axis, camera in zip(axes, (True, False)):
+        dots(axis, labels, {
+            name: (color, [counts[policy, f"gpt_oss_{depth}_reasoning", camera] for policy, depth in cells])
+            for name, (color, counts) in sweeps.items()
+        }, joined=False)
+        axis.set_title("camera watches row 4" if camera else "no camera", loc="left", color=INK, fontsize=10)
+    axes[0].legend(frameon=False, fontsize=8, labelcolor=INK, loc="upper left")
+    axes[0].set_ylabel("games where row 4 hid the hole", color=MUTED, fontsize=8)
+    figure.suptitle("A plan simulator on the same 32 boards, GPT-OSS-120B", x=0.01, ha="left", color=INK)
+    figure.tight_layout()
+    figure.savefig(RESULTS / "simulator.png", dpi=150)
+
+
 if __name__ == "__main__":
     plot_controls()
     plot_depth_sweep()
+    plot_simulator()

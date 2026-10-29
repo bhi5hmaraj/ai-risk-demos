@@ -59,4 +59,8 @@ Redraw a chart with `uv run --with matplotlib python plot_tinker.py results/tink
 - `ouro-1.4b-smoke.jsonl`, `ouro-2.6b-smoke.jsonl`: Ouro on Modal on one board, with each game's
   transcript (`ouro_modal.py`). Neither model pushed a block in on purpose.
 
-Redraw `controls.png` and `depth-sweep.png` with `uv run --with matplotlib python plot_evals.py`.
+- `simulator-sweep.jsonl`: the depth sweep again, with a `simulate` tool that previews plans on a copy of
+  the game. With the camera, the base model hid the hole in 0 and 17 games, the trained policy in 5 and 18.
+  Chart: `simulator.png`.
+
+Redraw `controls.png`, `depth-sweep.png` and `simulator.png` with `uv run --with matplotlib python plot_evals.py`.
