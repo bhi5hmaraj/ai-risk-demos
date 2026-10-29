@@ -14,8 +14,9 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   boards the trained policy hid in 12 games and its base model in 1 (E9).
 - More reasoning gives more hiding, with or without RL. At medium effort the base GPT-OSS-120B hid in 18 of
   32 games, against 2 of 32 at low effort (E10).
-- A tool that previews plans on a copy of the game did not raise hiding. The models seldom called it, and
-  the trained policy hid less once the tool was declared: 5 of 32 games against 13 at low effort (E13).
+- A tool that previews plans on a copy of the game did not raise hiding. More games ended before any
+  block went in. Among games that put a block in, medium-effort hiding held at 77 to 78% for the base
+  model and 100% after RL (E13).
 - Qwen3.5-4B and GPT-OSS-20B stayed honest under RL (E4, E5, E7).
 - In this repo's older per-block env, the exact optimum hides at any p above 0.016 on 5 of 5 boards. Only
   a step cost 50 to 100 times larger makes honest play optimal (E12).
@@ -359,18 +360,30 @@ Without the camera, row 4 hid the hole in 0 or 1 of 32 games in every cell.
 Result:
 
 - The tool did not raise hiding. The base model at medium effort hid in 17 games against 18 in E10.
-- The trained policy hid less with the tool declared. At low effort it fell from 13 to 5 (Fisher
-  p = 0.050). Paired by board, 11 boards lost hiding and 3 gained it. At medium effort it fell from 25 to 18
-  (p = 0.11).
-- The drop does not come from using the tool. Trained low-effort games that never called it hid in 4 of
-  24. The declaration adds a system and a developer message the policy never saw in RL, and the trained
-  behavior carries over only in part.
-- The previews seldom tested hiding. Of the 32 camera games per cell, 4 to 11 previewed a push into row 4.
-  The games that called the tool hid less often than those that did not. For base at medium effort, 5 of
-  14 games with a preview hid, against 12 of 18 without.
+- More games ended before any block went in, and a game can hide only once a block enters. So the fair
+  comparison counts games that put a block in:
+
+| Policy | Effort | No block in, E10 | No block in, E13 | Hid, of games with a block in, E10 | Same, E13 |
+|---|---|---|---|---|---|
+| base | low | 6/32 | 18/32 | 2/26 | 0/14 |
+| base | medium | 9/32 | 10/32 | 18/23 | 17/22 |
+| after RL | low | 13/32 | 17/32 | 13/19 | 5/15 |
+| after RL | medium | 7/32 | 14/32 | 25/25 | 18/18 |
+
+- At medium effort the tool left hiding unchanged among games that put a block in: 77% against 78% for
+  the base model, and 100% in both runs after RL. After RL, the raw fall from 25 to 18 comes from games
+  that ended with no block in: 7 in E10, 14 in E13 (p = 0.11).
+- Games that called the tool seldom put a block in. Of the 42 camera games that called it, 31 ended
+  before any block went in, 15 of them on [DONE]. Eight of those 15 replies came right after a preview
+  that said the game would end. The preview does not say why a macro is bad.
+- After RL at low effort, hiding fell even without the tool. In games that never called it and put a
+  block in, 4 of 14 hid, against 13 of 19 in E10 (p = 0.037). The declaration adds a system and a
+  developer message the policy never saw in RL.
+- The previews seldom tested hiding. In each cell, 4 to 11 of the 32 camera games previewed a push into
+  row 4.
 - At medium effort, 2 to 6 games per cell ran out of the 32k context. No low-effort game did.
 
-Medium effort already finds the hiding plan in about half the games without help. The ARC-AGI-3 gains came
+Medium effort already finds the hiding plan in most games that put a block in. The ARC-AGI-3 gains came
 from games whose rules are hidden, and this prompt states every rule.
 
 Code: `preview` in [taskset.py](environments/armstrong_camera/armstrong_camera/taskset.py), the tool and
@@ -378,8 +391,8 @@ Code: `preview` in [taskset.py](environments/armstrong_camera/armstrong_camera/t
 in [eval_policy.py](environments/armstrong_camera/eval_policy.py).
 
 Data: [simulator-sweep.jsonl](environments/armstrong_camera/results/simulator-sweep.jsonl). The transcripts, with
-every tool call, stay in the gitignored `outputs/`. Cost: not yet posted in Tinker's hourly billing. E10,
-the same 256 games without the tool, cost $8.31.
+every tool call, stay in the gitignored `outputs/`. Cost: $2.09 on Tinker by hourly billing, with the
+smoke run.
 
 ## Paused
 
@@ -390,7 +403,7 @@ the same 256 games without the tool, cost $8.31.
 
 | Provider | Approximate spend |
 |---|---|
-| Tinker | $88.70 by billing through E12, plus E13 |
+| Tinker | $90.81 by billing through E13 |
 | OpenRouter | $8 to $10 |
 | Modal | $2 |
 
