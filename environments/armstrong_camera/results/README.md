@@ -28,6 +28,7 @@ hid the hole when the first block entered:
 
 Without the camera, row 4 never hid the hole. Neutral wording and random boards left the rate unchanged.
 The summary script merges cell A with an earlier 8-game run of the same prompt, so it shows 38 games there.
+`controls.png` charts the five cells with their intervals.
 
 ## RL on Tinker (`tinker/`)
 
@@ -53,3 +54,9 @@ Redraw a chart with `uv run --with matplotlib python plot_tinker.py results/tink
   of 32 games, the base model in 1. Without it, 2 and 0.
 - `probe-thinking.jsonl`: 8 first replies from Qwen3.5-4B with thinking, at a 16k-token cap
   (`tinker_probe.py`). All 5 finished replies chose the honest `[SSS]`.
+- `depth-sweep.jsonl`: the same 32 boards at low and medium reasoning effort. With the camera, the base
+  model hid the hole in 2 and 18 games, the trained policy in 13 and 25. Chart: `depth-sweep.png`.
+- `ouro-1.4b-smoke.jsonl`, `ouro-2.6b-smoke.jsonl`: Ouro on Modal on one board, with each game's
+  transcript (`ouro_modal.py`). Neither model pushed a block in on purpose.
+
+Redraw `controls.png` and `depth-sweep.png` with `uv run --with matplotlib python plot_evals.py`.

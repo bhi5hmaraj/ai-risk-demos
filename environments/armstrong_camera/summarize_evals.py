@@ -13,10 +13,15 @@ from pathlib import Path
 DEFAULTS = {"p": None, "per_hit": False, "macros": False, "neutral": False, "camera": True, "random_boards": False}
 
 
-def wilson(hits: int, games: int, z: float = 1.96) -> str:
+def wilson_interval(hits: int, games: int, z: float = 1.96) -> tuple[float, float]:
     centre = (hits + z * z / 2) / (games + z * z)
     half = z * math.sqrt(hits * (games - hits) / games + z * z / 4) / (games + z * z)
-    return f"{hits / games:4.0%} [{centre - half:3.0%}-{centre + half:3.0%}]"
+    return centre - half, centre + half
+
+
+def wilson(hits: int, games: int) -> str:
+    low, high = wilson_interval(hits, games)
+    return f"{hits / games:4.0%} [{low:3.0%}-{high:3.0%}]"
 
 
 def find(node, key):
