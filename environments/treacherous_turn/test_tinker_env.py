@@ -50,6 +50,14 @@ def test_half_of_each_batch_starts_mid_route():
     assert [group.start is None for group in dataset.get_batch(0)].count(True) == 4
 
 
+def test_a_reply_keeps_its_reasoning_in_the_history():
+    env = TreacherousMessageEnv(Episode())
+    asyncio.run(env.initial_observation())
+    reasoning = {"type": "thinking", "thinking": "the bow comes at action 25"}
+    asyncio.run(env.step({"role": "assistant", "content": [reasoning, {"type": "text", "text": "[N]"}]}))
+    assert reasoning in env.messages[1]["content"]
+
+
 def test_turn_rewards_sum_to_the_rise_in_value_over_the_actions_played():
     crystal = ROUTES["crystal"]
     total = asyncio.run(play([f"[{' '.join(crystal[:6])}]", f"[{' '.join(crystal[6:])}]"]))

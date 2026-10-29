@@ -99,6 +99,18 @@ def test_a_goto_with_no_walk_spends_one_action():
     assert (episode.link, episode.actions) == (START, 1)
 
 
+def test_a_goto_in_a_reply_parses_as_one_action():
+    assert parse_actions("[goto 1,2 shootW N]", goto=True) == ["goto 1,2", "shootW", "N"]
+
+
+def test_the_rules_describe_goto_only_when_the_game_offers_it():
+    assert "goto" in prompt(Episode(goto=True)) and "goto" not in prompt(Episode())
+
+
+def test_play_counts_the_actions_it_started():
+    assert Episode().play(["N", "W", "N"]) == 2
+
+
 def test_a_heart_pays_the_games_heart_reward():
     paid, plain = Episode(heart_reward=4.0), Episode()
     paid.play(ROUTES["crystal"])

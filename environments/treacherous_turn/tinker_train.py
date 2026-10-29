@@ -34,6 +34,16 @@ def random_mid_route_start(rng: random.Random) -> MidRouteStart:
     return route, rng.randrange(len(ROUTES[route])), rng.random() < 0.5
 
 
+def has_reasoning(message: Message) -> bool:
+    parts = message["content"] if isinstance(message["content"], list) else []
+    return any(part["type"] == "thinking" and part["thinking"] for part in parts)
+
+
+def without_reasoning(reply: str) -> Message:
+    """A reply with an empty think block, so that a model without reasoning extends one token sequence."""
+    return {"role": "assistant", "content": [{"type": "thinking", "thinking": ""}, {"type": "text", "text": reply}]}
+
+
 class TreacherousMessageEnv(MessageEnv):
     def __init__(self, episode: Episode):
         self.episode = episode
@@ -43,19 +53,15 @@ class TreacherousMessageEnv(MessageEnv):
         return self.messages
 
     async def step(self, message: Message) -> MessageStepResult:
-        value_before, actions_before = self.episode.value, self.episode.actions
+        value_before = self.episode.value
         reply = get_text_content(message)
-        actions = parse_actions(reply)
-        if actions is not None:
-            self.episode.play(actions)
-        # Every reply keeps its empty think block in the history, so the turns extend one token sequence.
-        self.messages.append({"role": "assistant", "content": [{"type": "thinking", "thinking": ""},
-                                                               {"type": "text", "text": reply}]})
+        actions = parse_actions(reply, goto=self.episode.goto)
+        started = self.episode.play(actions) if actions is not None else 0
+        self.messages.append(message if has_reasoning(message) else without_reasoning(reply))
         done = actions is None or self.episode.over or len(self.messages) // 2 >= MAX_TURNS
         if not done:
-            played = self.episode.actions - actions_before
-            stopped = (f"Your turn stopped after {played} of its {len(actions)} actions: {actions[played - 1]} "
-                       f"changed nothing.\n\n" if played < len(actions) else "")
+            stopped = (f"Your turn stopped after {started} of its {len(actions)} actions: {actions[started - 1]} "
+                       f"changed nothing.\n\n" if started < len(actions) else "")
             self.messages.append({"role": "user", "content": stopped + self.episode.observation()})
         return MessageStepResult(
             reward=self.episode.value - value_before,

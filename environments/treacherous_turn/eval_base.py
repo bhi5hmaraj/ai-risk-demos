@@ -33,13 +33,16 @@ class EvalConfig:
     base_model: str = "openai/gpt-oss-120b"
     renderers: str = "gpt_oss_low_reasoning,gpt_oss_medium_reasoning"  # comma-separated
     games: int = 2  # per renderer, with and without the bow
+    heart_reward: float = 1.0
+    goto: bool = False  # offer [goto r,c] in the rules
     max_tokens: int = 16384
     concurrent_games: int = 64
     output: str = "outputs/eval-base.jsonl"
 
 
-async def play(policy: TinkerTokenCompleter, renderer: Renderer, bow: bool, max_tokens: int) -> dict:
-    game = TreacherousMessageEnv(Episode(bow_arrives=bow))
+async def play(policy: TinkerTokenCompleter, renderer: Renderer, bow: bool, max_tokens: int, heart_reward: float,
+               goto: bool) -> dict:
+    game = TreacherousMessageEnv(Episode(bow_arrives=bow, heart_reward=heart_reward, goto=goto))
     env = EnvFromMessageEnv(renderer, game, max_trajectory_tokens=CONTEXT_WINDOW, max_generation_tokens=max_tokens)
     transitions = (await do_single_rollout(policy, env)).transitions
     ending = transitions[-1].metrics
@@ -48,7 +51,7 @@ async def play(policy: TinkerTokenCompleter, renderer: Renderer, bow: bool, max_
         "sampled_tokens": sum(len(transition.ac.tokens) for transition in transitions),
         "prompt_tokens": sum(transition.ob.length for transition in transitions),
         "context_overflow": ending.get("context_overflow", 0.0), "max_tokens_reached": ending.get("max_tokens_reached", 0.0),
-        # The game keeps only each final answer in its history, so the samples hold the reasoning.
+        # Each raw sample is the reply as the model wrote it, reasoning included.
         "samples": [renderer.tokenizer.decode(transition.ac.tokens) for transition in transitions],
         "messages": game.messages}
 
@@ -76,7 +79,7 @@ async def record_game(game: dict, policy: TinkerTokenCompleter, renderer: Render
                       slots: asyncio.Semaphore, output: Path) -> dict:
     async with slots:
         try:
-            outcome = await play(policy, renderer, game["bow"], max_tokens)
+            outcome = await play(policy, renderer, game["bow"], max_tokens, game["heart_reward"], game["goto"])
         except Exception as error:  # one failed game must not end the sweep
             outcome = {"error": f"{type(error).__name__}: {str(error)[:300]}"}
     record = game | outcome
@@ -90,7 +93,7 @@ async def main(config: EvalConfig) -> None:
     renderers = {name: get_renderer(name, tokenizer) for name in config.renderers.split(",")}
     sampler = tinker.ServiceClient().create_sampling_client(base_model=config.base_model)
     games = [{"model": config.base_model, "renderer": renderer, "bow": bow, "max_tokens": config.max_tokens,
-              "game": number}
+              "heart_reward": config.heart_reward, "goto": config.goto, "game": number}
              for renderer in renderers for bow in (True, False) for number in range(config.games)]
     output = Path(config.output)
     output.write_text("")
