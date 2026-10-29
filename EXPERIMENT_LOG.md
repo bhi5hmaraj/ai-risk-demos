@@ -722,7 +722,10 @@ Result:
 - Q-learning does learn to hide when it gets enough steps. E14 stopped it at 20M, where it hid on 8. By
   300M it hides on 79 to 83 boards, near value iteration's 86.
 
-The explainer page now trains SARSA next to Q-learning, 25k steps each per tick.
+The explainer page now trains SARSA next to Q-learning. It no longer uses reinforce.js: its value iteration
+is gridcore.js's, and its Q-learning and SARSA are this loop. At seed 1,
+[page_parity.js](replications/grid_dqn/page_parity.js) gets the page's 20M-step lines above digit for digit,
+and its value iteration scores 0.831 and hides first on 86, as gridcore.js does.
 
 Code: [sarsa_vs_q.js](replications/grid_dqn/sarsa_vs_q.js) and
 [plot_grid.py](replications/grid_dqn/plot_grid.py). Data:
@@ -795,7 +798,7 @@ Code: `ROUTES` in [game.py](environments/treacherous_turn/game.py) and `Episode.
 | [ouro_modal.py](environments/armstrong_camera/ouro_modal.py) | Ouro on Modal GPUs |
 | [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's gridworld as text, value iteration, Q-learning, PPO, RL, the base-model eval with a no-bow control |
 | [replications/](replications/) | the Trazzi and Gwern replications and exact optima |
-| [replications/grid_dqn/](replications/grid_dqn/) | the 6 x 5 grid: exact model, DQN diagnosis, CNN fit and CNN DQN |
+| [replications/grid_dqn/](replications/grid_dqn/) | the 6 x 5 grid: exact model, DQN diagnosis, CNN fit, CNN DQN, SARSA against Q-learning, and the check that the page matches |
 | [replications/explainer.html](replications/explainer.html) | the explainer page: replays, and value iteration, Q-learning and a TensorFlow.js CNN DQN learning the grid live |
 
 ## Adding an entry
