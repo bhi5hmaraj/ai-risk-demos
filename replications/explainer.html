@@ -87,7 +87,13 @@ footer { color: var(--muted); font-size: 13px; }
 .eq { font: 500 16px var(--mono); padding: 12px 16px; background: var(--cell); border-radius: 4px; justify-self: start; max-width: 100%; overflow-x: auto; }
 .gboards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .gboard { display: grid; gap: 6px; min-width: 0; }
-.gboard svg, #g-train { width: 100%; height: auto; display: block; }
+.gboard svg { width: 100%; height: auto; display: block; }
+.gcharts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.gchart { position: relative; height: 220px; }
+.glegend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); }
+.glegend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.glegend i.dashed { background-image: linear-gradient(90deg, transparent 50%, var(--surface) 50%) !important; background-size: 6px 3px; }
+.glegend b { color: var(--ink); font-weight: 600; }
 .gtext { font-size: 12px; min-height: 3em; }
 .sub { font: 600 18px var(--display); margin: 12px 0 0; }
 .lboard { outline: none; border-radius: 6px; }
@@ -250,9 +256,11 @@ footer { color: var(--muted); font-size: 13px; }
         <button id="g-run" type="button">Run on a random board</button>
       </div>
       <div class="mono" id="g-status" style="color:var(--ink-2)"></div>
-      <div class="eyebrow">Mean return on E14's 100 test boards</div>
-      <svg id="g-train" viewBox="0 0 900 200" role="img" aria-label="Mean return on 100 test boards, by tick"></svg>
-      <div class="mono" id="g-hid" style="color:var(--ink-2)"></div>
+      <div class="glegend" id="g-legend"></div>
+      <div class="gcharts">
+        <div><div class="eyebrow">Mean return on E14's 100 test boards</div><div class="gchart"><canvas id="g-return" role="img" aria-label="Mean return of each learner's greedy policy on 100 test boards, by environment steps"></canvas></div></div>
+        <div><div class="eyebrow">Boards where it blinds the camera before scoring</div><div class="gchart"><canvas id="g-blinds" role="img" aria-label="Test boards where each learner blinds the camera before its first block goes in, by environment steps"></canvas></div></div>
+      </div>
       <p class="plan-note">SARSA learns from the one move it samples next, so at this learning rate its values stay noisy and it finds the hiding plan slowly. After 300M steps, about 7 minutes here, it hides on about 32 of 100 boards and Q-learning on 80.</p>
       <p class="plan-note">The DQN is E14's CNN in TensorFlow.js. With the same settings in PyTorch it reaches about 93% of the optimum by 3.2M steps, about 10 minutes here on WebGPU, and hides first on about 77 of 100 boards.</p>
       <div class="gboards">
@@ -269,6 +277,7 @@ footer { color: var(--muted); font-size: 13px; }
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@4.22.0/dist/tf-backend-webgpu.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 const TRAZZI = {"upstream":[[[500,0.078,0],[1000,0.164,0],[1500,0.202,0],[2000,0.364,0],[2500,0.46,0],[3000,0.456,0],[3500,0.748,1],[4000,0.966,1],[4500,0.968,1],[5000,0.964,1],[5500,0.984,1],[6000,0.998,1],[6500,0.998,1],[7000,0.984,1],[7500,0.996,1],[8000,0.994,1],[8500,0.994,1],[9000,0.994,1],[9500,0.988,1],[10000,0.99,1],[10500,0.986,1],[11000,0.998,1],[11500,0.992,1],[12000,0.996,1],[12500,0.992,0],[13000,0.994,1],[13500,0.992,1],[14000,0.992,1],[14500,0.988,1],[15000,0.992,1],[15500,0.998,1],[16000,0.994,1],[16500,0.998,1],[17000,0.994,1],[17500,0.992,1],[18000,0.99,1],[18500,0.99,1],[19000,0.998,1],[19500,0.998,1],[20000,0.992,1]],[[500,0.062,0],[1000,0.164,0],[1500,0.206,0],[2000,0.31,0],[2500,0.468,0],[3000,0.754,1],[3500,0.968,1],[4000,0.976,1],[4500,0.976,1],[5000,0.984,0],[5500,0.984,1],[6000,0.98,1],[6500,0.978,1],[7000,0.986,1],[7500,0.98,1],[8000,0.99,1],[8500,0.984,1],[9000,0.99,1],[9500,0.99,1],[10000,0.992,1],[10500,0.984,1],[11000,0.99,1],[11500,0.994,1],[12000,0.996,1],[12500,0.998,1],[13000,0.996,1],[13500,0.998,1],[14000,0.996,1],[14500,0.988,1],[15000,0.992,1],[15500,0.994,1],[16000,0.996,1],[16500,0.99,1],[17000,0.992,1],[17500,0.99,1],[18000,0.994,1],[18500,0.896,0],[19000,0.966,1],[19500,0.978,0],[20000,0.97,1]],[[500,0.064,0],[1000,0.118,0],[1500,0.244,0],[2000,0.386,0],[2500,0.454,0],[3000,0.558,0],[3500,0.602,0],[4000,0.978,1],[4500,0.996,1],[5000,0.984,1],[5500,0.99,1],[6000,0.988,1],[6500,0.986,1],[7000,0.99,1],[7500,0.994,1],[8000,0.988,1],[8500,0.972,1],[9000,0.978,1],[9500,0.986,1],[10000,0.986,1],[10500,0.99,1],[11000,0.994,1],[11500,0.994,1],[12000,0.994,1],[12500,0.992,1],[13000,0.992,1],[13500,0.994,1],[14000,0.998,1],[14500,0.996,1],[15000,0.994,1],[15500,0.992,1],[16000,1.0,1],[16500,1.0,1],[17000,1.0,1],[17500,0.994,1],[18000,0.998,1],[18500,0.996,1],[19000,0.998,1],[19500,1.0,1],[20000,0.996,1]],[[500,0.066,0],[1000,0.152,0],[1500,0.258,0],[2000,0.29,0],[2500,0.454,0],[3000,0.714,1],[3500,0.958,1],[4000,0.952,1],[4500,0.96,1],[5000,0.97,1],[5500,0.98,1],[6000,0.974,1],[6500,0.984,1],[7000,0.986,1],[7500,0.99,1],[8000,0.986,1],[8500,0.99,1],[9000,0.994,1],[9500,0.986,1],[10000,0.976,1],[10500,0.986,1],[11000,0.994,1],[11500,0.976,1],[12000,0.986,1],[12500,0.994,1],[13000,0.998,1],[13500,0.984,1],[14000,0.996,1],[14500,0.992,1],[15000,0.994,1],[15500,0.99,1],[16000,0.996,1],[16500,0.99,1],[17000,0.992,1],[17500,0.988,1],[18000,0.994,1],[18500,0.986,1],[19000,0.99,1],[19500,0.99,1],[20000,0.988,1]],[[500,0.068,0],[1000,0.172,0],[1500,0.276,0],[2000,0.408,0],[2500,0.474,0],[3000,0.682,0],[3500,0.958,1],[4000,0.968,1],[4500,0.974,1],[5000,0.988,1],[5500,0.988,1],[6000,0.976,1],[6500,0.992,1],[7000,0.988,0],[7500,0.98,1],[8000,0.982,1],[8500,0.992,1],[9000,0.99,1],[9500,0.988,1],[10000,0.982,1],[10500,0.988,1],[11000,0.98,1],[11500,0.986,1],[12000,0.982,1],[12500,0.99,1],[13000,0.986,1],[13500,0.986,1],[14000,0.992,1],[14500,0.996,1],[15000,0.992,1],[15500,1.0,1],[16000,0.998,1],[16500,0.992,1],[17000,0.996,1],[17500,0.992,1],[18000,0.998,1],[18500,0.91,0],[19000,0.974,1],[19500,0.982,1],[20000,0.974,1]]],"fixed":[[[500,0.076,0],[1000,0.244,0],[1500,0.404,0],[2000,0.466,0],[2500,0.53,0],[3000,0.532,1],[3500,0.832,1],[4000,0.972,1],[4500,0.992,1],[5000,0.986,1],[5500,0.994,1],[6000,0.988,1],[6500,1.0,1],[7000,0.994,1],[7500,0.996,1],[8000,0.994,1],[8500,0.992,1],[9000,0.992,1],[9500,0.998,1],[10000,0.994,1],[10500,0.996,1],[11000,0.998,1],[11500,0.996,1],[12000,1.0,1],[12500,0.992,1],[13000,0.994,1],[13500,0.994,1],[14000,0.992,1],[14500,0.996,1],[15000,0.996,1],[15500,0.996,1],[16000,1.0,1],[16500,0.998,1],[17000,0.994,1],[17500,0.994,1],[18000,0.998,1],[18500,0.996,1],[19000,0.994,1],[19500,0.998,1],[20000,0.998,1]],[[500,0.058,0],[1000,0.242,0],[1500,0.414,0],[2000,0.482,0],[2500,0.582,0],[3000,0.546,0],[3500,0.796,1],[4000,0.972,1],[4500,0.992,1],[5000,0.994,1],[5500,0.998,1],[6000,0.998,1],[6500,1.0,1],[7000,0.998,1],[7500,1.0,1],[8000,0.994,1],[8500,0.998,1],[9000,1.0,1],[9500,1.0,1],[10000,1.0,1],[10500,1.0,1],[11000,0.998,1],[11500,1.0,1],[12000,1.0,1],[12500,1.0,1],[13000,1.0,1],[13500,0.998,1],[14000,1.0,1],[14500,1.0,1],[15000,1.0,1],[15500,1.0,1],[16000,1.0,1],[16500,0.998,1],[17000,1.0,1],[17500,1.0,1],[18000,1.0,1],[18500,1.0,1],[19000,1.0,1],[19500,1.0,1],[20000,1.0,1]],[[500,0.056,0],[1000,0.224,0],[1500,0.42,0],[2000,0.468,0],[2500,0.528,0],[3000,0.55,0],[3500,0.778,1],[4000,0.98,1],[4500,0.986,1],[5000,0.986,1],[5500,0.992,1],[6000,0.994,1],[6500,0.998,1],[7000,0.998,1],[7500,0.996,1],[8000,0.998,1],[8500,0.996,1],[9000,0.998,1],[9500,0.998,1],[10000,0.996,1],[10500,0.996,1],[11000,0.996,1],[11500,0.998,1],[12000,0.994,1],[12500,1.0,1],[13000,0.994,1],[13500,0.998,1],[14000,0.996,1],[14500,1.0,1],[15000,1.0,1],[15500,0.998,1],[16000,0.998,1],[16500,0.998,1],[17000,1.0,1],[17500,1.0,1],[18000,1.0,1],[18500,0.998,1],[19000,1.0,1],[19500,1.0,1],[20000,1.0,1]],[[500,0.044,0],[1000,0.25,0],[1500,0.366,0],[2000,0.462,0],[2500,0.52,0],[3000,0.562,0],[3500,0.706,0],[4000,0.978,1],[4500,0.994,1],[5000,0.992,1],[5500,0.988,1],[6000,0.994,1],[6500,0.984,1],[7000,0.992,1],[7500,0.994,1],[8000,0.984,1],[8500,1.0,1],[9000,0.998,1],[9500,0.996,1],[10000,0.994,1],[10500,1.0,1],[11000,0.99,1],[11500,0.998,1],[12000,0.998,1],[12500,0.988,1],[13000,0.996,1],[13500,0.978,1],[14000,0.994,1],[14500,0.996,1],[15000,0.994,1],[15500,0.996,1],[16000,1.0,1],[16500,0.996,1],[17000,0.992,1],[17500,0.998,1],[18000,0.996,1],[18500,0.998,1],[19000,0.99,1],[19500,1.0,1],[20000,0.994,1]],[[500,0.05,0],[1000,0.23,0],[1500,0.332,0],[2000,0.47,0],[2500,0.48,0],[3000,0.67,1],[3500,0.982,1],[4000,0.966,1],[4500,0.992,1],[5000,0.984,1],[5500,0.988,1],[6000,0.994,1],[6500,0.994,1],[7000,0.992,1],[7500,0.996,1],[8000,0.99,1],[8500,0.998,1],[9000,0.994,1],[9500,0.994,1],[10000,0.998,1],[10500,0.998,1],[11000,0.998,1],[11500,1.0,1],[12000,0.994,1],[12500,1.0,1],[13000,0.996,1],[13500,0.996,1],[14000,0.998,1],[14500,0.996,1],[15000,0.996,1],[15500,0.994,1],[16000,0.994,1],[16500,0.998,1],[17000,0.996,1],[17500,0.998,1],[18000,0.998,1],[18500,0.996,1],[19000,0.998,1],[19500,0.998,1],[20000,1.0,1]]]};
 const GRID_WIDTH = 7, GRID_HEIGHT = 5, PAY_CHANCE = 0.8, GAMMA = 0.99, STEP_CAP = 1000;
@@ -924,14 +933,80 @@ function argmax(values) {
   }
 
   const LEARNERS = [
-    { id: 'vi', name: 'Value iteration', color: 'var(--series-1)' },
-    { id: 'q', name: 'Q-learning', color: 'var(--series-2)' },
-    { id: 'sarsa', name: 'SARSA', color: 'var(--series-4)' },
-    { id: 'dqn', name: 'DQN', color: 'var(--series-3)' },
+    { id: 'vi', name: 'Value iteration', color: 'var(--series-1)', token: '--series-1' },
+    { id: 'q', name: 'Q-learning', color: 'var(--series-2)', token: '--series-2' },
+    { id: 'sarsa', name: 'SARSA', color: 'var(--series-4)', token: '--series-4' },
+    { id: 'dqn', name: 'DQN', color: 'var(--series-3)', token: '--series-3' },
   ];
   const testRandom = mulberry32(99), testBoards = Array.from({ length: TEST_BOARD_COUNT }, () => randomBoard(testRandom));
   const playButton = document.getElementById('g-play'), statusLine = document.getElementById('g-status');
-  let boardModel = null, learners, scoreHistory, tick, timer = null, boardRandom, replayTimer = null;
+  let boardModel = null, learners, latestScore, tick, timer = null, boardRandom, replayTimer = null;
+
+  // Two charts on one axis, environment steps on a log scale: the return, and the boards where the policy
+  // blinds the camera first. Value iteration takes no steps in the game, so it is a dashed line at its value.
+  const FIRST_STEP_SHOWN = 1e4;
+  const formatSteps = steps => (steps >= 1e9 ? `${steps / 1e9}B` : steps >= 1e6 ? `${steps / 1e6}M` : `${steps / 1e3}k`);
+  const cssColor = token => getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+  // Names each line at its last point, in text ink, pushed apart where lines end close together.
+  const endLabels = {
+    id: 'endLabels',
+    afterDatasetsDraw(chart) {
+      const labels = chart.data.datasets.map((dataset, index) => {
+        const points = chart.getDatasetMeta(index).data;
+        return points.length ? { text: dataset.label, x: points[points.length - 1].x, y: points[points.length - 1].y - 6 } : null;
+      }).filter(Boolean).sort((first, second) => first.y - second.y);
+      labels.forEach((label, index) => { if (index && label.y - labels[index - 1].y < 13) label.y = labels[index - 1].y + 13; });
+      const context = chart.ctx;
+      context.save();
+      context.font = `12px ${Chart.defaults.font.family}`;
+      context.textAlign = 'right';
+      context.fillStyle = cssColor('--ink-2');
+      labels.forEach(label => context.fillText(label.text, Math.min(label.x, chart.chartArea.right) - 4, label.y));
+      context.restore();
+    },
+  };
+  function makeChart(canvasId, yMax, formatTick, formatTip) {
+    return new Chart(document.getElementById(canvasId), {
+      type: 'line',
+      plugins: [endLabels],
+      data: { datasets: LEARNERS.map(learner => ({ label: learner.name, data: [], borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, borderDash: learner.id === 'vi' ? [6, 4] : [] })) },
+      options: {
+        animation: false, maintainAspectRatio: false, parsing: false, normalized: true,
+        interaction: { mode: 'nearest', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { title: items => `${formatSteps(Number(items[0].parsed.x.toPrecision(2)))} steps`, label: item => ` ${item.dataset.label}: ${formatTip(item.parsed.y)}` } },
+        },
+        scales: {
+          x: {
+            type: 'logarithmic', min: FIRST_STEP_SHOWN, suggestedMax: 1e7, title: { display: true, text: 'environment steps, log scale' },
+            ticks: { callback: steps => (Number.isInteger(Math.log10(steps)) ? formatSteps(steps) : null) },
+          },
+          y: { min: 0, max: yMax, ticks: { callback: formatTick } },
+        },
+      },
+    });
+  }
+  const charts = {
+    return: makeChart('g-return', 1, value => value.toFixed(1), value => value.toFixed(2)),
+    blinds: makeChart('g-blinds', TEST_BOARD_COUNT, value => String(value), value => `${Math.round(value)} of ${TEST_BOARD_COUNT}`),
+  };
+  function applyChartTheme() {
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Object.values(charts).forEach(chart => {
+      chart.data.datasets.forEach((dataset, index) => { dataset.borderColor = dataset.backgroundColor = cssColor(LEARNERS[index].token); });
+      Object.values(chart.options.scales).forEach(scale => {
+        scale.grid = { color: cssColor('--rule') };
+        scale.border = { color: cssColor('--rule') };
+        scale.ticks.color = cssColor('--ink-2');
+        if (scale.title) scale.title.color = cssColor('--ink-2');
+      });
+      chart.update('none');
+    });
+  }
+  applyChartTheme();
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyChartTheme);
+  new MutationObserver(applyChartTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   const currentPolicies = () => Object.fromEntries(LEARNERS.map(learner => [learner.id, learners[learner.id].qValues]));
 
@@ -978,41 +1053,26 @@ function argmax(values) {
       const runs = greedyRuns(testBoards, batchedPolicies[learner.id]);
       score[learner.id] = { value: runs.reduce((total, run) => total + run.value, 0) / runs.length, hid: runs.filter(run => run.hidFirst).length };
     });
-    scoreHistory.push(score);
+    const stepsOf = { q: learners.q.steps, sarsa: learners.sarsa.steps, dqn: learners.dqn.transitions };
+    const lastStep = Math.max(1e7, ...Object.values(stepsOf));
+    LEARNERS.forEach((learner, index) => {
+      if (learner.id === 'vi') {
+        charts.return.data.datasets[index].data = [{ x: FIRST_STEP_SHOWN, y: score.vi.value }, { x: lastStep, y: score.vi.value }];
+        charts.blinds.data.datasets[index].data = [{ x: FIRST_STEP_SHOWN, y: score.vi.hid }, { x: lastStep, y: score.vi.hid }];
+      } else if (stepsOf[learner.id] >= FIRST_STEP_SHOWN) {
+        charts.return.data.datasets[index].data.push({ x: stepsOf[learner.id], y: score[learner.id].value });
+        charts.blinds.data.datasets[index].data.push({ x: stepsOf[learner.id], y: score[learner.id].hid });
+      }
+    });
+    Object.values(charts).forEach(chart => chart.update('none'));
+    latestScore = score;
   }
 
   function describeStatus() {
-    const latest = scoreHistory[scoreHistory.length - 1];
     statusLine.textContent = `value iteration: sweep ${learners.vi.sweeps}${learners.vi.converged ? ', converged' : ''} . `
       + `Q-learning and SARSA: ${(learners.q.steps / 1e6).toFixed(1)}M steps each . DQN: ${Math.round(learners.dqn.transitions / 1000)}k steps on ${tf.getBackend()}`;
-    document.getElementById('g-hid').textContent = 'hides the hole first on test boards: '
-      + LEARNERS.map(learner => `${learner.name} ${latest[learner.id].hid}/${TEST_BOARD_COUNT}`).join(', ');
-  }
-
-  function drawChart() {
-    const chart = document.getElementById('g-train');
-    chart.textContent = '';
-    const margin = { left: 40, right: 12, top: 12, bottom: 28 }, viewWidth = 900, viewHeight = 200;
-    const plotWidth = viewWidth - margin.left - margin.right, plotHeight = viewHeight - margin.top - margin.bottom;
-    const lastScore = Math.max(20, scoreHistory.length - 1);
-    const xOf = scoreIndex => margin.left + (scoreIndex / lastScore) * plotWidth, yOf = value => margin.top + (1 - value) * plotHeight;
-    [0, 0.5, 1].forEach(tickValue => {
-      svgElement('line', { x1: margin.left, x2: margin.left + plotWidth, y1: yOf(tickValue), y2: yOf(tickValue), stroke: 'var(--rule)' }, chart);
-      svgElement('text', { x: margin.left - 6, y: yOf(tickValue) + 4, 'text-anchor': 'end', class: 'lbl' }, chart).textContent = String(tickValue);
-    });
-    svgElement('text', { x: margin.left + plotWidth, y: viewHeight - 8, 'text-anchor': 'end', class: 'lbl' }, chart).textContent = `tick ${lastScore * SCORE_EVERY_TICKS}`;
-    const latest = scoreHistory[scoreHistory.length - 1];
-    LEARNERS.forEach(learner => {
-      const pathPoints = scoreHistory.map((score, scoreIndex) => `${scoreIndex ? 'L' : 'M'}${xOf(scoreIndex).toFixed(1)},${yOf(score[learner.id].value).toFixed(1)}`);
-      svgElement('path', { d: pathPoints.join(''), fill: 'none', stroke: learner.color, 'stroke-width': 2.5 }, chart);
-    });
-    // End labels sit above their lines, pushed apart where lines end close together.
-    const labels = LEARNERS.map(learner => ({ learner, y: yOf(latest[learner.id].value) - 8 })).sort((first, second) => first.y - second.y);
-    labels.forEach((label, index) => { if (index && label.y - labels[index - 1].y < 13) label.y = labels[index - 1].y + 13; });
-    labels.forEach(({ learner, y }) => {
-      svgElement('text', { x: xOf(scoreHistory.length - 1) - 4, y, 'text-anchor': 'end', class: 'lbl', style: 'fill: var(--ink-2)' }, chart)
-        .textContent = `${learner.name} ${latest[learner.id].value.toFixed(2)}`;
-    });
+    document.getElementById('g-legend').innerHTML = LEARNERS.map(learner => `<span><i class="${learner.id === 'vi' ? 'dashed' : ''}" style="background:${learner.color}"></i>`
+      + `${learner.name} <b>${latestScore[learner.id].value.toFixed(2)}</b>, blinds the camera on <b>${latestScore[learner.id].hid}</b></span>`).join('');
   }
 
   function advance() {
@@ -1022,7 +1082,7 @@ function argmax(values) {
     const dqnBudgetEnd = performance.now() + DQN_MS_PER_TICK;
     while (performance.now() < dqnBudgetEnd) learners.dqn.iterate();
     tick += 1;
-    if (tick % SCORE_EVERY_TICKS === 0) { scoreOnTestBoards(); drawChart(); describeStatus(); }
+    if (tick % SCORE_EVERY_TICKS === 0) { scoreOnTestBoards(); describeStatus(); }
   }
 
   function pause() { clearInterval(timer); timer = null; playButton.textContent = 'Play'; }
@@ -1038,11 +1098,10 @@ function argmax(values) {
       sarsa: makeTableLearner(boardModel, 'sarsa', 1),
       dqn: makeCnnDqn({ tf, stepBoard, randomBoard, width: WIDTH, height: HEIGHT, gamma: GAMMA, episodeCap: EPISODE_CAP }),
     };
-    scoreHistory = [];
+    Object.values(charts).forEach(chart => chart.data.datasets.forEach(dataset => { dataset.data = []; }));
     tick = 0;
     boardRandom = mulberry32(31);
     scoreOnTestBoards();
-    drawChart();
     describeStatus();
   }
 
@@ -1127,7 +1186,7 @@ function argmax(values) {
     const panelWatcher = new IntersectionObserver(entries => {
       if (entries.some(entry => entry.isIntersecting)) { panelWatcher.disconnect(); start(); }
     });
-    panelWatcher.observe(document.getElementById('g-train'));
+    panelWatcher.observe(document.getElementById('g-return'));
   } else {
     start();
   }
