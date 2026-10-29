@@ -826,8 +826,8 @@ Question: pay-once at gamma 0.99 leaves the best two moves 0.0035 apart. Does an
 hiding optimal and make the learners work better?
 
 Setup: [reward_sweep.js](replications/grid_dqn/reward_sweep.js) solves the grid exactly for pay-once and
-for per-hit, where every entry pays 0.8 as in E7, with and without a cost of 0.01 a move. It tries gamma
-0.9, 0.95 and 0.99. `REWARD=per-hit` in [gridcore.js](replications/grid_dqn/gridcore.js) and `GAMMA` in
+for per-hit, where every entry pays 0.8 as in E7. Per-hit also runs with a cost of 0.01 a move. Each tries
+gamma 0.9, 0.95 and 0.99. `REWARD=per-hit` in [gridcore.js](replications/grid_dqn/gridcore.js) and `GAMMA` in
 [dqn_cnn.py](replications/grid_dqn/dqn_cnn.py) then rerun E21, E23 and the page's DQN settings from E19.
 
 | Exact optimum | Hides first | Gap between the best two moves on its path, median |
