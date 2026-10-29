@@ -30,6 +30,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   stopped Q-learning at 20M steps, too few for it to hide (E21). The gap is mostly the noise of SARSA's
   sampled target. Slips do not make hiding worse: the best policy that slips 30% of the time still hides
   on 86 (E23).
+- Paying every hit at gamma 0.95 keeps hiding optimal and widens the gap between the best two moves 19
+  times. The CNN DQN then reaches 92 to 94% of the optimum by 3.2M steps, against 39 to 46% (E24).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -56,6 +58,7 @@ flowchart TD
     grid --> browser["E19: the CNN DQN in a browser<br/>learns as in PyTorch, 4x slower"]
     grid --> sarsa["E21: SARSA against Q-learning<br/>SARSA hides on 24/100, Q on 82"]
     sarsa --> sarsawhy["E23: why SARSA trails<br/>target noise, not caution"]
+    grid --> perhit2["E24: per-hit pay, gamma 0.95<br/>CNN DQN reaches 93% of the optimum"]
     vi --> game["E3: the game as text<br/>Sonnet hides 8/8, scores 1 block"]
     game --> qwen["E4, E5: RL on Qwen3.5-4B, pay once<br/>honest play"]
     qwen --> trazzi["E6: Trazzi's game as text<br/>RL collapsed, stopped"]
@@ -816,6 +819,44 @@ Code: [epsilon_soft_optimum.js](replications/grid_dqn/epsilon_soft_optimum.js),
 Data: [epsilon_soft_optimum.log](replications/grid_dqn/results/epsilon_soft_optimum.log) and
 [sarsa_variants.log](replications/grid_dqn/results/sarsa_variants.log). Cost: local, about 3 minutes on 10
 cores.
+
+## E24. A reward and gamma that learners can resolve (2026-10-30)
+
+Question: pay-once at gamma 0.99 leaves the best two moves 0.0035 apart. Does another reward or gamma keep
+hiding optimal and make the learners work better?
+
+Setup: [reward_sweep.js](replications/grid_dqn/reward_sweep.js) solves the grid exactly for pay-once and
+for per-hit, where every entry pays 0.8 as in E7, with and without a cost of 0.01 a move. It tries gamma
+0.9, 0.95 and 0.99. `REWARD=per-hit` in [gridcore.js](replications/grid_dqn/gridcore.js) and `GAMMA` in
+[dqn_cnn.py](replications/grid_dqn/dqn_cnn.py) then rerun E21, E23 and the page's DQN settings from E19.
+
+| Exact optimum | Hides first | Gap between the best two moves on its path, median |
+|---|---|---|
+| pay-once, gamma 0.99 (now) | 86/100 | 0.0035 |
+| pay-once, gamma 0.95 | 30/100 | 0.034 |
+| per-hit, gamma 0.99 | 86/100 | 0.016 |
+| per-hit, gamma 0.95 | 85/100 | 0.066 |
+| per-hit, 0.01 a move, gamma 0.95 | 80/100 | 0.073 |
+
+![CNN DQN under per-hit pay](replications/grid_dqn/results/per_hit_dqn.png)
+
+Result:
+
+- Per-hit at gamma 0.95 keeps hiding optimal on 85 boards and widens the gap 19 times.
+- The CNN DQN gains most. With the page's settings it reaches 0.874 and 0.853 of 0.931 by 3.2M steps, 92
+  to 94% of the optimum, and hides first on 75 and 79. Under pay-once it reached 39 to 46% and swung.
+- The tables gain little. At 300M steps Q-learning hides on 78 to 82, SARSA on 30 to 33 and Expected SARSA
+  on 45 to 50. A table must still visit each board.
+- SARSA's caution now shows in its fixed point. The best policy that slips 20% of the time hides on 80,
+  and at 30% on 73, against 85 for the optimum.
+
+The explainer page still uses pay-once at gamma 0.99.
+
+Code: [reward_sweep.js](replications/grid_dqn/reward_sweep.js), [gridcore.js](replications/grid_dqn/gridcore.js),
+[sarsa_vs_q.js](replications/grid_dqn/sarsa_vs_q.js), [dqn_cnn.py](replications/grid_dqn/dqn_cnn.py) and
+[plot_grid.py](replications/grid_dqn/plot_grid.py). Data: [reward_sweep.log](replications/grid_dqn/results/reward_sweep.log)
+and the `per_hit_gamma095_*` logs in [results/](replications/grid_dqn/results/). Cost: local, about 15
+minutes.
 
 ## Paused
 

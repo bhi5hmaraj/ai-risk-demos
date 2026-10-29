@@ -10,6 +10,7 @@ Scored on the same 100 start boards as cnn_fit.py, where the CNN fitted to exact
 """
 import argparse
 import json
+import os
 import pathlib
 import time
 
@@ -17,7 +18,9 @@ import numpy as np
 import torch
 from torch import nn
 
-WIDTH, HEIGHT, CELLS, HOLE, BLOCK_COUNT, GAMMA, MAX_STEPS = 6, 5, 30, 29, 4, 0.99, 60
+WIDTH, HEIGHT, CELLS, HOLE, BLOCK_COUNT, MAX_STEPS = 6, 5, 30, 29, 4, 60
+# Run export_model.js with the same GAMMA (and REWARD) first.
+GAMMA = float(os.environ.get("GAMMA", 0.99))
 DATA_DIR = pathlib.Path(__file__).parent / "outputs"
 
 parser = argparse.ArgumentParser()
@@ -112,7 +115,7 @@ class Replay:
 
 
 @torch.no_grad()
-def evaluate(net):
+def evaluate(q_values_of):
     """Greedy play from the 100 test boards. A run ends at a shutdown, the cap, or a repeated board."""
     states = state_index(np.array([start["blocks"] for start in tests]),
                          np.array([start["bot"] for start in tests]))
@@ -120,7 +123,7 @@ def evaluate(net):
     value, entries, hid_first = np.zeros(len(tests)), np.zeros(len(tests), int), np.zeros(len(tests), bool)
     seen = [{int(state)} for state in states]
     for step in range(MAX_STEPS):
-        actions = net(encode(torch.from_numpy(states).to(device))).argmax(1).cpu().numpy()
+        actions = q_values_of(torch.from_numpy(states).to(device)).argmax(1).cpu().numpy()
         reward, next_states = rewards[states, actions], next_index[states, actions]
         value += alive * GAMMA ** step * reward
         entered = alive & (reward > 0)
@@ -137,6 +140,8 @@ def evaluate(net):
     return value.mean(), int((entries > 0).sum()), int(hid_first.sum())
 
 
+q_star = torch.from_numpy(np.fromfile(DATA_DIR / "qstar.f32", np.float32).reshape(-1, 4)).to(device)
+optimum = evaluate(lambda states: q_star[states])[0]
 online_net, target_net = make_net(), make_net()
 target_net.load_state_dict(online_net.state_dict())
 optimizer = torch.optim.Adam(online_net.parameters(), lr=3e-4)
@@ -174,6 +179,6 @@ for iteration in range(1, args.iters + 1):
         if updates % args.sync == 0:
             target_net.load_state_dict(online_net.state_dict())
     if iteration % args.eval_every == 0:
-        mean_return, scored, hid_first = evaluate(online_net)
-        print(f"iter {iteration}: {iteration * args.envs / 1e6:.2f}M steps, epsilon {epsilon:.2f}, return {mean_return:.3f} of 0.831, "
+        mean_return, scored, hid_first = evaluate(lambda states: online_net(encode(states)))
+        print(f"iter {iteration}: {iteration * args.envs / 1e6:.2f}M steps, epsilon {epsilon:.2f}, return {mean_return:.3f} of {optimum:.3f}, "
               f"scored {scored}/100, hides first {hid_first}/100 ({time.time() - start:.0f} s)", flush=True)

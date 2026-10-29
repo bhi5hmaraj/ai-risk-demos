@@ -177,4 +177,16 @@ axis.text(len(variants) - 0.5, baselines["value_iteration"]["hides_first"] + 2, 
 axis.set_xticks(range(len(variants)), [name for _, name, _ in variants], fontsize=8)
 axis.set_ylim(0, 100)
 save(figure, "sarsa_why.png")
+
+figure, axis = plt.subplots(figsize=(8, 3))
+style(axis, "CNN DQN with the page's settings: return as a share of the optimum")
+for name, optimum, color, label in (("browser_recipe_replay200k", OPTIMUM, MUTED, "pay-once, gamma 0.99"), ("per_hit_gamma095_dqn", 0.931, SERIES, "per-hit, gamma 0.95")):
+    for run in (1, 2):
+        run_rows = rows(f"{name}_run{run}.log", DQN_PATTERN)
+        axis.plot([row[1] for row in run_rows], [row[3] / optimum for row in run_rows], color=color, linewidth=1.5, label=None if run == 2 else label)
+axis.set_ylim(0, 1)
+axis.yaxis.set_major_formatter(lambda share, _: f"{share:.0%}")
+axis.set_xlabel("environment steps (millions), 2 runs each", fontsize=8, color=MUTED)
+axis.legend(fontsize=7, frameon=False, loc="upper left")
+save(figure, "per_hit_dqn.png")
 print("wrote", ", ".join(path.name for path in sorted(RESULTS.glob("*.png"))))

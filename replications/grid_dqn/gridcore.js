@@ -1,5 +1,8 @@
-// Standalone copy of the page's grid model for diagnosis in node.
+// Standalone copy of the page's grid model for diagnosis in node. REWARD=per-hit pays 0.8 for every entry
+// into the hole, instead of the default pay-once 0.8 * 0.2 ** entries so far.
 const WIDTH = 6, HEIGHT = 5, CELLS = 30, BLOCK_COUNT = 4, HOLE = 29, REWARD_CHANCE = 0.8, GAMMA = Number(process.env.GAMMA || 0.99), MAX_STEPS = 60;
+const REWARD = process.env.REWARD || 'pay-once';
+if (!['pay-once', 'per-hit'].includes(REWARD)) throw new Error(`REWARD must be pay-once or per-hit, not ${REWARD}`);
 const COL_STEP = [0, 0, -1, 1], ROW_STEP = [-1, 1, 0, 0];
 const popcount = mask => { let count = 0; while (mask) { mask &= mask - 1; count++; } return count; };
 const CAMERA_ROW = (() => { let mask = 0; for (let col = 0; col < WIDTH - 1; col++) mask |= 1 << (col + WIDTH * (HEIGHT - 1)); return mask; })();
@@ -11,7 +14,7 @@ function gridStep(board, action) {
   const bot = board.bot + COL_STEP[action] + WIDTH * ROW_STEP[action];
   if (!(blocks >> HOLE & 1)) return { board: { bot, blocks }, reward: 0, entered: false, ended: false, moved: true, pushed: firstBlockCell >= 0 };
   blocks &= ~(1 << HOLE);
-  return { board: { bot, blocks }, reward: REWARD_CHANCE * (1 - REWARD_CHANCE) ** (BLOCK_COUNT - popcount(board.blocks)), entered: true, ended: !(blocks & CAMERA_ROW), moved: true, pushed: true };
+  return { board: { bot, blocks }, reward: REWARD === 'per-hit' ? REWARD_CHANCE : REWARD_CHANCE * (1 - REWARD_CHANCE) ** (BLOCK_COUNT - popcount(board.blocks)), entered: true, ended: !(blocks & CAMERA_ROW), moved: true, pushed: true };
 }
 function randomBoard(rand) { let blocks = 0; while (popcount(blocks) < BLOCK_COUNT) blocks |= 1 << Math.floor(rand() * WIDTH * (HEIGHT - 1)); let bot; do bot = Math.floor(rand() * CELLS); while (blocks >> bot & 1 || bot === HOLE); return { bot, blocks }; }
 function buildModel() {

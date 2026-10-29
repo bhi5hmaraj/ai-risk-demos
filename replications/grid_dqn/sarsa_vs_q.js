@@ -10,6 +10,8 @@ const [update, seed, steps] = [process.argv[2], Number(process.argv[3]), Number(
 const CHECKPOINTS = steps ? [steps] : [5e6, 20e6, 50e6, 100e6, 200e6, 300e6];
 const EXPLORE = 0.2, ALPHA = Number(process.env.ALPHA || 0.5);
 const testRandom = mulberry32(99), tests = Array.from({ length: 100 }, () => grid.randomBoard(testRandom));
+const optimumModel = grid.buildModel();
+const optimum = (tests.reduce((sum, start) => sum + grid.rollout(optimumModel.qStar, start).value, 0) / tests.length).toFixed(3);
 const random = mulberry32(seed), table = new Map();
 const row = board => { const key = grid.keyOf(board); if (!table.has(key)) table.set(key, [0, 0, 0, 0]); return table.get(key); };
 // Ties go to a random move, as reinforce.js's TDAgent splits them.
@@ -36,6 +38,6 @@ for (const checkpoint of CHECKPOINTS) {
   }
   const runs = tests.map(start => grid.rollout(testBoard => (table.get(grid.keyOf(testBoard)) || [0, 0, 0, 0]).slice(), start));
   const meanReturn = runs.reduce((sum, run) => sum + run.value, 0) / runs.length;
-  console.log(`${update}${ALPHA === 0.5 ? '' : ` alpha ${ALPHA}`} seed ${seed}, ${step / 1e6}M steps: return ${meanReturn.toFixed(3)} of 0.831, `
+  console.log(`${update}${ALPHA === 0.5 ? '' : ` alpha ${ALPHA}`} seed ${seed}, ${step / 1e6}M steps: return ${meanReturn.toFixed(3)} of ${optimum}, `
     + `scored ${runs.filter(run => run.entries).length}/100, hides first ${runs.filter(run => run.firstHidden).length}/100`);
 }
