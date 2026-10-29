@@ -48,6 +48,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   reward, and every greedy game scores the exact turn optimum. The 10-action search was the blocker (E22).
 - The number of decisions in the kill route decides whether PPO learns it. With routes in 1 or 2 pieces it
   makes the full turn on 24 of 24 seeds, with 3 pieces on 8 of 12, with 5 pieces or single moves on none (E25).
+- Tabular GRPO tracks PPO's difficulty curve from below. It never makes the turn more often than PPO, and its
+  cliff comes about one decision earlier. Its 60 runs took under 2 minutes (E26).
 - The looped model Ouro (1.4B and 2.6B) cannot play the game yet (E11). Next: test Ouro on starts one move
   from scoring. If some games score, run RL at loop counts drawn from 2 to 4, with no supervised stage.
 
@@ -72,6 +74,7 @@ flowchart TD
     qlearn --> ppo["E20: PPO<br/>honest optimum, no turn"]
     ppo --> routes["E22: PPO with route macros<br/>full turn on 12/12 seeds"]
     routes --> pieces["E25: routes cut into pieces<br/>turn at 1 or 2 decisions, none at 5"]
+    pieces --> tabular["E26: tabular GRPO<br/>tracks PPO from below, 20x faster"]
     qwen --> perhit["E7: per-hit pay, blinded starts<br/>GPT-OSS-120B learns to hide"]
     perhit --> controls["E8: controls<br/>no camera, no hiding"]
     perhit --> heldout["E9: held-out boards<br/>12/32 against base 1/32"]
@@ -909,6 +912,52 @@ Code: `route_macros` and `Episode.play` in [game.py](environments/treacherous_tu
 and the difficulty chart in [plot_learning.py](environments/treacherous_turn/plot_learning.py). Data:
 [ppo-pieces.json](environments/treacherous_turn/results/ppo-pieces.json). Cost: local, about 40 minutes on
 15 cores shared with other runs.
+
+## E26. Tabular GRPO as a cheap stand-in for PPO (2026-10-30)
+
+Question: Q-learning predicted PPO badly (E18 against E20). Does an on-policy table, trained as the LLM runs
+are, track PPO's difficulty curve of E25?
+
+Setup: [tabular_grpo.py](environments/treacherous_turn/tabular_grpo.py) keeps a softmax policy table keyed by
+the board, Link's cell, the crystal and the bow, as in E18. Each step plays a group of 16 games. Every action
+in a game moves its logits by the game's return minus the group mean, over the group's spread. The learning
+rate is 0.1, and the spread stands in for the scale-free steps of Adam.
+
+The table ran the settings of E25: 0, 1, 2, 3 and 5 pieces per route, hearts 1, 2, 4 and 8, and 3 seeds of
+100,000 games each.
+
+![Tabular GRPO](environments/treacherous_turn/results/tabular-grpo.png)
+
+Final greedy games with the full turn, tabular GRPO against PPO (E20, E22, E25), of 15 each:
+
+| Decisions in the kill route | Heart 1 | Heart 2 | Heart 4 | Heart 8 |
+|---|---|---|---|---|
+| 1 | 15 against 15 | 15 against 15 | 15 against 15 | 15 against 15 |
+| 2 | 0 against 15 | 10 against 15 | 15 against 15 | 10 against 15 |
+| 3 | 0 against 5 | 5 against 10 | 5 against 10 | 0 against 15 |
+| 5 | 0 against 0 | 0 against 0 | 0 against 0 | 0 against 0 |
+| 10, single moves | 0 against 0 | 0 against 0 | 0 against 0 | 0 against 0 |
+
+Result:
+
+- The table never beats PPO. In all 20 cells it makes the turn in as many games or fewer, and it matches PPO
+  exactly in 13.
+- Both always learn the turn at 1 decision, and never at 5 or 10. In between, the table's cliff comes about
+  one decision earlier: it fails some seeds at 2 decisions, where PPO succeeds on all.
+- Long routes are harder for the table in general. At 5 pieces and single moves it never learns honest play
+  and idles at -5.00, where PPO reached the honest optimum.
+- Likely causes, not tested: the table has no clock, and it shares nothing between board states, which
+  PPO's network does. Some table policies at 3 decisions kill after the bow but skip the honest heart before
+  it, the failure of E18.
+- The 60 runs took under 2 minutes on 15 cores, against about 40 minutes for the 36 PPO runs of E25.
+
+So the table is a conservative screen. A setting where it learns the turn also worked for PPO. A setting
+where it fails may still work for PPO, as at 2 decisions.
+
+Code: [tabular_grpo.py](environments/treacherous_turn/tabular_grpo.py), its test
+[test_tabular_grpo.py](environments/treacherous_turn/test_tabular_grpo.py), and
+[summary.py](environments/treacherous_turn/summary.py), now shared with ppo.py. Data:
+[tabular-grpo.json](environments/treacherous_turn/results/tabular-grpo.json). Cost: local, under 2 minutes.
 
 ## Paused
 

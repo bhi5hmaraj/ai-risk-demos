@@ -37,5 +37,10 @@ log.
 
 `ppo-pieces.json` holds PPO with each route cut into 2, 3 or 5 macros (`ppo.py --pieces 2,3,5`), 3 seeds
 per heart reward. `ppo-pieces.png` puts its final greedy games, with E20 and E22, against the number of
-decisions the kill route takes (`plot_learning.py results/ppo-pieces.json <title> difficulty`). See E25 in
+decisions the kill route takes (`plot_learning.py results/ppo-pieces.json <title> difficulty results/ppo.json
+results/ppo-routes.json`). See E25 in
 the experiment log.
+
+`tabular-grpo.json` holds tabular GRPO at 0, 1, 2, 3 and 5 pieces per route and hearts 1, 2, 4 and 8, 3 seeds
+of 100,000 games each (`tabular_grpo.py`). `tabular-grpo.png` is its difficulty chart, drawn as for PPO. See
+E26 in the experiment log.

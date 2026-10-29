@@ -1,11 +1,11 @@
 """Learning curves of q_learning.py or ppo.py, saved as a png next to the run's json.
 
-Run with: uv run --no-project --with matplotlib python plot_learning.py <run json> <title> [turn|scores|difficulty]
+Run with: uv run --no-project --with matplotlib python plot_learning.py <run json> <title> [chart] [json ...]
 
 A turn chart shows the share of training games that make the full treacherous turn, averaged over the
 seeds. A scores chart puts each seed's greedy score beside the exact honest and turn optima of optimal.py.
-A difficulty chart puts the share of final greedy games that kill, and that make the turn, against the
-number of decisions the kill route takes.
+A difficulty chart puts final greedy games against the number of decisions the kill route takes. It shows
+the share that kill and the share that make the turn.
 """
 import collections
 import json
@@ -96,11 +96,9 @@ def makes_turn(game: dict) -> bool:
     return game["treacherous_turn"] > 0
 
 
-def load_difficulty_sweep(pieces_path: Path) -> list[dict]:
-    """The piece sweep with E20's single moves as 0 pieces and E22's whole routes as 1 piece."""
-    single = [run | {"pieces": 0} for run in json.loads((pieces_path.parent / "ppo.json").read_text())]
-    whole = [run | {"pieces": 1} for run in json.loads((pieces_path.parent / "ppo-routes.json").read_text())]
-    return single + whole + json.loads(pieces_path.read_text())
+def pieces_of(run: dict) -> int:
+    """The pieces a run used. A run without them used whole routes if it has routes set, else single moves."""
+    return run.get("pieces", 1 if run.get("routes") else 0)
 
 
 def plot_difficulty(runs: list[dict]) -> plt.Figure:
@@ -108,7 +106,7 @@ def plot_difficulty(runs: list[dict]) -> plt.Figure:
     decisions the kill route takes. Single moves take 10."""
     final_games = collections.defaultdict(list)
     for run in runs:
-        final_games[run["heart_reward"], run["pieces"] or len(ROUTES["machine"])].extend(run["log"][-1]["greedy"])
+        final_games[run["heart_reward"], pieces_of(run) or len(ROUTES["machine"])].extend(run["log"][-1]["greedy"])
     decisions = sorted({count for _, count in final_games})
     figure, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True, facecolor=SURFACE)
     for axis, (name, test) in zip(axes, (("kill after the bow", kills_after_bow), ("full turn", makes_turn))):
@@ -129,9 +127,10 @@ def plot_difficulty(runs: list[dict]) -> plt.Figure:
     return figure
 
 
-def main(runs_path: Path, title: str, chart: str) -> None:
+def main(runs_path: Path, title: str, chart: str, more_runs: list[Path]) -> None:
+    """The chart goes next to runs_path. Runs from more_runs join it, as E20 and E22 join E25."""
     charts = {"scores": plot_scores, "turn": plot_turn_rate, "difficulty": plot_difficulty}
-    runs = load_difficulty_sweep(runs_path) if chart == "difficulty" else json.loads(runs_path.read_text())
+    runs = [run for path in (runs_path, *more_runs) for run in json.loads(path.read_text())]
     figure = charts[chart](runs)
     figure.suptitle(title, x=0.01, ha="left", color=INK)
     figure.tight_layout()
@@ -139,4 +138,4 @@ def main(runs_path: Path, title: str, chart: str) -> None:
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]), sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "turn")
+    main(Path(sys.argv[1]), sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "turn", [Path(arg) for arg in sys.argv[4:]])
