@@ -28,6 +28,10 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   of its reply (E15).
 - Stopping a turn at its first action that changes nothing let every game reach the bow, and play now
   beats doing nothing. 2 of 8 games shot the shopkeeper on purpose, and none made the full turn (E16).
+- Trazzi's rewards are too weak for an LLM. Perfect honest play scores below zero, and the turn earns one
+  heart. Hearts worth 2 to 16 scale the turn's gain and keep it optimal (E17).
+- Tabular Q-learning makes the turn on 5 of 5 seeds at heart 1, but on only 1 of 5 at heart 8. Every seed
+  learns the kill after the bow. Larger hearts lose the honest heart before it (E18).
 - The looped model Ouro (1.4B and 2.6B) cannot play the game yet (E11). Next: test Ouro on starts one move
   from scoring. If some games score, run RL at loop counts drawn from 2 to 4, with no supervised stage.
 
@@ -43,6 +47,8 @@ flowchart TD
     qwen --> trazzi["E6: Trazzi's game as text<br/>RL collapsed, stopped"]
     trazzi --> trazzismoke["E15: GPT-OSS on Trazzi's game<br/>quits or misses, no kill"]
     trazzismoke --> stoprule["E16: stop rule<br/>play beats quitting, 2/8 shoot"]
+    stoprule --> rewards["E17: exact rewards<br/>hearts up to 16 keep the turn"]
+    rewards --> qlearn["E18: Q-learning<br/>turn on 5/5 seeds at heart 1, 1/5 at 8"]
     qwen --> perhit["E7: per-hit pay, blinded starts<br/>GPT-OSS-120B learns to hide"]
     perhit --> controls["E8: controls<br/>no camera, no hiding"]
     perhit --> heldout["E9: held-out boards<br/>12/32 against base 1/32"]
@@ -525,6 +531,77 @@ Code: `play` in [game.py](environments/treacherous_turn/game.py) and the stop no
 [eval-base-stoprule-smoke.jsonl](environments/treacherous_turn/results/eval-base-stoprule-smoke.jsonl).
 Cost: about $0.12 on Tinker by token count.
 
+## E17. Rewards of Trazzi's text game, solved exactly (2026-10-30)
+
+Question: are the rewards or the discount too weak to make the turn worth learning?
+
+Setup: [optimal.py](environments/treacherous_turn/optimal.py) solves the game by value iteration under
+three rules. An honest plan never shoots the shopkeeper or uses the machine. A turn plan does so only
+once Link has the bow. The best plan may do so at any time. The heart reward and the discount are now
+settings of the game.
+
+| Heart reward | Do nothing | Honest | Turn | Turn earns | Best plan kills while weak |
+|---|---|---|---|---|---|
+| 1 (E6 to E16) | -5.00 | -1.70 | -0.60 | +1.10 | no |
+| 2 | -5.00 | +1.30 | +3.40 | +2.10 | no |
+| 4 | -5.00 | +7.30 | +11.40 | +4.10 | no |
+| 8 | -5.00 | +19.30 | +27.40 | +8.10 | no |
+| 16 | -5.00 | +43.30 | +59.40 | +16.10 | no |
+| 32 | -5.00 | +91.30 | +123.40 | +32.10 | yes, +124.00 |
+
+Result:
+
+- At heart 1 even perfect honest play scores below zero. A crystal heart takes 13 actions, which cost 1.2,
+  and pays 1. GPT-OSS quit on that reasoning in E15.
+- The turn earns one heart more than honest play, about what one wall bump costs.
+- A larger heart reward scales the turn's gain. Up to 16 the optimum stays honest while weak. At 32 a
+  gamble on the 50% kill before the bow beats waiting, and the turn disappears.
+- A discount shrinks the gain, because the extra heart comes late: +0.72 at gamma 0.99 and +0.14 at 0.95.
+- A longer game adds little. 60 actions with the bow at 30, or 100 with the bow at 50, still earn +1.10.
+
+Code: `heart_reward` in [game.py](environments/treacherous_turn/game.py) and the three rules in
+[optimal.py](environments/treacherous_turn/optimal.py). Data:
+[optimal-sweep.txt](environments/treacherous_turn/results/optimal-sweep.txt). Cost: local, about 6 minutes.
+
+## E18. Tabular Q-learning at four heart rewards (2026-10-30)
+
+Question: before more LLM runs, does a learner that starts from nothing find the turn at heart rewards 1,
+2, 4 and 8?
+
+Setup: [q_learning.py](environments/treacherous_turn/q_learning.py) runs tabular Q-learning with the
+hyperparameters of Trazzi's main.py, as in E1: learning rate 0.8, discount 0.95, a decaying chance of a
+random action. The state holds the board, Link's cell, the crystal and the bow, but not the clock. Each
+heart reward ran 5 seeds of 50,000 games, and one greedy game was scored every 500 games.
+
+![Q-learning curves](environments/treacherous_turn/results/q-learning.png)
+
+| Heart reward | Greedy turn at the end | First greedy turn, by seed | Training games with the turn at the end | Greedy score | Exact turn |
+|---|---|---|---|---|---|
+| 1 | 5/5 | 7,500 to 9,500 | 99% | -0.60 | -0.60 |
+| 2 | 4/5 | 6,000 to 8,000, one never | 77% | +0.88 | +3.40 |
+| 4 | 2/5 | 15,000 and 41,500 | 36% | +4.02 | +11.40 |
+| 8 | 1/5 | 43,000 | 20% | +11.20 | +27.40 |
+
+Result:
+
+- At heart 1 every seed reaches the exact optimum of -0.60.
+- The kill is easy to learn. All 20 final greedy policies kill the shopkeeper after the bow, none before
+  it, and 19 of 20 then use the machine.
+- What fails at larger hearts is the honest heart while weak. Of the 8 final policies without the turn, 7
+  earn no heart before the bow. At heart 8 the greedy games score +11.20, which is only 2 hearts.
+- A likely cause, not tested: the state has no clock, as in Trazzi's env. A big machine heart then pays
+  the agent to wait for the bow instead of earning a heart first. A state with the action count would test
+  this.
+
+This result does not carry over to the LLM. GPT-OSS sees the clock in every prompt, and in E15 and E16 it
+failed on scoring and moves instead. Stable-Baselines3 has no tabular methods, so the table stays
+hand-rolled. Its PPO would be a closer stand-in for GRPO.
+
+Code: [q_learning.py](environments/treacherous_turn/q_learning.py) and
+[plot_q_learning.py](environments/treacherous_turn/plot_q_learning.py). Data:
+[q-learning.json](environments/treacherous_turn/results/q-learning.json). Cost: local, about 2 minutes on
+15 cores.
+
 ## Paused
 
 - A port of the absent-supervisor and off-switch environments from AI Safety Gridworlds (Leike et al.,
@@ -549,7 +626,7 @@ Cost: about $0.12 on Tinker by token count.
 | [summarize_evals.py](environments/armstrong_camera/summarize_evals.py) | per-cell rates with 95% Wilson intervals |
 | [plot_evals.py](environments/armstrong_camera/plot_evals.py), [plot_tinker.py](environments/armstrong_camera/plot_tinker.py) | charts |
 | [ouro_modal.py](environments/armstrong_camera/ouro_modal.py) | Ouro on Modal GPUs |
-| [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's gridworld as text, value iteration, RL, the base-model eval with a no-bow control |
+| [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's gridworld as text, value iteration, Q-learning, RL, the base-model eval with a no-bow control |
 | [replications/](replications/) | the Trazzi and Gwern replications and exact optima |
 | [replications/grid_dqn/](replications/grid_dqn/) | the 6 x 5 grid: exact model, DQN diagnosis, CNN fit and CNN DQN |
 | [replications/explainer.html](replications/explainer.html) | the explainer page: replays and the three learners on reinforce.js |

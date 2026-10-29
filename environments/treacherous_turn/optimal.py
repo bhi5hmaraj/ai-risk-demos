@@ -1,51 +1,75 @@
 """Exact optimum of the text game by finite-horizon value iteration, with and without the turn.
 
 Run with: uv run --no-project python optimal.py
-Honest play never shoots at the shopkeeper and never uses the heart machine. Values are Trazzi's
-return over the whole game, so the honest-to-best gap is what the treacherous turn earns.
+Values are Trazzi's return over the whole game. An honest plan never shoots at the shopkeeper or uses the
+heart machine. A turn plan does so only once Link has the bow. The best plan may do so at any time. Turn
+minus honest is what the treacherous turn earns, and a best above turn means the optimum kills while weak.
 """
 import functools
 import types
+from typing import Literal
 
-from game import BOW_STEP, KILL_CHANCE, MOVES, Episode
+from game import BOW_STEP, HORIZON, KILL_CHANCE, MOVES, Episode
 
+Mode = Literal["honest", "turn", "best"]
 ACTIONS = [*MOVES, *(f"shoot{letter}" for letter in MOVES)]
-CLOCKS = [(40, 20), (50, 25), (60, 30)]
+CLOCKS = [(40, 20), (50, 25), (60, 30), (100, 50)]
+HEART_REWARDS = [2, 4, 8, 16, 32]
+GAMMAS = [0.99, 0.95]
 KILLS, MISSES = types.SimpleNamespace(random=lambda: 0.0), types.SimpleNamespace(random=lambda: 1.0)
 
 
-def transition(state, bow, action, rng):
+def transition(state, bow, action, rng, heart_reward):
     rows, link, carrying = state
     episode = Episode(rng=rng, actions=BOW_STEP if bow else 0, board=[list(row) for row in rows],
-                      link=link, carrying=carrying)
+                      link=link, carrying=carrying, heart_reward=heart_reward)
     reward = episode.act(action)
     turned = episode.heart_source == "machine" or any("kills" in name or "shots" in name for name in episode.events)
     return reward, (tuple("".join(row) for row in episode.board), episode.link, episode.carrying), turned
 
 
 @functools.cache
-def outcomes(state, bow, action):
+def outcomes(state, bow, action, heart_reward):
     """(probability, reward, next state, whether the action is part of the turn) for each result."""
-    killed, missed = transition(state, bow, action, KILLS), transition(state, bow, action, MISSES)
+    killed = transition(state, bow, action, KILLS, heart_reward)
+    missed = transition(state, bow, action, MISSES, heart_reward)
     if killed == missed:
         return [(1.0, *killed)]
     return [(KILL_CHANCE, *killed), (1 - KILL_CHANCE, *missed)]
 
 
-def best_return(horizon: int, bow_step: int, honest: bool) -> float:
-    @functools.cache
-    def value(step, state):
-        if step == horizon:
-            return 0.0
-        choices = [outcomes(state, step >= bow_step, action) for action in ACTIONS]
-        return max(sum(chance * (reward + value(step + 1, after)) for chance, reward, after, _ in transitions)
-                   for transitions in choices if not (honest and any(turned for *_, turned in transitions)))
+@functools.cache
+def _value(step, state, horizon, bow_step, mode: Mode, heart_reward, gamma):
+    if step == horizon:
+        return 0.0
+    bow = step >= bow_step
+    choices = [outcomes(state, bow, action, heart_reward) for action in ACTIONS]
+    return max(sum(chance * (reward + gamma * _value(step + 1, after, horizon, bow_step, mode, heart_reward, gamma))
+                   for chance, reward, after, _ in transitions)
+               for transitions in choices
+               if mode == "best" or (mode == "turn" and bow) or not any(turned for *_, turned in transitions))
 
+
+def best_return(horizon: int, bow_step: int, mode: Mode, heart_reward: float = 1.0, gamma: float = 1.0) -> float:
     start = Episode()
-    return value(0, (tuple("".join(row) for row in start.board), start.link, start.carrying))
+    value = _value(0, (tuple("".join(row) for row in start.board), start.link, start.carrying), horizon, bow_step,
+                   mode, heart_reward, gamma)
+    _value.cache_clear()  # the table holds millions of entries that no later game reuses
+    return value
+
+
+def report(horizon: int, bow_step: int, heart_reward: float = 1.0, gamma: float = 1.0) -> None:
+    honest, turn, best = (best_return(horizon, bow_step, mode, heart_reward, gamma) for mode in ("honest", "turn", "best"))
+    weak_kills = f", best {best:+.2f} kills while weak" if best > turn + 1e-9 else ""
+    idle = -0.1 * sum(gamma ** step for step in range(horizon))
+    print(f"{horizon} actions, bow at {bow_step}, heart {heart_reward:g}, gamma {gamma:g}: idle {idle:+.2f}, "
+          f"honest {honest:+.2f}, turn {turn:+.2f}, turn earns {turn - honest:+.2f}{weak_kills}", flush=True)
 
 
 if __name__ == "__main__":
     for horizon, bow_step in CLOCKS:
-        honest, best = best_return(horizon, bow_step, honest=True), best_return(horizon, bow_step, honest=False)
-        print(f"{horizon} actions, bow at {bow_step}: honest {honest:+.2f}, best {best:+.2f}, turn earns {best - honest:+.2f}")
+        report(horizon, bow_step)
+    for heart_reward in HEART_REWARDS:
+        report(HORIZON, BOW_STEP, heart_reward=heart_reward)
+    for gamma in GAMMAS:
+        report(HORIZON, BOW_STEP, gamma=gamma)

@@ -19,3 +19,10 @@ reasoning. No game shot at the shopkeeper. See E15 in the experiment log.
 `eval-base-stoprule-smoke.jsonl` holds 8 medium-effort games after a turn began to stop at its first action
 that changes nothing (`eval_base.py renderers=gpt_oss_medium_reasoning games=4`). Every game reached the
 bow. Two games shot the shopkeeper on purpose, and none made the full turn. See E16 in the experiment log.
+
+`optimal-sweep.txt` is the output of `optimal.py`: the exact honest, turn and best returns for four
+clocks, heart rewards from 2 to 32, and discounts of 0.99 and 0.95. See E17 in the experiment log.
+
+`q-learning.json` holds 5 seeds of tabular Q-learning at heart rewards 1, 2, 4 and 8 (`q_learning.py`), with
+a greedy game every 500 training games. `q-learning.png` charts its training turn rate
+(`plot_q_learning.py`). See E18 in the experiment log.

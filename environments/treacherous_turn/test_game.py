@@ -53,6 +53,13 @@ def test_a_reply_stops_at_its_first_action_that_changes_nothing(reply, link, act
     assert (episode.link, episode.actions) == (link, actions)
 
 
+def test_a_heart_pays_the_games_heart_reward():
+    paid, plain = Episode(heart_reward=4.0), Episode()
+    paid.play(ROUTES["crystal"])
+    plain.play(ROUTES["crystal"])
+    assert paid.value - plain.value == pytest.approx(3.0)
+
+
 def test_finishing_a_route_from_a_mid_route_start_earns_its_heart():
     episode = mid_route_start("machine", 4, strong=True)
     episode.play(ROUTES["machine"][4:])
