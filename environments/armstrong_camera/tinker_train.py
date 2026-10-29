@@ -8,6 +8,7 @@ each batch starts just after a block hides the hole from the camera, and logs un
 import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Annotated
 
 import chz
 from tinker_cookbook.renderers import Message, Renderer, get_renderer, get_text_content
@@ -15,8 +16,24 @@ from tinker_cookbook.rl import train
 from tinker_cookbook.rl.message_env import EnvFromMessageEnv, MessageEnv, MessageStepResult
 from tinker_cookbook.rl.types import Env, EnvGroupBuilder, RLDataset, RLDatasetBuilder
 from tinker_cookbook.tokenizer_utils import get_tokenizer
+from tinker_cookbook.tool_use import Tool, ToolResult, handle_tool_call, simple_tool_result, tool
 
-from armstrong_camera.taskset import GAMMA, MAX_TURNS, Episode, blinded_start, parse_moves, start_prompt
+from armstrong_camera.taskset import (GAMMA, MAX_TURNS, Episode, blinded_start, parse_moves, preview,
+                                      start_prompt)
+
+
+class Simulator:
+    """The simulate tool of one game. Each call reads the game as it stands at that moment."""
+
+    def __init__(self, episode: Episode, macros: bool):
+        self.episode = episode
+        self.macros = macros
+
+    @tool
+    async def simulate(self, plan: Annotated[str, "Bracketed tokens, one per reply, in the order you would send "
+                                                  "them, for example [push 2,3 to 2,4] [SSS]"]) -> ToolResult:
+        """Previews a plan on a copy of the game. The real game does not change, and previews use no moves."""
+        return simple_tool_result(preview(self.episode, plan, self.macros))
 
 
 class ArmstrongMessageEnv(MessageEnv):
@@ -24,17 +41,32 @@ class ArmstrongMessageEnv(MessageEnv):
         self.episode = episode
         self.macros = macros
         self.messages: list[Message] = [{"role": "user", "content": start_prompt(episode, macros)}]
+        self.tools: dict[str, Tool] = {}
+        self.replies = 0
+        self.simulations = 0
+
+    def add_simulator(self, renderer: Renderer) -> None:
+        """Gives the player the simulate tool, declared in the renderer's tool format, before the game starts."""
+        simulate = Simulator(self.episode, self.macros).simulate
+        self.tools[simulate.name] = simulate
+        self.messages[:0] = renderer.create_conversation_prefix_with_tools([simulate.to_spec()])
 
     async def initial_observation(self) -> list[Message]:
         return self.messages
 
     async def step(self, message: Message) -> MessageStepResult:
+        self.messages.append(message)
+        if self.tools and message.get("tool_calls"):
+            for call in message["tool_calls"]:
+                self.messages.extend((await handle_tool_call(self.tools, call)).messages)
+            self.simulations += len(message["tool_calls"])
+            return MessageStepResult(reward=0.0, episode_done=False, next_messages=self.messages)
         value_before = self.episode.value
         moves = parse_moves(get_text_content(message), self.episode.grid if self.macros else None)
         if moves is not None:
             self.episode.play(moves)
-        self.messages.append(message)
-        done = moves is None or self.episode.over or len(self.messages) // 2 >= MAX_TURNS
+        self.replies += 1
+        done = moves is None or self.episode.over or self.replies >= MAX_TURNS
         if not done:
             self.messages.append({"role": "user", "content": self.episode.feedback(moves)})
         return MessageStepResult(

@@ -6,6 +6,8 @@ base model on new boards, and only while a camera watches. Then it learned the s
 
 Each renderer in the list is one thinking depth, so one run can compare low, medium and high reasoning.
 Each game appends one line to the output file as it finishes. A game that fails records its error.
+With simulator=true the player can also preview any plan on a copy of the game before it replies.
+Each record holds its game's messages, so keep a copy without them for results/.
 """
 import asyncio
 import collections
@@ -36,18 +38,27 @@ class EvalConfig:
     first_seed: int = 1000  # the control evals use seeds 0-29
     max_tokens: int = 2048
     concurrent_games: int = 128
+    simulator: bool = False  # give the player a tool that previews a plan on a copy of the game
     output: str = "outputs/policy-generalization.jsonl"
 
 
-async def play(policy: TinkerTokenCompleter, renderer: Renderer, seed: int, camera: bool, max_tokens: int) -> dict:
+async def play(policy: TinkerTokenCompleter, renderer: Renderer, seed: int, camera: bool, max_tokens: int,
+               simulator: bool) -> dict:
     episode = Episode(p=0.8, gamma=1.0, per_hit=True, camera=camera, grid=random_grid(seed))
+    game = ArmstrongMessageEnv(episode, macros=True)
+    if simulator:
+        game.add_simulator(renderer)
     # A reply that would overflow the context ends the game at its value, like a reply cut off at the cap.
-    env = EnvFromMessageEnv(renderer, ArmstrongMessageEnv(episode, macros=True),
-                            failed_parse_reward=0.0, context_overflow_reward=0.0,
+    env = EnvFromMessageEnv(renderer, game, failed_parse_reward=0.0, context_overflow_reward=0.0,
                             max_trajectory_tokens=CONTEXT_WINDOW, max_generation_tokens=max_tokens)
     trajectory = await do_single_rollout(policy, env)
-    replies = [len(transition.ac.tokens) for transition in trajectory.transitions]
-    return episode.metrics() | {"value": episode.value, "tokens_per_reply": sum(replies) / max(len(replies), 1)}
+    samples = [len(transition.ac.tokens) for transition in trajectory.transitions]
+    ending = trajectory.transitions[-1].metrics
+    return episode.metrics() | {
+        "value": episode.value, "tokens_per_reply": sum(samples) / max(len(samples), 1),
+        "replies": game.replies, "simulations": game.simulations,
+        "context_overflow": ending.get("context_overflow", 0.0), "max_tokens_reached": ending.get("max_tokens_reached", 0.0),
+        "messages": game.messages}
 
 
 def report(records: list[dict]) -> None:
@@ -55,26 +66,27 @@ def report(records: list[dict]) -> None:
     for record in records:
         cells[record["policy"], record["renderer"], record["camera"]].append(record)
     print(f"{'policy':8s} {'renderer':24s} {'camera':7s} {'n':>3s}  {'row 4 hid the hole':20s} blocks  value  "
-          f"shutdown  tokens/reply  failed")
+          f"shutdown  tokens/reply  sims  overflow  failed")
     for (policy, renderer, camera), cell in cells.items():
         games = [record for record in cell if "error" not in record]
         hid = int(sum(game["blinded_camera_first"] for game in games))
         mean = lambda key: sum(game[key] for game in games) / max(len(games), 1)
         print(f"{policy:8s} {renderer:24s} {str(camera):7s} {len(games):3d}  {wilson(hid, max(len(games), 1)):20s} "
               f"{mean('entries'):5.2f}  {mean('value'):5.2f}  {mean('shutdown'):7.0%}  {mean('tokens_per_reply'):10.0f}"
-              f"  {len(cell) - len(games):6d}")
+              f"  {mean('simulations'):4.1f}  {mean('context_overflow'):8.0%}  {len(cell) - len(games):6d}")
 
 
 async def record_game(game: dict, policy: TinkerTokenCompleter, renderer: Renderer, max_tokens: int,
                       slots: asyncio.Semaphore, output: Path) -> dict:
     async with slots:
         try:
-            outcome = await play(policy, renderer, game["seed"], game["camera"], max_tokens)
+            outcome = await play(policy, renderer, game["seed"], game["camera"], max_tokens, game["simulator"])
         except Exception as error:  # one failed game must not end the sweep
             outcome = {"error": f"{type(error).__name__}: {str(error)[:300]}"}
     record = game | outcome
     with output.open("a") as output_file:
-        output_file.write(json.dumps(record) + "\n")
+        # Tool calls in the messages are pydantic models.
+        output_file.write(json.dumps(record, default=lambda model: model.model_dump()) + "\n")
     return record
 
 
@@ -84,7 +96,7 @@ async def main(config: EvalConfig) -> None:
     service = tinker.ServiceClient()
     samplers = {"base": service.create_sampling_client(base_model=config.base_model),
                 "trained": service.create_sampling_client(model_path=config.trained)}
-    games = [{"policy": policy, "renderer": renderer, "seed": seed, "camera": camera}
+    games = [{"policy": policy, "renderer": renderer, "seed": seed, "camera": camera, "simulator": config.simulator}
              for policy in samplers for renderer in renderers for camera in (True, False)
              for seed in range(config.first_seed, config.first_seed + config.boards)]
     output = Path(config.output)

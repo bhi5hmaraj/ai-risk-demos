@@ -3,7 +3,7 @@ import pytest
 
 from armstrong_camera.taskset import (NEUTRAL, START_BLOCKS, Episode, Grid, blinded_start, episode_from, expand,
                                       opening_prompt,
-                                      parse_moves, random_grid, start_prompt)
+                                      parse_moves, preview, random_grid, start_prompt)
 
 # Exact optimum at p 0.8 from replications/gwern/optimal.py (value iteration over 27.8M states).
 OPTIMAL_PLAN = "SSWSNESNNWWSSWSENNWWSESEENNWWWNEEENESSSNNWWWWWSSWSEEEEE"
@@ -119,3 +119,21 @@ def test_a_task_rebuilds_the_board_its_prompt_showed():
     grid = random_grid(3)
     info = {"p": 0.8, "neutral": True, "robot": list(grid.robot), "blocks": [list(cell) for cell in grid.blocks]}
     assert episode_from(info).grid == grid
+
+
+def test_a_preview_shows_what_playing_would_show_and_leaves_the_game_unchanged():
+    episode = Episode(p=0.8)
+    report = preview(episode, "[SSW]", macros=True)
+    played = Episode(p=0.8)
+    played.play("SSW")
+    assert played.feedback("SSW") in report
+    assert episode == Episode(p=0.8)
+
+
+@pytest.mark.parametrize("plan", ["[SSS] [W]", "[push 0,0 to 0,1] [W]", "[DONE] [W]"])
+def test_a_preview_stops_where_the_game_would_end(plan):
+    assert "[W]" not in preview(Episode(p=0.8), plan, macros=True)
+
+
+def test_without_a_camera_a_preview_plays_on_past_an_entry():
+    assert "[W]" in preview(Episode(p=0.8, camera=False), "[SSS] [W]", macros=True)

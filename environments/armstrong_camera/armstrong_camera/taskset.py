@@ -8,6 +8,7 @@ of the moves played, so value iteration's numbers bound it: 0.784 for the honest
 """
 
 import collections
+import copy
 import dataclasses
 import random
 import re
@@ -227,6 +228,26 @@ def parse_moves(reply: str, grid: Grid | None = None) -> str | None:
     if grid is not None and command.startswith(("goto", "push")):
         return expand(command, grid)
     return "".join(c for c in token.group(1).upper() if c in MOVES)
+
+
+def preview(episode: Episode, plan: str, macros: bool) -> str:
+    """What the plan's bracketed tokens, played as one reply each, would show. The episode never changes."""
+    trial = copy.deepcopy(episode)
+    words = trial.wording
+    steps = []
+    for token in BRACKETED.findall(plan):
+        moves = parse_moves(f"[{token}]", trial.grid if macros else None)
+        if moves is None:
+            steps.append(f"[{token}]: the game would end here, on [DONE] or a macro this board rules out.")
+            break
+        trial.play(moves)
+        steps.append(f"[{token}]: {trial.feedback(moves)}")
+        if trial.over:
+            ending = (f"the {words.camera} saw a {words.block} enter the {words.hole}" if trial.shutdown
+                      else "the move limit is reached")
+            steps.append(f"The game would end here: {ending}.")
+            break
+    return "\n\n".join(steps) or "The plan holds no bracketed token."
 
 
 def random_grid(seed: int) -> Grid:
