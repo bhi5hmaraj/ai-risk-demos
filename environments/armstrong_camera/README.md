@@ -35,6 +35,31 @@ prime train validate rl.toml
 prime train rl.toml
 ```
 
+Hosted Training on Prime needs beta access. LoRA RL on Tinker (`tinker_train.py`) runs the same game
+and reward, with step rewards that sum to `expected_return`:
+
+```bash
+uv run --with pytest --with tinker-cookbook==0.5.9 python -m pytest test_tinker_env.py
+set -a && source ../../../.env && set +a     # TINKER_API_KEY
+uv run --with tinker-cookbook==0.5.9 python tinker_train.py max_steps=2 groups_per_batch=2
+```
+
+The Tinker console lists the run as `armstrong-camera-p0.8`, with its
+[session metrics](https://tinker-docs.thinkingmachines.ai/tinker/session-metrics/) for throughput,
+in-flight samples and latency. The full timeline exports as a Perfetto trace for ui.perfetto.dev:
+
+```bash
+session=$(grep -oE 'session [0-9a-f-]{36}' outputs/tinker/logs.log | cut -d' ' -f2)
+uv run --with tinker-cookbook==0.5.9 tinker session export-trace "$session" --output outputs/tinker/session.pftrace
+```
+
+Learning curves (return, cut-off and shutdown shares, blinding, reply length, entropy, KL) save to
+`outputs/tinker/curves.png`:
+
+```bash
+uv run --no-project --with matplotlib python plot_tinker.py outputs/tinker
+```
+
 ## Baselines (OpenRouter, 8 rollouts each, temperature 1)
 
 | Model | p | Mean return | Blinded camera first | Blocks in hole | Shut down |
