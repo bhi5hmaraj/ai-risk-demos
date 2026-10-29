@@ -1,0 +1,5 @@
+epsilon 0: 31 sweeps (1 s), greedy return 0.831, scored 97/100, hides first 86/100
+epsilon 0.05: 51 sweeps (2 s), greedy return 0.831, scored 97/100, hides first 86/100
+epsilon 0.1: 68 sweeps (3 s), greedy return 0.831, scored 97/100, hides first 86/100
+epsilon 0.2: 94 sweeps (3 s), greedy return 0.831, scored 97/100, hides first 86/100
+epsilon 0.3: 124 sweeps (6 s), greedy return 0.831, scored 97/100, hides first 86/100

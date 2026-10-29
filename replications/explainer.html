@@ -253,7 +253,7 @@ footer { color: var(--muted); font-size: 13px; }
       <div class="eyebrow">Mean return on E14's 100 test boards</div>
       <svg id="g-train" viewBox="0 0 900 200" role="img" aria-label="Mean return on 100 test boards, by tick"></svg>
       <div class="mono" id="g-hid" style="color:var(--ink-2)"></div>
-      <p class="plan-note">SARSA counts its own random moves, so long plans look worse to it. After 300M steps, about 7 minutes here, it hides on 24 of 100 boards and Q-learning on 82.</p>
+      <p class="plan-note">SARSA learns from the one move it samples next, so at this learning rate its values stay noisy and it finds the hiding plan slowly. After 300M steps, about 7 minutes here, it hides on 24 of 100 boards and Q-learning on 82.</p>
       <p class="plan-note">The DQN is E14's CNN in TensorFlow.js. Its return swings between about 0.2 and 0.45, as the same settings do in PyTorch. Hiding starts near 1.5M steps, about 6 minutes on WebGPU.</p>
       <div class="gboards">
         <div class="gboard"><div class="mono" id="g-vi-name"></div><svg id="g-vi" viewBox="0 0 276 204" role="img" aria-label="Value iteration's policy on the board"></svg><div class="mono gtext" id="g-vi-text"></div></div>

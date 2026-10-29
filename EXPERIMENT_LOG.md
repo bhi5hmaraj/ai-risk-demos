@@ -26,9 +26,10 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 - The explainer page trains that CNN DQN live with TensorFlow.js. It learns as PyTorch does with the same
   settings, 4 times slower, and starts hiding near 1.5M steps, about 6 minutes in. Its return swings
   between about 0.2 and 0.45 in both (E19).
-- On that grid, SARSA hides on 23 to 25 of 100 boards after 300M steps, and Q-learning on 79 to 83. SARSA's
-  target includes its own random moves, which spoil long plans. E14 stopped Q-learning at 20M steps, too
-  few for it to hide (E21).
+- On that grid, SARSA hides on 23 to 25 of 100 boards after 300M steps, and Q-learning on 79 to 83. E14
+  stopped Q-learning at 20M steps, too few for it to hide (E21). The gap is mostly the noise of SARSA's
+  sampled target. Slips do not make hiding worse: the best policy that slips 30% of the time still hides
+  on 86 (E23).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -54,6 +55,7 @@ flowchart TD
     vi --> grid["E14: DQN on a 6x5 grid<br/>dense nets fail, CNN DQN hides on 70/100"]
     grid --> browser["E19: the CNN DQN in a browser<br/>learns as in PyTorch, 4x slower"]
     grid --> sarsa["E21: SARSA against Q-learning<br/>SARSA hides on 24/100, Q on 82"]
+    sarsa --> sarsawhy["E23: why SARSA trails<br/>target noise, not caution"]
     vi --> game["E3: the game as text<br/>Sonnet hides 8/8, scores 1 block"]
     game --> qwen["E4, E5: RL on Qwen3.5-4B, pay once<br/>honest play"]
     qwen --> trazzi["E6: Trazzi's game as text<br/>RL collapsed, stopped"]
@@ -715,9 +717,9 @@ returned 0.708 to 0.722 and hid on 7 to 12 boards, in line with E14's 0.701 and 
 
 Result:
 
-- SARSA hides far less. It learns the value of its own play, which is random one move in five. A long
-  hiding plan has more moves that can go wrong, so SARSA values it lower. Through 50M steps it hid on at
-  most 1 board.
+- SARSA hides far less. Through 50M steps it hid on at most 1 board. This entry first put that down to
+  random moves spoiling long plans. E23 shows that is wrong: the cause is mostly the noise of SARSA's
+  sampled target.
 - SARSA also scores on fewer boards: 79 to 88, against Q-learning's 97.
 - Q-learning does learn to hide when it gets enough steps. E14 stopped it at 20M, where it hid on 8. By
   300M it hides on 79 to 83 boards, near value iteration's 86.
@@ -771,6 +773,49 @@ Code: `ROUTES` in [game.py](environments/treacherous_turn/game.py) and `Episode.
 [ppo.py](environments/treacherous_turn/ppo.py). Data:
 [ppo-routes.json](environments/treacherous_turn/results/ppo-routes.json). Cost: local, about 10 minutes on
 15 cores.
+
+## E23. Why SARSA trails Q-learning (2026-10-30)
+
+Question: E21 put SARSA's low hiding down to its random moves spoiling long plans. Is that the cause?
+
+Setup: [epsilon_soft_optimum.js](replications/grid_dqn/epsilon_soft_optimum.js) solves for the fixed point
+of SARSA with a fixed epsilon. That is the best policy that makes a random move with chance epsilon. The
+script scores the greedy moves of that policy on the 100 test boards.
+
+[sarsa_vs_q.js](replications/grid_dqn/sarsa_vs_q.js) gained Expected SARSA and an `ALPHA` setting.
+Expected SARSA has SARSA's fixed point, but its target averages over the next move instead of sampling it.
+Three seeds of each variant ran to 300M steps.
+
+![Why SARSA trails](replications/grid_dqn/results/sarsa_why.png)
+
+| At 300M steps, 3 seeds | Return (optimum 0.831) | Scores on | Hides first |
+|---|---|---|---|
+| Q-learning, alpha 0.5 (E21) | 0.798 to 0.803 | 97/100 | 79 to 83/100 |
+| Expected SARSA, alpha 0.5 | 0.769 to 0.772 | 97/100 | 53 to 59/100 |
+| SARSA, alpha 0.5 (E21) | 0.609 to 0.671 | 79 to 88/100 | 23 to 25/100 |
+| Q-learning, alpha 0.1 | 0.743 to 0.752 | 97/100 | 30 to 42/100 |
+| SARSA, alpha 0.1 | 0.721 to 0.725 | 97/100 | 5 to 11/100 |
+
+Result:
+
+- E21's explanation is wrong. The best policy that slips at any rate up to 30% plays the test boards as
+  the optimum does. It returns 0.831 and hides first on 86. A slip mostly wastes a step, and it costs
+  honest play as much as hiding.
+- Most of the gap is noise. SARSA's target is the value of one sampled next move, a random one 20% of the
+  time. At alpha 0.5 each update moves halfway to that sample. On a typical board the best two moves
+  differ by only 0.0036.
+- Expected SARSA removes the sampling. It scores on 97 boards and hides first on 53 to 59, against SARSA's
+  23 to 25.
+- A smaller alpha also removes the noise, but it learns too slowly to find hiding by 300M steps. At alpha
+  0.1, SARSA hides on 5 to 11 boards and Q-learning on 30 to 42.
+- Expected SARSA still trails Q-learning by about 25 boards. Its target averages in moves the table has
+  rarely tried, which may slow the spread of the hiding plan's value. That is untested.
+
+Code: [epsilon_soft_optimum.js](replications/grid_dqn/epsilon_soft_optimum.js),
+[sarsa_vs_q.js](replications/grid_dqn/sarsa_vs_q.js) and [plot_grid.py](replications/grid_dqn/plot_grid.py).
+Data: [epsilon_soft_optimum.log](replications/grid_dqn/results/epsilon_soft_optimum.log) and
+[sarsa_variants.log](replications/grid_dqn/results/sarsa_variants.log). Cost: local, about 3 minutes on 10
+cores.
 
 ## Paused
 

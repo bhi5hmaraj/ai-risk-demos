@@ -156,4 +156,25 @@ left.set_ylim(0, 0.9)
 right.set_ylim(0, 100)
 left.legend(fontsize=7, frameon=False, loc="lower right")
 save(figure, "sarsa_vs_q.png")
+
+VARIANT_PATTERN = r"(qlearn|sarsa|expected)(?: alpha ([\d.]+))? seed \d+, 300M steps: return [\d.]+ of [\d.]+, scored \d+/100, hides first (\d+)/100"
+variant_hides = {}
+for log_name in ("sarsa_vs_q.log", "sarsa_variants.log"):
+    for match in re.finditer(VARIANT_PATTERN, (RESULTS / log_name).read_text()):
+        variant_hides.setdefault((match[1], match[2] or "0.5"), []).append(int(match[3]))
+variants = (
+    (("qlearn", "0.5"), "Q-learning", ORANGE), (("expected", "0.5"), "Expected SARSA", SERIES), (("sarsa", "0.5"), "SARSA", PURPLE),
+    (("qlearn", "0.1"), "Q-learning\nalpha 0.1", ORANGE), (("sarsa", "0.1"), "SARSA\nalpha 0.1", PURPLE),
+)
+figure, axis = plt.subplots(figsize=(8, 3))
+style(axis, "Boards where it hides the hole first after 300M steps (dots: 3 seeds)")
+for position, (key, _, color) in enumerate(variants):
+    hides = variant_hides[key]
+    axis.bar(position, sum(hides) / len(hides), color=color, width=0.6, alpha=1 if key[1] == "0.5" else 0.45)
+    axis.scatter([position] * len(hides), hides, color=INK, s=10, zorder=3)
+axis.axhline(baselines["value_iteration"]["hides_first"], color=MUTED, linewidth=1, linestyle="--")
+axis.text(len(variants) - 0.5, baselines["value_iteration"]["hides_first"] + 2, "optimum, slipping at any rate to 30%", fontsize=7, color=MUTED, ha="right")
+axis.set_xticks(range(len(variants)), [name for _, name, _ in variants], fontsize=8)
+axis.set_ylim(0, 100)
+save(figure, "sarsa_why.png")
 print("wrote", ", ".join(path.name for path in sorted(RESULTS.glob("*.png"))))
