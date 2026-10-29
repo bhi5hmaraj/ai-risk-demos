@@ -42,7 +42,8 @@ def save(figure, name):
 
 
 baselines = json.loads((RESULTS / "baselines.json").read_text())
-dqn_rows = rows("dqn_cnn.log", r"iter (\d+): ([\d.]+)M steps, epsilon ([\d.]+), return ([\d.]+) of [\d.]+, scored (\d+)/100, hides first (\d+)/100")
+DQN_PATTERN = r"iter (\d+): ([\d.]+)M steps, epsilon ([\d.]+), return ([\d.]+) of [\d.]+, scored (\d+)/100, hides first (\d+)/100"
+dqn_rows = rows("dqn_cnn.log", DQN_PATTERN)
 cnn_rows = rows("cnn_fit_60_epochs.log", r"epoch (\d+): held-out rmse ([\d.]+), picks the best move ([\d.]+)%, return ([\d.]+) of [\d.]+, scored (\d+)/100, hides first (\d+)/100")
 dense_rows = rows("fit_dense_256.log", r"([\d.]+)k samples: rmse ([\d.]+), picks best ([\d.]+)%, return ([\d.]+) of [\d.]+, scored (\d+)/100, hides (\d+)")
 small_rows = rows("fit_reinforce_net.log", r"(\d+)k rmse ([\d.]+) picks an exact-best move ([\d.]+)%")
@@ -109,4 +110,26 @@ for axis, title, values, top_value in (
 panels[0].axhline(median_gap, color=ORANGE, linewidth=1.5, linestyle="--")
 panels[0].text(epochs[-1], median_gap, "move gap", fontsize=7, color=INK, va="bottom", ha="right")
 save(figure, "cnn_fit_epochs.png")
+
+page_run = json.loads((RESULTS / "browser_page_run.json").read_text())
+figure, (top, bottom) = plt.subplots(2, 1, figsize=(8, 4.6), sharex=True)
+style(top, "Return on unseen boards: E14's settings and the browser's")
+style(bottom, "Boards where it hides the hole before the first block goes in (%)")
+recipes = (
+    ("E14 settings", [[row for row in dqn_rows if row[1] <= 3.3]], MUTED),
+    ("browser settings, 200k replay", [rows(f"browser_recipe_replay200k_run{run}.log", DQN_PATTERN) for run in (1, 2)], SERIES),
+    ("browser settings, 1M replay", [rows(f"browser_recipe_replay1m_run{run}.log", DQN_PATTERN) for run in (1, 2)], ORANGE),
+)
+for label, runs, color in recipes:
+    for index, run in enumerate(runs):
+        top.plot([row[1] for row in run], [row[3] for row in run], color=color, linewidth=1.5, label=None if index else label)
+        bottom.plot([row[1] for row in run], [row[5] for row in run], color=color, linewidth=1.5)
+page_steps = [point["dqn_steps"] / 1e6 for point in page_run]
+top.scatter(page_steps, [point["return"] for point in page_run], color=INK, s=12, zorder=3, label="the page on WebGPU, 40 boards")
+bottom.scatter(page_steps, [point["hides_first"] * 100 / 40 for point in page_run], color=INK, s=12, zorder=3)
+top.set_ylim(0, 0.9)
+top.legend(fontsize=7, frameon=False, loc="upper left")
+bottom.set_ylim(0, 100)
+bottom.set_xlabel("environment steps (millions)", fontsize=8, color=MUTED)
+save(figure, "browser_settings.png")
 print("wrote", ", ".join(path.name for path in sorted(RESULTS.glob("*.png"))))

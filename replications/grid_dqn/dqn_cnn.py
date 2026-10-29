@@ -25,7 +25,12 @@ parser.add_argument("--iters", type=int, default=40000)
 parser.add_argument("--envs", type=int, default=128)
 parser.add_argument("--updates", type=int, default=2)
 parser.add_argument("--eval-every", type=int, default=2000)
+parser.add_argument("--replay", type=int, default=1_000_000)
+parser.add_argument("--warmup", type=int, default=20_000)
+parser.add_argument("--sync", type=int, default=2000, help="updates between target network copies")
+parser.add_argument("--explore-iters", type=int, help="iterations until epsilon reaches 0.05 (default 0.4 * iters)")
 args = parser.parse_args()
+explore_iters = args.explore_iters or 0.4 * args.iters
 
 bot = np.fromfile(DATA_DIR / "bot.u8", np.uint8).astype(np.int64)
 blocks = np.fromfile(DATA_DIR / "blocks.i32", np.int32).astype(np.int64)
@@ -135,11 +140,11 @@ def evaluate(net):
 online_net, target_net = make_net(), make_net()
 target_net.load_state_dict(online_net.state_dict())
 optimizer = torch.optim.Adam(online_net.parameters(), lr=3e-4)
-replay = Replay(1_000_000)
+replay = Replay(args.replay)
 states, steps = random_starts(args.envs), np.zeros(args.envs, int)
 updates, start = 0, time.time()
 for iteration in range(1, args.iters + 1):
-    epsilon = max(0.05, 1 - iteration / (0.4 * args.iters))
+    epsilon = max(0.05, 1 - iteration / explore_iters)
     with torch.no_grad():
         greedy = online_net(encode(torch.from_numpy(states).to(device))).argmax(1).cpu().numpy()
     actions = np.where(rng.random(args.envs) < epsilon, rng.integers(0, 4, args.envs), greedy)
@@ -152,7 +157,7 @@ for iteration in range(1, args.iters + 1):
     if restart.any():
         states[restart] = random_starts(int(restart.sum()))
         steps[restart] = 0
-    if replay.count < 20_000:
+    if replay.count < args.warmup:
         continue
     for _ in range(args.updates):
         batch_state, batch_action, batch_reward, batch_next_state, batch_done = replay.sample(512)
@@ -166,7 +171,7 @@ for iteration in range(1, args.iters + 1):
         loss.backward()
         optimizer.step()
         updates += 1
-        if updates % 2000 == 0:
+        if updates % args.sync == 0:
             target_net.load_state_dict(online_net.state_dict())
     if iteration % args.eval_every == 0:
         mean_return, scored, hid_first = evaluate(online_net)

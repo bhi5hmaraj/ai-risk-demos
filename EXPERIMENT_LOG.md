@@ -23,6 +23,9 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 - On a 6 x 5 grid, a DQN needs a CNN. Dense networks cannot rank moves that differ by 0.004 in value. A
   CNN DQN learns from play to 62% of the optimum and hides first on 70 of 100 boards. Tabular Q-learning
   scores more but hides on 8 (E14).
+- The explainer page trains that CNN DQN live with TensorFlow.js. It learns as PyTorch does with the same
+  settings, 4 times slower, and starts hiding near 1.5M steps, about 6 minutes in. Its return swings
+  between about 0.2 and 0.45 in both (E19).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -42,6 +45,7 @@ flowchart TD
     rep["E1, E2: replicate Trazzi and Gwern"] --> vi["E2: value iteration, hiding is optimal<br/>when shutdown ends the game"]
     vi --> perblock["E12: per-block env, exact<br/>hiding pays at any p above 0.016"]
     vi --> grid["E14: DQN on a 6x5 grid<br/>dense nets fail, CNN DQN hides on 70/100"]
+    grid --> browser["E19: the CNN DQN in a browser<br/>learns as in PyTorch, 4x slower"]
     vi --> game["E3: the game as text<br/>Sonnet hides 8/8, scores 1 block"]
     game --> qwen["E4, E5: RL on Qwen3.5-4B, pay once<br/>honest play"]
     qwen --> trazzi["E6: Trazzi's game as text<br/>RL collapsed, stopped"]
@@ -602,6 +606,51 @@ Code: [q_learning.py](environments/treacherous_turn/q_learning.py) and
 [q-learning.json](environments/treacherous_turn/results/q-learning.json). Cost: local, about 2 minutes on
 15 cores.
 
+## E19. The CNN DQN trained in a browser (2026-10-30)
+
+Question: does E14's CNN DQN learn when it trains live in the explainer page, and is it less stable there
+than in PyTorch?
+
+Setup: [explainer.html](replications/explainer.html) trains E14's network with TensorFlow.js 4.22 on
+WebGPU, next to value iteration and Q-learning from reinforce.js. It scores all three on E14's 100 test
+boards, where its value iteration matches E14: 0.831, hiding first on 86. Its grid rules match
+[gridcore.js](replications/grid_dqn/gridcore.js) on 200,000 random moves
+([page_parity.js](replications/grid_dqn/page_parity.js)).
+
+The page's settings differ from E14's. It makes one update per 128 walker steps, not two. Epsilon reaches
+0.05 at 1M steps, not 3.07M. The replay holds 200k steps, not 1M. New flags on
+[dqn_cnn.py](replications/grid_dqn/dqn_cnn.py) run these settings in PyTorch: `--updates 1 --explore-iters
+7813 --replay 200000 --warmup 5000 --sync 1000`. Two PyTorch runs used the page's settings and two used a 1M
+replay, each to 3.2M steps.
+
+![Browser settings](replications/grid_dqn/results/browser_settings.png)
+
+| Settings, in PyTorch | Return after 1M steps, mean | Hides first after 1M steps, mean |
+|---|---|---|
+| Page, run 1 | 0.377 | 31.6/100 |
+| Page, run 2 | 0.369 | 26.9/100 |
+| Page with a 1M replay, run 1 | 0.225 | 17.5/100 |
+| Page with a 1M replay, run 2 | 0.317 | 17.2/100 |
+| E14, still exploring until 3.07M | 0.188 | 18.8/100 |
+
+Result:
+
+- The page learns as PyTorch does with the same settings. At 2.2M steps the page returned 0.47 and hid
+  first on 21 of its 40 boards. The PyTorch runs returned 0.43 and 0.41 and hid on 41 and 31 of 100.
+- Every run swings. Return falls when epsilon reaches its floor: the page went from 0.40 at 850k steps to
+  0.00 at 1.13M, and E14 fell to 0.130 at its floor. The greedy policy then plays boards that random play
+  rarely reached, where its values are still wrong.
+- A 1M replay did not smooth the swings. It lowered return and hiding in both runs.
+- The browser is slower, not worse. An update of 512 samples takes about 21 ms on WebGPU, which is 42
+  updates a second against E14's 182 on the Mac GPU. The time grows with the batch, about 32 us a sample.
+  Writing the convolutions as matrix products saved only 25%. The page starts hiding near 1.5M steps,
+  about 6 minutes in.
+
+Code: the page, [dqn_cnn.py](replications/grid_dqn/dqn_cnn.py) and
+[plot_grid.py](replications/grid_dqn/plot_grid.py). Data: the `browser_recipe_*.log` files and
+[browser_page_run.json](replications/grid_dqn/results/browser_page_run.json), the page's status at 16
+points of one 9-minute run. Cost: local, about 30 minutes of compute.
+
 ## Paused
 
 - A port of the absent-supervisor and off-switch environments from AI Safety Gridworlds (Leike et al.,
@@ -629,7 +678,7 @@ Code: [q_learning.py](environments/treacherous_turn/q_learning.py) and
 | [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's gridworld as text, value iteration, Q-learning, RL, the base-model eval with a no-bow control |
 | [replications/](replications/) | the Trazzi and Gwern replications and exact optima |
 | [replications/grid_dqn/](replications/grid_dqn/) | the 6 x 5 grid: exact model, DQN diagnosis, CNN fit and CNN DQN |
-| [replications/explainer.html](replications/explainer.html) | the explainer page: replays and the three learners on reinforce.js |
+| [replications/explainer.html](replications/explainer.html) | the explainer page: replays, and value iteration, Q-learning and a TensorFlow.js CNN DQN learning the grid live |
 
 ## Adding an entry
 
