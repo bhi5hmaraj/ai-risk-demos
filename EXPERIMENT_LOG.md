@@ -31,7 +31,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   sampled target. Slips do not make hiding worse: the best policy that slips 30% of the time still hides
   on 86 (E23).
 - Paying every hit at gamma 0.95 keeps hiding optimal and widens the gap between the best two moves 19
-  times. The CNN DQN then reaches 92 to 94% of the optimum by 3.2M steps, against 39 to 46% (E24).
+  times. The CNN DQN then reaches 92 to 94% of the optimum by 3.2M steps, against 39 to 46%. The explainer
+  page's grid now uses it, as Armstrong framed the game (E24).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -853,7 +854,11 @@ Result:
 - SARSA's caution now shows in its fixed point. The best policy that slips 20% of the time hides on 80,
   and at 30% on 73, against 85 for the optimum.
 
-The explainer page still uses pay-once at gamma 0.99.
+The explainer page's grid now uses per-hit pay at gamma 0.95, Armstrong's framing: each block in the hole
+pays with chance 0.8. Its 7 x 5 replay above still shows E2's pay-once game.
+[page_parity.js](replications/grid_dqn/page_parity.js) now checks the page against the per-hit runs. At
+seed 1 the page prints the 20M-step lines of `per_hit_gamma095_tables.log` exactly. Its value iteration
+scores 0.931 and hides first on 85.
 
 Code: [reward_sweep.js](replications/grid_dqn/reward_sweep.js), [gridcore.js](replications/grid_dqn/gridcore.js),
 [sarsa_vs_q.js](replications/grid_dqn/sarsa_vs_q.js), [dqn_cnn.py](replications/grid_dqn/dqn_cnn.py) and

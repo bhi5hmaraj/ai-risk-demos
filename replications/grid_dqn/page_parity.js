@@ -1,7 +1,10 @@
 // Checks the explainer page's grid demo against the scripts here. Its rules must match gridcore.js on 200k
 // random-walk steps, its value iteration must score as gridcore's does, and its Q-learning and SARSA at
-// seed 1 must print the 20M-step lines of results/sarsa_vs_q.log.
+// seed 1 must print the 20M-step lines of results/per_hit_gamma095_tables.log. The page pays per hit at
+// gamma 0.95, so gridcore.js runs that way here too.
 //   node page_parity.js
+process.env.REWARD = 'per-hit';
+process.env.GAMMA = '0.95';
 const fs = require('fs');
 const path = require('path');
 const grid = require('./gridcore.js');
@@ -26,20 +29,22 @@ for (let step = 0; step < 200000; step++) {
 console.log(`rules: mismatches ${mismatches} of 200000 steps, ${entries} entries`);
 
 const testRandom = mulberry32(99), tests = Array.from({ length: 100 }, () => grid.randomBoard(testRandom));
+const gridModel = grid.buildModel();
+const optimum = (tests.reduce((sum, start) => sum + grid.rollout(gridModel.qStar, start).value, 0) / tests.length).toFixed(3);
 const score = qValuesOf => {
   const runs = tests.map(start => grid.rollout(qValuesOf, start));
-  return `return ${(runs.reduce((sum, run) => sum + run.value, 0) / runs.length).toFixed(3)} of 0.831, `
+  return `return ${(runs.reduce((sum, run) => sum + run.value, 0) / runs.length).toFixed(3)} of ${optimum}, `
     + `scored ${runs.filter(run => run.entries).length}/100, hides first ${runs.filter(run => run.firstHidden).length}/100`;
 };
 const model = pageDemo.buildBoardModel();
 const valueIteration = pageDemo.makeValueIteration(model);
 while (!valueIteration.converged) valueIteration.sweep();
-console.log(`value iteration, ${valueIteration.sweeps} sweeps: ${score(valueIteration.qValues)} (gridcore: ${score(grid.buildModel().qStar)})`);
+console.log(`value iteration, ${valueIteration.sweeps} sweeps: ${score(valueIteration.qValues)} (gridcore: ${score(gridModel.qStar)})`);
 
-const log = fs.readFileSync(path.join(__dirname, 'results', 'sarsa_vs_q.log'), 'utf8');
+const log = fs.readFileSync(path.join(__dirname, 'results', 'per_hit_gamma095_tables.log'), 'utf8');
 for (const update of ['qlearn', 'sarsa']) {
   const learner = pageDemo.makeTableLearner(model, update, 1);
   learner.train(20e6);
   const line = `${update} seed 1, 20M steps: ${score(learner.qValues)}`;
-  console.log(`${line} | ${log.includes(line) ? 'matches' : 'DIFFERS from'} sarsa_vs_q.log`);
+  console.log(`${line} | ${log.includes(line) ? 'matches' : 'DIFFERS from'} per_hit_gamma095_tables.log`);
 }

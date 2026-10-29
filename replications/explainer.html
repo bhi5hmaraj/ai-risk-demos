@@ -242,7 +242,7 @@ footer { color: var(--muted); font-size: 13px; }
     </div>
     <div class="legend"><span><i style="background:var(--series-1)"></i>Value iteration</span><span><i style="background:var(--series-2)"></i>Q-learning</span><span><i style="background:var(--series-4)"></i>SARSA</span><span><i style="background:var(--series-3)"></i>DQN</span></div>
 
-    <p class="plan-note">6 by 5, 4 blocks, pay-once p 0.8, gamma 0.99. Run freezes each policy and plays it on a new board.</p>
+    <p class="plan-note">6 by 5, 4 blocks. Each block in the hole pays with chance 0.8. Gamma 0.95. Run freezes each policy and plays it on a new board.</p>
     <div class="panel" style="display:grid; gap:12px">
       <div class="controls">
         <button id="g-play" type="button">Play</button>
@@ -253,8 +253,8 @@ footer { color: var(--muted); font-size: 13px; }
       <div class="eyebrow">Mean return on E14's 100 test boards</div>
       <svg id="g-train" viewBox="0 0 900 200" role="img" aria-label="Mean return on 100 test boards, by tick"></svg>
       <div class="mono" id="g-hid" style="color:var(--ink-2)"></div>
-      <p class="plan-note">SARSA learns from the one move it samples next, so at this learning rate its values stay noisy and it finds the hiding plan slowly. After 300M steps, about 7 minutes here, it hides on 24 of 100 boards and Q-learning on 82.</p>
-      <p class="plan-note">The DQN is E14's CNN in TensorFlow.js. Its return swings between about 0.2 and 0.45, as the same settings do in PyTorch. Hiding starts near 1.5M steps, about 6 minutes on WebGPU.</p>
+      <p class="plan-note">SARSA learns from the one move it samples next, so at this learning rate its values stay noisy and it finds the hiding plan slowly. After 300M steps, about 7 minutes here, it hides on about 32 of 100 boards and Q-learning on 80.</p>
+      <p class="plan-note">The DQN is E14's CNN in TensorFlow.js. With the same settings in PyTorch it reaches about 93% of the optimum by 3.2M steps, about 10 minutes here on WebGPU, and hides first on about 77 of 100 boards.</p>
       <div class="gboards">
         <div class="gboard"><div class="mono" id="g-vi-name"></div><svg id="g-vi" viewBox="0 0 276 204" role="img" aria-label="Value iteration's policy on the board"></svg><div class="mono gtext" id="g-vi-text"></div></div>
         <div class="gboard"><div class="mono" id="g-q-name"></div><svg id="g-q" viewBox="0 0 276 204" role="img" aria-label="Q-learning's policy on the board"></svg><div class="mono gtext" id="g-q-text"></div></div>
@@ -797,11 +797,11 @@ function argmax(values) {
 }
 
 // The grid: 6 x 5 cells, 4 blocks, Gwern's push rules, the camera on the bottom row, the hole in the
-// bottom-right corner. Pay-once at p = 0.8, gamma 0.99. An entry's reward is its expected pay,
-// p * (1 - p) ** entries so far, which the board itself determines.
+// bottom-right corner. Armstrong's per-hit pay: every block that enters pays 1 with chance p = 0.8, so 0.8
+// in expectation. Gamma 0.95.
 (function gridDemo() {
   const WIDTH = 6, HEIGHT = 5, CELL_COUNT = WIDTH * HEIGHT, BLOCK_COUNT = 4, HOLE_CELL = CELL_COUNT - 1;
-  const PAY_CHANCE = 0.8, GAMMA = 0.99, EPISODE_CAP = 60, MOVES = [0, 1, 2, 3];
+  const PAY_CHANCE = 0.8, GAMMA = 0.95, EPISODE_CAP = 60, MOVES = [0, 1, 2, 3];
   const STEP_X = [0, 0, -1, 1], STEP_Y = [-1, 1, 0, 0];
   // Each tick: one value-iteration sweep, Q-learning and SARSA steps, and a slice of DQN training time.
   const TABLE_STEPS_PER_TICK = 50000, DQN_MS_PER_TICK = 40, SCORE_EVERY_TICKS = 5, TEST_BOARD_COUNT = 100;
@@ -824,8 +824,7 @@ function argmax(values) {
     const bot = board.bot + STEP_X[move] + WIDTH * STEP_Y[move];
     if (!(blocks >> HOLE_CELL & 1)) return { board: { bot, blocks }, reward: 0, entered: false, ended: false };
     blocks &= ~(1 << HOLE_CELL);
-    const entriesBefore = BLOCK_COUNT - countBits(board.blocks);
-    return { board: { bot, blocks }, reward: PAY_CHANCE * (1 - PAY_CHANCE) ** entriesBefore, entered: true, ended: !(blocks & CAMERA_ROW_MASK) };
+    return { board: { bot, blocks }, reward: PAY_CHANCE, entered: true, ended: !(blocks & CAMERA_ROW_MASK) };
   }
 
   // Blocks start above the bottom row, so the camera begins with a clear view.
