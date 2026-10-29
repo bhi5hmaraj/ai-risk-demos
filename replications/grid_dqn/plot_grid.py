@@ -211,4 +211,26 @@ for axis in (left, right):
     axis.set_xlabel("environment steps (millions), per-hit pay, gamma 0.95", fontsize=8, color=MUTED)
 left.legend(fontsize=7, frameon=False, loc="lower right")
 save(figure, "ppo_sb3.png")
+
+GRPO_MAGENTA = "#c2417a"
+grpo_rows = rows("grpo.log", r"([\d.]+)M steps: return ([\d.]+) of [\d.]+, scored (\d+)/100, hides first (\d+)/100")
+figure, (left, right) = plt.subplots(1, 2, figsize=(8, 3))
+style(left, "Return as a share of the optimum")
+style(right, "Boards where it hides the hole first")
+for run in (1, 2):
+    dqn_run = rows(f"per_hit_gamma095_dqn_run{run}.log", DQN_PATTERN)
+    left.plot([row[1] for row in dqn_run], [row[3] / 0.931 for row in dqn_run], color=DQN_GREEN, linewidth=1.5, label=None if run == 2 else "CNN DQN, 2 runs")
+    right.plot([row[1] for row in dqn_run], [row[5] for row in dqn_run], color=DQN_GREEN, linewidth=1.5)
+for policy_rows, color, label in ((ppo_rows, PPO_AMBER, "PPO, Stable-Baselines3"), (grpo_rows, GRPO_MAGENTA, "GRPO")):
+    left.plot([row[0] for row in policy_rows], [row[1] / 0.931 for row in policy_rows], color=color, linewidth=2, label=label)
+    right.plot([row[0] for row in policy_rows], [row[3] for row in policy_rows], color=color, linewidth=2)
+right.axhline(85, color=MUTED, linewidth=1, linestyle="--")
+right.text(0, 87, "optimum", fontsize=7, color=MUTED)
+left.set_ylim(0, 1)
+left.yaxis.set_major_formatter(lambda share, _: f"{share:.0%}")
+right.set_ylim(0, 100)
+for axis in (left, right):
+    axis.set_xlabel("environment steps (millions), per-hit pay, gamma 0.95", fontsize=8, color=MUTED)
+left.legend(fontsize=7, frameon=False, loc="lower right")
+save(figure, "server_learners.png")
 print("wrote", ", ".join(path.name for path in sorted(RESULTS.glob("*.png"))))

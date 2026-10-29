@@ -35,6 +35,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   page's grid now uses it, as Armstrong framed the game (E24).
 - PPO from Stable-Baselines3 reaches 80% of the optimum on that grid in a quarter of the CNN DQN's steps, and
   hides first on 79 boards by 2M steps. It trains on a local server that also serves the page (E30).
+- GRPO, with no value network, learns to score but stalls at 55% of the optimum and hides first on 6
+  boards by 2.9M steps. Early on, half its groups give no gradient (E31).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -74,6 +76,7 @@ flowchart TD
     sarsa --> sarsawhy["E23: why SARSA trails<br/>target noise, not caution"]
     grid --> perhit2["E24: per-hit pay, gamma 0.95<br/>CNN DQN reaches 93% of the optimum"]
     perhit2 --> ppo2["E30: PPO from Stable-Baselines3<br/>80% of the optimum in a quarter of the steps"]
+    ppo2 --> grpo2["E31: GRPO, no value network<br/>scores but hides on 6/100"]
     vi --> game["E3: the game as text<br/>Sonnet hides 8/8, scores 1 block"]
     game --> qwen["E4, E5: RL on Qwen3.5-4B, pay once<br/>honest play"]
     qwen --> trazzi["E6: Trazzi's game as text<br/>RL collapsed, stopped"]
@@ -1184,7 +1187,7 @@ gamma 0.95. The policy and value heads share the page's CNN. Each rollout is 64 
 epochs of 512-sample minibatches, at learning rate 2.5e-4 and entropy coefficient 0.01. It scores the greedy
 policy on E14's 100 test boards.
 
-[ppo_server.py](replications/grid_dqn/ppo_server.py) trains the same PPO behind FastAPI. The explainer page
+[grid_server.py](replications/grid_dqn/grid_server.py) trains the same PPO behind FastAPI. The explainer page
 plots its scores and asks it for moves. A published claude.ai artifact cannot call localhost, so the server
 also serves the page at http://127.0.0.1:8790.
 
@@ -1206,9 +1209,46 @@ Result:
 - Both end near the optimum, which hides first on 85 boards. PPO hides first on 79 by 2M steps, and the DQN on
   75 to 79 by 3.2M.
 
-Code: [ppo_sb3.py](replications/grid_dqn/ppo_sb3.py), [ppo_server.py](replications/grid_dqn/ppo_server.py) and
+Code: [ppo_sb3.py](replications/grid_dqn/ppo_sb3.py), [grid_server.py](replications/grid_dqn/grid_server.py) and
 [plot_grid.py](replications/grid_dqn/plot_grid.py). Data: [ppo_sb3.log](replications/grid_dqn/results/ppo_sb3.log).
 Cost: local, about 15 minutes on the CPU.
+
+## E31. GRPO on the 6 x 5 grid, and the DQN on the server's GPU (2026-10-30)
+
+Question: does GRPO, which has no value network, learn the per-hit grid of E24 like PPO does?
+
+Setup: [grid_learners.py](replications/grid_dqn/grid_learners.py) holds a PyTorch CNN DQN with the page's
+settings and a GRPO learner. GRPO uses the same CNN as a policy. It plays 8 episodes from each of 32 random
+boards. Each episode's advantage is its discounted return minus its group's mean, divided by the group's
+spread. Then it runs 4 epochs of PPO's clipped objective over minibatches of 32 whole episodes, at learning
+rate 3e-4 and clip 0.2.
+
+[grid_server.py](replications/grid_dqn/grid_server.py) now trains PPO, the DQN and GRPO side by side, with the DQN and GRPO on the Mac GPU (MPS). The page plots all three and falls back to its
+TensorFlow.js DQN when the server is off.
+
+![DQN, PPO and GRPO on the server](replications/grid_dqn/results/server_learners.png)
+
+| Per-hit pay, gamma 0.95 | 0.5M steps | 2M steps | 2.9 to 3.2M steps |
+|---|---|---|---|
+| PPO (E30): return, hides first | 0.746, 59/100 | 0.854, 79/100 | not run |
+| CNN DQN, 2 runs (E24): return, hides first | 0.096 to 0.130, 0/100 | 0.685 to 0.737, 27 to 45/100 | 0.853 to 0.874, 75 to 79/100 |
+| GRPO: return, hides first | 0.311, 0/100 | 0.511, 7/100 | 0.513, 6/100 |
+
+Result:
+
+- GRPO learns to score but not to hide. It scores on 86 to 90 of 100 boards from 1.8M steps on, and stalls
+  at 55% of the optimum (0.931). It hides first on 8 boards at most.
+- Early on, every episode scored the same in 41 to 56% of groups, so those groups gave no gradient.
+  About 10% of episodes scored at all. A value network gives PPO a signal on every move instead.
+- With a Python loop doing 2 gradient steps per batch, GRPO did not learn. Minibatches of whole episodes over
+  4 epochs, 32 steps per batch, fixed that.
+- On MPS the DQN runs at about 14,500 steps a second alone and GRPO at about 8,700. PPO stays on the CPU at
+  about 2,000. The DQN looks to catch PPO suddenly on the page because it runs more steps a second and the
+  x-axis is logarithmic. In steps, PPO reaches 80% of the optimum about 4 times sooner.
+
+Code: [grid_learners.py](replications/grid_dqn/grid_learners.py), [grid_server.py](replications/grid_dqn/grid_server.py)
+and [plot_grid.py](replications/grid_dqn/plot_grid.py). Data: [grpo.log](replications/grid_dqn/results/grpo.log).
+Cost: local, about 20 minutes for the GRPO run.
 
 ## Paused
 
@@ -1237,8 +1277,8 @@ Cost: local, about 15 minutes on the CPU.
 | [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's gridworld as text, value iteration, Q-learning, tabular GRPO, PPO, route and goto macros, RL, the base-model eval with a no-bow control |
 | [replications/](replications/) | the Trazzi and Gwern replications and exact optima |
 | [replications/grid_dqn/](replications/grid_dqn/) | the 6 x 5 grid: exact model, DQN diagnosis, CNN fit, CNN DQN, SARSA against Q-learning, and the check that the page matches |
-| [replications/explainer.html](replications/explainer.html) | the explainer page: replays, and value iteration, Q-learning, SARSA and a TensorFlow.js CNN DQN learning the grid live |
-| [replications/grid_dqn/ppo_server.py](replications/grid_dqn/ppo_server.py) | PPO from Stable-Baselines3 behind FastAPI, serving the explainer page with PPO live at http://127.0.0.1:8790 |
+| [replications/explainer.html](replications/explainer.html) | the explainer page: replays, and value iteration, Q-learning, SARSA, a CNN DQN, PPO and GRPO learning the grid live |
+| [replications/grid_dqn/grid_server.py](replications/grid_dqn/grid_server.py) | PPO from Stable-Baselines3, and the PyTorch DQN and GRPO of [grid_learners.py](replications/grid_dqn/grid_learners.py), behind FastAPI. It serves the explainer page with them live at http://127.0.0.1:8790 |
 
 ## Adding an entry
 

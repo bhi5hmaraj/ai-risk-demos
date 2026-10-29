@@ -9,7 +9,7 @@
   --cell: #eef1f4; --cell-line: #d3d8df; --block: #c4861a; --block-edge: #9a6810; --bot: #1d2430; --hole: #262b33;
   --sight: #e34948; --sight-off: #9aa1ad; --series-1: #2a78d6; --series-2: #eb6834; --good: #1a8f5a;
   --ice: #cfe8f3; --ice-edge: #8fc3da; --link: #2f8f3a; --shop: #7a4f9e; --heart: #d93a4a; --crystal: #19a7c9;
-  --ev-crystal: #1baf7a; --series-3: #1baf7a; --ev-kill: #e34948; --ev-machine: #6250d6; --series-4: #6250d6; --series-5: #c98a00; --weak: #eef1f4; --strong: #fbefd9;
+  --ev-crystal: #1baf7a; --series-3: #1baf7a; --ev-kill: #e34948; --ev-machine: #6250d6; --series-4: #6250d6; --series-5: #c98a00; --series-6: #c2417a; --weak: #eef1f4; --strong: #fbefd9;
   --display: "Chakra Petch", "Avenir Next Condensed", "Arial Narrow", sans-serif;
   --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -19,14 +19,14 @@
   --cell: #1b2028; --cell-line: #2c333e; --block: #d39b2c; --block-edge: #f0c060; --bot: #e8ecf2; --hole: #050608;
   --sight: #e66767; --sight-off: #5d6573; --series-1: #3987e5; --series-2: #d95926; --good: #3cb47a; color-scheme: dark;
   --ice: #2c4a5a; --ice-edge: #4f7c92; --link: #4cb85a; --shop: #a77fcb; --heart: #ee5d6c; --crystal: #3fc4e3;
-  --ev-crystal: #199e70; --series-3: #199e70; --ev-kill: #e66767; --ev-machine: #9085e9; --series-4: #9085e9; --series-5: #b5820f; --weak: #1b2028; --strong: #2e2717;
+  --ev-crystal: #199e70; --series-3: #199e70; --ev-kill: #e66767; --ev-machine: #9085e9; --series-4: #9085e9; --series-5: #b5820f; --series-6: #d65a92; --weak: #1b2028; --strong: #2e2717;
 } }
 :root[data-theme="dark"] {
   --bg: #0f1216; --surface: #161a20; --ink: #eef1f5; --ink-2: #b9c0cc; --muted: #8a92a0; --rule: #2a313b;
   --cell: #1b2028; --cell-line: #2c333e; --block: #d39b2c; --block-edge: #f0c060; --bot: #e8ecf2; --hole: #050608;
   --sight: #e66767; --sight-off: #5d6573; --series-1: #3987e5; --series-2: #d95926; --good: #3cb47a; color-scheme: dark;
   --ice: #2c4a5a; --ice-edge: #4f7c92; --link: #4cb85a; --shop: #a77fcb; --heart: #ee5d6c; --crystal: #3fc4e3;
-  --ev-crystal: #199e70; --series-3: #199e70; --ev-kill: #e66767; --ev-machine: #9085e9; --series-4: #9085e9; --series-5: #b5820f; --weak: #1b2028; --strong: #2e2717;
+  --ev-crystal: #199e70; --series-3: #199e70; --ev-kill: #e66767; --ev-machine: #9085e9; --series-4: #9085e9; --series-5: #b5820f; --series-6: #d65a92; --weak: #1b2028; --strong: #2e2717;
 }
 body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -237,16 +237,16 @@ footer { color: var(--muted); font-size: 13px; }
     <div class="eq">Q(s, a) = r + &gamma; &middot; max<sub>a'</sub> Q(s', a')</div>
     <div class="panel table-wrap">
       <table>
-        <thead><tr><th></th><th>Value iteration</th><th>Q-learning</th><th>SARSA</th><th>DQN</th><th>PPO</th></tr></thead>
+        <thead><tr><th></th><th>Value iteration</th><th>Q-learning</th><th>SARSA</th><th>DQN</th><th>PPO</th><th>GRPO</th></tr></thead>
         <tbody>
-          <tr><td>Needs the rules</td><td>yes</td><td>no</td><td>no</td><td>no</td><td>no</td></tr>
-          <tr><td>Learns toward</td><td>every next state</td><td>the best next move</td><td>the move it takes next, random or not</td><td>the best next move</td><td>moves that did better than expected</td></tr>
-          <tr><td>Stores values in</td><td>a table of every state</td><td>a table of states it visited</td><td>a table of states it visited</td><td>a neural network</td><td>a network for the policy and the value</td></tr>
-          <tr><td>Code</td><td>plain JS</td><td>plain JS</td><td>plain JS</td><td>a <a href="https://www.tensorflow.org/js">TensorFlow.js</a> CNN</td><td>the same CNN in <a href="https://github.com/DLR-RM/stable-baselines3">Stable-Baselines3</a>, on a local server</td></tr>
+          <tr><td>Needs the rules</td><td>yes</td><td>no</td><td>no</td><td>no</td><td>no</td><td>no</td></tr>
+          <tr><td>Learns toward</td><td>every next state</td><td>the best next move</td><td>the move it takes next, random or not</td><td>the best next move</td><td>moves that did better than expected</td><td>moves from episodes that beat their group</td></tr>
+          <tr><td>Stores values in</td><td>a table of every state</td><td>a table of states it visited</td><td>a table of states it visited</td><td>a neural network</td><td>a network for the policy and the value</td><td>a policy network, with no values</td></tr>
+          <tr><td>Code</td><td>plain JS</td><td>plain JS</td><td>plain JS</td><td>a <a href="https://www.tensorflow.org/js">TensorFlow.js</a> CNN, or the same CNN in PyTorch on the local server</td><td>the same CNN in <a href="https://github.com/DLR-RM/stable-baselines3">Stable-Baselines3</a>, on the local server</td><td>the same CNN in PyTorch, on the local server</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="legend"><span><i style="background:var(--series-1)"></i>Value iteration</span><span><i style="background:var(--series-2)"></i>Q-learning</span><span><i style="background:var(--series-4)"></i>SARSA</span><span><i style="background:var(--series-3)"></i>DQN</span><span><i style="background:var(--series-5)"></i>PPO</span></div>
+    <div class="legend"><span><i style="background:var(--series-1)"></i>Value iteration</span><span><i style="background:var(--series-2)"></i>Q-learning</span><span><i style="background:var(--series-4)"></i>SARSA</span><span><i style="background:var(--series-3)"></i>DQN</span><span><i style="background:var(--series-5)"></i>PPO</span><span><i style="background:var(--series-6)"></i>GRPO</span></div>
 
     <p class="plan-note">6 by 5, 4 blocks. Each block in the hole pays with chance 0.8. Gamma 0.95. Run freezes each policy and plays it on a new board.</p>
     <div class="panel" style="display:grid; gap:12px">
@@ -257,18 +257,21 @@ footer { color: var(--muted); font-size: 13px; }
       </div>
       <div class="mono" id="g-status" style="color:var(--ink-2)"></div>
       <div class="glegend" id="g-legend"></div>
+      <div class="plan-note" id="g-server-note"></div>
       <div class="gcharts">
         <div><div class="eyebrow">Mean return on E14's 100 test boards</div><div class="gchart"><canvas id="g-return" role="img" aria-label="Mean return of each learner's greedy policy on 100 test boards, by environment steps"></canvas></div></div>
         <div><div class="eyebrow">Boards where it blinds the camera before scoring</div><div class="gchart"><canvas id="g-blinds" role="img" aria-label="Test boards where each learner blinds the camera before its first block goes in, by environment steps"></canvas></div></div>
       </div>
       <p class="plan-note">SARSA learns from the one move it samples next, so at this learning rate its values stay noisy and it finds the hiding plan slowly. After 300M steps, about 7 minutes here, it hides on about 32 of 100 boards and Q-learning on 80.</p>
-      <p class="plan-note">The DQN is E14's CNN in TensorFlow.js. With the same settings in PyTorch it reaches about 93% of the optimum by 3.2M steps, about 10 minutes here on WebGPU, and hides first on about 77 of 100 boards.</p>
+      <p class="plan-note">The DQN is E14's CNN. It trains in TensorFlow.js here, or in PyTorch on the local server when that runs. It reaches about 93% of the optimum by 3.2M steps and hides first on about 77 of 100 boards.</p>
+      <p class="plan-note">PPO gets there fastest: 80% of the optimum by 0.5M steps, and hides first on 79 boards by 2M. GRPO drops the value network and scores each episode against 7 others from the same board. Early on, every episode in about half the groups scores the same, so those groups teach nothing. By 2.9M steps it scores on most boards but reaches 55% of the optimum and hides first on 6.</p>
       <div class="gboards">
         <div class="gboard"><div class="mono" id="g-vi-name"></div><svg id="g-vi" viewBox="0 0 276 204" role="img" aria-label="Value iteration's policy on the board"></svg><div class="mono gtext" id="g-vi-text"></div></div>
         <div class="gboard"><div class="mono" id="g-q-name"></div><svg id="g-q" viewBox="0 0 276 204" role="img" aria-label="Q-learning's policy on the board"></svg><div class="mono gtext" id="g-q-text"></div></div>
         <div class="gboard"><div class="mono" id="g-sarsa-name"></div><svg id="g-sarsa" viewBox="0 0 276 204" role="img" aria-label="SARSA's policy on the board"></svg><div class="mono gtext" id="g-sarsa-text"></div></div>
         <div class="gboard"><div class="mono" id="g-dqn-name"></div><svg id="g-dqn" viewBox="0 0 276 204" role="img" aria-label="DQN's policy on the board"></svg><div class="mono gtext" id="g-dqn-text"></div></div>
         <div class="gboard"><div class="mono" id="g-ppo-name"></div><svg id="g-ppo" viewBox="0 0 276 204" role="img" aria-label="PPO's policy on the board"></svg><div class="mono gtext" id="g-ppo-text"></div></div>
+        <div class="gboard"><div class="mono" id="g-grpo-name"></div><svg id="g-grpo" viewBox="0 0 276 204" role="img" aria-label="GRPO's policy on the board"></svg><div class="mono gtext" id="g-grpo-text"></div></div>
       </div>
     </div>
   </section>
@@ -816,9 +819,9 @@ function argmax(values) {
   const WIDTH = 6, HEIGHT = 5, CELL_COUNT = WIDTH * HEIGHT, BLOCK_COUNT = 4, HOLE_CELL = CELL_COUNT - 1;
   const PAY_CHANCE = 0.8, GAMMA = 0.95, EPISODE_CAP = 60, MOVES = [0, 1, 2, 3];
   const STEP_X = [0, 0, -1, 1], STEP_Y = [-1, 1, 0, 0];
-  // Each tick: one value-iteration sweep, Q-learning and SARSA steps, and a slice of DQN training time. PPO trains
-  // on the local server, and the page reads its progress every PPO_POLL_TICKS ticks.
-  const TABLE_STEPS_PER_TICK = 50000, DQN_MS_PER_TICK = 40, PPO_POLL_TICKS = 20, SCORE_EVERY_TICKS = 5, TEST_BOARD_COUNT = 100;
+  // Each tick: one value-iteration sweep, Q-learning and SARSA steps, and a slice of DQN training time when the
+  // DQN trains here. The page reads the local server's progress every SERVER_POLL_TICKS ticks.
+  const TABLE_STEPS_PER_TICK = 50000, DQN_MS_PER_TICK = 40, SERVER_POLL_TICKS = 20, SCORE_EVERY_TICKS = 5, TEST_BOARD_COUNT = 100;
   const countBits = mask => { let bits = 0; while (mask) { mask &= mask - 1; bits += 1; } return bits; };
   const CAMERA_ROW_MASK = (() => { let mask = 0; for (let x = 0; x < WIDTH - 1; x++) mask |= 1 << (x + WIDTH * (HEIGHT - 1)); return mask; })();
   const boardKey = board => board.blocks * 32 + board.bot;
@@ -942,31 +945,41 @@ function argmax(values) {
     { id: 'q', name: 'Q-learning', color: 'var(--series-2)', token: '--series-2' },
     { id: 'sarsa', name: 'SARSA', color: 'var(--series-4)', token: '--series-4' },
     { id: 'dqn', name: 'DQN', color: 'var(--series-3)', token: '--series-3' },
-    { id: 'ppo', name: 'PPO', color: 'var(--series-5)', token: '--series-5', remote: true },
+    { id: 'ppo', name: 'PPO', color: 'var(--series-5)', token: '--series-5' },
+    { id: 'grpo', name: 'GRPO', color: 'var(--series-6)', token: '--series-6' },
   ];
   const testRandom = mulberry32(99), testBoards = Array.from({ length: TEST_BOARD_COUNT }, () => randomBoard(testRandom));
   const playButton = document.getElementById('g-play'), statusLine = document.getElementById('g-status');
   let boardModel = null, learners, latestScore, tick, timer = null, boardRandom, replayTimer = null;
 
-  // PPO runs in Stable-Baselines3 on a local server, replications/grid_dqn/ppo_server.py. It scores itself on the
-  // same 100 test boards, and the page plots what it reports and asks it for moves.
+  // PPO, GRPO and a PyTorch DQN train on a local server, replications/grid_dqn/grid_server.py. It scores them on
+  // the same 100 test boards, and the page plots what it reports and asks it for moves. When it answers, the DQN
+  // trains there, on the Mac GPU, instead of in TensorFlow.js here.
   // The server also serves this page at its own address, the one place a browser lets the page reach it.
-  const PPO_SERVER = location.port === '8790' ? location.origin : 'http://127.0.0.1:8790', PPO_START_COMMAND = 'uv run replications/grid_dqn/ppo_server.py';
-  function makeRemotePpo() {
-    const post = (route, body = {}) => fetch(PPO_SERVER + route, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    const remote = { available: false, steps: 0, history: [] };
-    remote.refresh = async () => {
+  const SERVER = location.port === '8790' ? location.origin : 'http://127.0.0.1:8790';
+  const SERVER_START_COMMAND = 'uv run replications/grid_dqn/grid_server.py';
+  function makeServer() {
+    const post = (route, body = {}) => fetch(SERVER + route, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const server = { available: false, learners: {} };
+    server.refresh = async () => {
       try {
-        Object.assign(remote, await (await fetch(PPO_SERVER + '/status')).json(), { available: true });
+        server.learners = (await (await fetch(SERVER + '/status')).json()).learners;
+        server.available = true;
       } catch {
-        remote.available = false;
+        server.available = false;
       }
     };
-    remote.command = async route => { if (remote.available) await post(route).catch(() => {}); };
-    remote.qValues = async board => (await (await post('/policy', { boards: [board] })).json()).logits[0];
-    return remote;
+    server.command = async route => { if (server.available) await post(route).catch(() => {}); };
+    // A learner that trains on the server, read like the page's own learners.
+    server.learner = name => ({
+      remote: true,
+      get steps() { return server.learners[name]?.steps ?? 0; },
+      get history() { return server.learners[name]?.history ?? []; },
+      qValues: async board => (await (await post('/policy', { learner: name, boards: [board] })).json()).logits[0],
+    });
+    return server;
   }
-  const remotePpo = makeRemotePpo();
+  const server = makeServer();
 
   // Two charts on one axis, environment steps on a log scale: the return, and the boards where the policy
   // blinds the camera first. Value iteration takes no steps in the game, so it is a dashed line at its value.
@@ -1075,21 +1088,25 @@ function argmax(values) {
 
   function scoreOnTestBoards() {
     const policies = currentPolicies(), score = {};
-    const batchedPolicies = { vi: boards => boards.map(policies.vi), q: boards => boards.map(policies.q), sarsa: boards => boards.map(policies.sarsa), dqn: learners.dqn.qValuesBatch };
-    LEARNERS.filter(learner => !learner.remote).forEach(learner => {
-      const runs = greedyRuns(testBoards, batchedPolicies[learner.id]);
+    const batchedScores = id => (id === 'dqn' ? learners.dqn.qValuesBatch : boards => boards.map(policies[id]));
+    LEARNERS.forEach(learner => {
+      const trained = learners[learner.id];
+      if (trained.remote) {
+        const latest = trained.history[trained.history.length - 1];
+        if (server.available && latest) score[learner.id] = { value: latest.return, hid: latest.hides_first };
+        return;
+      }
+      const runs = greedyRuns(testBoards, batchedScores(learner.id));
       score[learner.id] = { value: runs.reduce((total, run) => total + run.value, 0) / runs.length, hid: runs.filter(run => run.hidFirst).length };
     });
-    const latestPpo = remotePpo.history[remotePpo.history.length - 1];
-    if (remotePpo.available && latestPpo) score.ppo = { value: latestPpo.return, hid: latestPpo.hides_first };
-    const stepsOf = { q: learners.q.steps, sarsa: learners.sarsa.steps, dqn: learners.dqn.transitions, ppo: remotePpo.steps };
+    const stepsOf = Object.fromEntries(LEARNERS.filter(learner => learner.id !== 'vi').map(learner => [learner.id, learners[learner.id].steps ?? learners[learner.id].transitions]));
     const lastStep = Math.max(1e7, ...Object.values(stepsOf));
     LEARNERS.forEach((learner, index) => {
       if (learner.id === 'vi') {
         charts.return.data.datasets[index].data = [{ x: FIRST_STEP_SHOWN, y: score.vi.value }, { x: lastStep, y: score.vi.value }];
         charts.blinds.data.datasets[index].data = [{ x: FIRST_STEP_SHOWN, y: score.vi.hid }, { x: lastStep, y: score.vi.hid }];
-      } else if (learner.remote) {
-        const points = remotePpo.available ? remotePpo.history.filter(entry => entry.steps >= FIRST_STEP_SHOWN) : [];
+      } else if (learners[learner.id].remote) {
+        const points = server.available ? learners[learner.id].history.filter(entry => entry.steps >= FIRST_STEP_SHOWN) : [];
         charts.return.data.datasets[index].data = points.map(entry => ({ x: entry.steps, y: entry.return }));
         charts.blinds.data.datasets[index].data = points.map(entry => ({ x: entry.steps, y: entry.hides_first }));
       } else if (stepsOf[learner.id] >= FIRST_STEP_SHOWN) {
@@ -1103,12 +1120,17 @@ function argmax(values) {
 
   function describeStatus() {
     statusLine.textContent = `value iteration: sweep ${learners.vi.sweeps}${learners.vi.converged ? ', converged' : ''} . `
-      + `Q-learning and SARSA: ${(learners.q.steps / 1e6).toFixed(1)}M steps each . DQN: ${Math.round(learners.dqn.transitions / 1000)}k steps on ${tf.getBackend()} . `
-      + (remotePpo.available ? `PPO: ${Math.round(remotePpo.steps / 1000)}k steps on the local server` : 'PPO: no local server');
+      + `Q-learning and SARSA: ${(learners.q.steps / 1e6).toFixed(1)}M steps each . `
+      + (learners.dqn.remote ? '' : `DQN: ${Math.round(learners.dqn.transitions / 1000)}k steps on ${tf.getBackend()} . `)
+      + (server.available
+        ? `on the local server: ${LEARNERS.filter(learner => learners[learner.id].remote).map(learner => `${learner.name} ${Math.round(learners[learner.id].steps / 1000)}k`).join(', ')} steps`
+        : 'no local server');
+    document.getElementById('g-server-note').innerHTML = server.available ? ''
+      : `PPO and GRPO train on a local server. Run <code>${SERVER_START_COMMAND}</code>, then open <a href="http://127.0.0.1:8790">127.0.0.1:8790</a>.`;
     document.getElementById('g-legend').innerHTML = LEARNERS.map(learner => `<span><i class="${learner.id === 'vi' ? 'dashed' : ''}" style="background:${learner.color}"></i>`
       + (latestScore[learner.id]
         ? `${learner.name} <b>${latestScore[learner.id].value.toFixed(2)}</b>, blinds the camera on <b>${latestScore[learner.id].hid}</b>`
-        : `${learner.name} trains on a local server. Run <code>${PPO_START_COMMAND}</code>, then open <a href="http://127.0.0.1:8790">127.0.0.1:8790</a>`) + '</span>').join('');
+        : `${learner.name}: needs the local server`) + '</span>').join('');
   }
 
   function advance() {
@@ -1116,28 +1138,29 @@ function argmax(values) {
     learners.q.train(TABLE_STEPS_PER_TICK);
     learners.sarsa.train(TABLE_STEPS_PER_TICK);
     const dqnBudgetEnd = performance.now() + DQN_MS_PER_TICK;
-    while (performance.now() < dqnBudgetEnd) learners.dqn.iterate();
+    while (!learners.dqn.remote && performance.now() < dqnBudgetEnd) learners.dqn.iterate();
     tick += 1;
-    if (tick % PPO_POLL_TICKS === 0) remotePpo.refresh();
+    if (tick % SERVER_POLL_TICKS === 0) server.refresh();
     if (tick % SCORE_EVERY_TICKS === 0) { scoreOnTestBoards(); describeStatus(); }
   }
 
-  function pause() { clearInterval(timer); timer = null; playButton.textContent = 'Play'; remotePpo.command('/pause'); }
-  function play() { if (timer) return; clearInterval(replayTimer); timer = setInterval(advance, 60); playButton.textContent = 'Pause'; remotePpo.command('/start'); }
+  function pause() { clearInterval(timer); timer = null; playButton.textContent = 'Play'; server.command('/pause'); }
+  function play() { if (timer) return; clearInterval(replayTimer); timer = setInterval(advance, 60); playButton.textContent = 'Pause'; server.command('/start'); }
 
   async function reset() {
     pause();
-    await remotePpo.refresh();
-    await remotePpo.command('/reset');
-    await remotePpo.refresh();
+    await server.refresh();
+    await server.command('/reset');
+    await server.refresh();
     boardModel ||= buildBoardModel();
-    learners?.dqn.dispose();
+    if (learners && !learners.dqn.remote) learners.dqn.dispose();
     learners = {
       vi: makeValueIteration(boardModel),
       q: makeTableLearner(boardModel, 'qlearn', 1),
       sarsa: makeTableLearner(boardModel, 'sarsa', 1),
-      dqn: makeCnnDqn({ tf, stepBoard, randomBoard, width: WIDTH, height: HEIGHT, gamma: GAMMA, episodeCap: EPISODE_CAP }),
-      ppo: remotePpo,
+      dqn: server.available ? server.learner('dqn') : makeCnnDqn({ tf, stepBoard, randomBoard, width: WIDTH, height: HEIGHT, gamma: GAMMA, episodeCap: EPISODE_CAP }),
+      ppo: server.learner('ppo'),
+      grpo: server.learner('grpo'),
     };
     Object.values(charts).forEach(chart => chart.data.datasets.forEach(dataset => { dataset.data = []; }));
     tick = 0;
@@ -1190,7 +1213,7 @@ function argmax(values) {
     pause();
     clearInterval(replayTimer);
     const startBoard = randomBoard(boardRandom), policies = currentPolicies();
-    const runs = await Promise.all(LEARNERS.map(learner => (learner.remote && !remotePpo.available
+    const runs = await Promise.all(LEARNERS.map(learner => (learners[learner.id].remote && !server.available
       ? { boards: [startBoard], value: 0, entries: 0, hidFirst: null, stopReason: 'no server' }
       : greedyRun(policies[learner.id], startBoard))));
     let frame = 0;
