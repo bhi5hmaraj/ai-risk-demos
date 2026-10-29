@@ -724,8 +724,8 @@ Result:
 
 The explainer page now trains SARSA next to Q-learning. It no longer uses reinforce.js: its value iteration
 is gridcore.js's, and its Q-learning and SARSA are this loop. At seed 1,
-[page_parity.js](replications/grid_dqn/page_parity.js) gets the page's 20M-step lines above digit for digit,
-and its value iteration scores 0.831 and hides first on 86, as gridcore.js does.
+[page_parity.js](replications/grid_dqn/page_parity.js) gets the page's 20M-step lines above digit for digit.
+The page's value iteration scores 0.831 and hides first on 86, as gridcore.js does.
 
 Code: [sarsa_vs_q.js](replications/grid_dqn/sarsa_vs_q.js) and
 [plot_grid.py](replications/grid_dqn/plot_grid.py). Data:
