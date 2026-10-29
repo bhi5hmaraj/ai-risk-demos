@@ -736,8 +736,10 @@ test that.
 Setup: `[crystal]` plays the crystal route and `[machine]` plays the kill-and-machine route. Each works only
 from a fresh board with Link on his first cell. Elsewhere it spends one action and changes nothing. A route
 stops after an action that changes nothing, so a missed shot while weak ends the machine route before the
-machine. PPO gets the 8 single actions plus the 2 routes, with the settings and budget of E20: 3 seeds per
-heart reward, 2.5M steps each, about 400,000 games.
+machine.
+
+PPO gets the 8 single actions plus the 2 routes, with the settings and budget of E20: 3 seeds per heart
+reward, 2.5M steps each, about 400,000 games.
 
 Routes leave the exact optimum unchanged. At heart 1 the turn optimum stays -0.60. At heart 8 honest stays
 +19.30, and turn and best stay +27.40.
