@@ -33,6 +33,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 - Paying every hit at gamma 0.95 keeps hiding optimal and widens the gap between the best two moves 19
   times. The CNN DQN then reaches 92 to 94% of the optimum by 3.2M steps, against 39 to 46%. The explainer
   page's grid now uses it, as Armstrong framed the game (E24).
+- PPO from Stable-Baselines3 reaches 80% of the optimum on that grid in a quarter of the CNN DQN's steps, and
+  hides first on 79 boards by 2M steps. It trains on a local server that also serves the page (E30).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -71,6 +73,7 @@ flowchart TD
     grid --> sarsa["E21: SARSA against Q-learning<br/>SARSA hides on 24/100, Q on 82"]
     sarsa --> sarsawhy["E23: why SARSA trails<br/>target noise, not caution"]
     grid --> perhit2["E24: per-hit pay, gamma 0.95<br/>CNN DQN reaches 93% of the optimum"]
+    perhit2 --> ppo2["E30: PPO from Stable-Baselines3<br/>80% of the optimum in a quarter of the steps"]
     vi --> game["E3: the game as text<br/>Sonnet hides 8/8, scores 1 block"]
     game --> qwen["E4, E5: RL on Qwen3.5-4B, pay once<br/>honest play"]
     qwen --> trazzi["E6: Trazzi's game as text<br/>RL collapsed, stopped"]
@@ -1172,6 +1175,41 @@ What the results change:
 Data: [eval-points-smoke.jsonl](environments/treacherous_turn/results/eval-points-smoke.jsonl). Cost: about
 $0.57 on Tinker by token count.
 
+## E30. PPO on the 6 x 5 grid, from a local Stable-Baselines3 server (2026-10-30)
+
+Question: how does PPO learn the per-hit grid of E24, next to the CNN DQN?
+
+Setup: [ppo_sb3.py](replications/grid_dqn/ppo_sb3.py) runs PPO from Stable-Baselines3 2.8.0 at per-hit pay and
+gamma 0.95. The policy and value heads share the page's CNN. Each rollout is 64 steps of 128 envs, then 4
+epochs of 512-sample minibatches, at learning rate 2.5e-4 and entropy coefficient 0.01. It scores the greedy
+policy on E14's 100 test boards.
+
+[ppo_server.py](replications/grid_dqn/ppo_server.py) trains the same PPO behind FastAPI. The explainer page
+plots its scores and asks it for moves. A published claude.ai artifact cannot call localhost, so the server
+also serves the page at http://127.0.0.1:8790.
+
+A TensorFlow.js port of PPO came first. Its advantages, loss, gradients and rollouts matched Stable-Baselines3
+on the CPU backend. On WebGPU, the gradients came out wrong after scaling for clipping: the policy and value
+heads got zero. The port learned far slower than Stable-Baselines3 and was dropped.
+
+![PPO against the CNN DQN](replications/grid_dqn/results/ppo_sb3.png)
+
+| Per-hit pay, gamma 0.95 | 0.5M steps | 2M steps | 3.2M steps |
+|---|---|---|---|
+| PPO: return, hides first | 0.746, 59/100 | 0.854, 79/100 | not run |
+| CNN DQN, 2 runs (E24): return, hides first | 0.096 to 0.130, 0/100 | 0.685 to 0.737, 27 to 45/100 | 0.853 to 0.874, 75 to 79/100 |
+
+Result:
+
+- PPO reaches 80% of the optimum (0.931) in about a quarter of the CNN DQN's steps: 0.5M against 2.2 to
+  2.3M.
+- Both end near the optimum, which hides first on 85 boards. PPO hides first on 79 by 2M steps, and the DQN on
+  75 to 79 by 3.2M.
+
+Code: [ppo_sb3.py](replications/grid_dqn/ppo_sb3.py), [ppo_server.py](replications/grid_dqn/ppo_server.py) and
+[plot_grid.py](replications/grid_dqn/plot_grid.py). Data: [ppo_sb3.log](replications/grid_dqn/results/ppo_sb3.log).
+Cost: local, about 15 minutes on the CPU.
+
 ## Paused
 
 - A port of the absent-supervisor and off-switch environments from AI Safety Gridworlds (Leike et al.,
@@ -1199,7 +1237,8 @@ $0.57 on Tinker by token count.
 | [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's gridworld as text, value iteration, Q-learning, tabular GRPO, PPO, route and goto macros, RL, the base-model eval with a no-bow control |
 | [replications/](replications/) | the Trazzi and Gwern replications and exact optima |
 | [replications/grid_dqn/](replications/grid_dqn/) | the 6 x 5 grid: exact model, DQN diagnosis, CNN fit, CNN DQN, SARSA against Q-learning, and the check that the page matches |
-| [replications/explainer.html](replications/explainer.html) | the explainer page: replays, and value iteration, Q-learning and a TensorFlow.js CNN DQN learning the grid live |
+| [replications/explainer.html](replications/explainer.html) | the explainer page: replays, and value iteration, Q-learning, SARSA and a TensorFlow.js CNN DQN learning the grid live |
+| [replications/grid_dqn/ppo_server.py](replications/grid_dqn/ppo_server.py) | PPO from Stable-Baselines3 behind FastAPI, serving the explainer page with PPO live at http://127.0.0.1:8790 |
 
 ## Adding an entry
 

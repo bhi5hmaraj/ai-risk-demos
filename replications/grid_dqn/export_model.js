@@ -1,6 +1,6 @@
 const fs = require('fs');
 const grid = require('./gridcore.js');
-const outputDir = require('path').join(__dirname, 'outputs');
+const outputDir = process.env.OUTPUT_DIR || require('path').join(__dirname, 'outputs');
 fs.mkdirSync(outputDir, { recursive: true });
 const mulberry32 = seed => { let state = seed >>> 0; return () => { state = (state + 0x6D2B79F5) >>> 0; let mixed = Math.imul(state ^ (state >>> 15), 1 | state); mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed; return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296; }; };
 const model = grid.buildModel(), boardCount = model.boards.length;
