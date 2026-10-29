@@ -9,7 +9,7 @@ import functools
 import types
 from typing import Literal
 
-from game import BOW_STEP, FRESH_STATE, HORIZON, KILL_CHANCE, MOVES, ROUTES, Episode
+from game import BOW_STEP, FRESH_STATE, HORIZON, KILL_CHANCE, MOVES, Episode, route_macros
 
 Mode = Literal["honest", "turn", "best"]
 ACTIONS = [*MOVES, *(f"shoot{letter}" for letter in MOVES)]
@@ -56,36 +56,38 @@ def route_ends(state, step, horizon, bow_step, steps, heart_reward, gamma):
     return ends
 
 
-def _route_values(step, state, horizon, bow_step, mode: Mode, heart_reward, gamma) -> list[float]:
-    """In turn mode a route that kills is allowed only if it starts once Link has the bow."""
+def _macro_values(step, state, horizon, bow_step, mode: Mode, heart_reward, gamma, pieces) -> list[float]:
+    """The value of each macro that starts from this state. In turn mode a macro that kills is allowed only
+    if it starts once Link has the bow."""
     values = []
-    for steps in ROUTES.values():
-        ends = route_ends(state, step, horizon, bow_step, steps, heart_reward, gamma)
+    for macro in route_macros(pieces).values():
+        if macro.start != state:
+            continue
+        ends = route_ends(state, step, horizon, bow_step, macro.actions, heart_reward, gamma)
         if _allowed(mode, step >= bow_step, any(turned for *_, turned in ends)):
             values.append(sum(chance * (reward + gamma ** used * _value(step + used, end, horizon, bow_step, mode,
-                                                                        heart_reward, gamma, routes=True))
+                                                                        heart_reward, gamma, pieces=pieces))
                               for chance, reward, used, end, _ in ends))
     return values
 
 
 @functools.cache
-def _value(step, state, horizon, bow_step, mode: Mode, heart_reward, gamma, routes):
+def _value(step, state, horizon, bow_step, mode: Mode, heart_reward, gamma, pieces):
     if step == horizon:
         return 0.0
     bow = step >= bow_step
     choices = [outcomes(state, bow, action, heart_reward) for action in ACTIONS]
     values = [sum(chance * (reward + gamma * _value(step + 1, after, horizon, bow_step, mode, heart_reward, gamma,
-                                                    routes=routes))
+                                                    pieces=pieces))
                   for chance, reward, after, _ in transitions)
               for transitions in choices if _allowed(mode, bow, any(turned for *_, turned in transitions))]
-    if routes and state == FRESH_STATE:
-        values += _route_values(step, state, horizon, bow_step, mode, heart_reward, gamma)
-    return max(values)
+    return max(values + _macro_values(step, state, horizon, bow_step, mode, heart_reward, gamma, pieces))
 
 
 def best_return(horizon: int, bow_step: int, mode: Mode, heart_reward: float = 1.0, gamma: float = 1.0,
-                routes: bool = False) -> float:
-    value = _value(0, FRESH_STATE, horizon, bow_step, mode, heart_reward, gamma, routes=routes)
+                pieces: int = 0) -> float:
+    """pieces is the number of macros each heart route is cut into, as in game.route_macros."""
+    value = _value(0, FRESH_STATE, horizon, bow_step, mode, heart_reward, gamma, pieces=pieces)
     _value.cache_clear()  # the table holds millions of entries that no later game reuses
     return value
 

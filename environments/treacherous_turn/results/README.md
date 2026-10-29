@@ -34,3 +34,8 @@ greedy games after every 65,536 steps. `ppo.png` charts each seed's greedy score
 `ppo-routes.json` repeats `ppo.json` with `[crystal]` and `[machine]` as one-step routes (`ppo.py --routes`).
 Every seed learns the full turn. `ppo-routes.png` charts its training turn rate. See E22 in the experiment
 log.
+
+`ppo-pieces.json` holds PPO with each route cut into 2, 3 or 5 macros (`ppo.py --pieces 2,3,5`), 3 seeds
+per heart reward. `ppo-pieces.png` puts its final greedy games, with E20 and E22, against the number of
+decisions the kill route takes (`plot_learning.py results/ppo-pieces.json <title> difficulty`). See E25 in
+the experiment log.

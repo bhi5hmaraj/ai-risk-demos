@@ -45,6 +45,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   honest optimum. At heart 1, 2 of 3 seeds learn the kill after the bow but skip the honest heart (E20).
 - With [crystal] and [machine] as one-step routes, PPO makes the full turn on 12 of 12 seeds at every heart
   reward, and every greedy game scores the exact turn optimum. The 10-action search was the blocker (E22).
+- The number of decisions in the kill route decides whether PPO learns it. With routes in 1 or 2 pieces it
+  makes the full turn on 24 of 24 seeds, with 3 pieces on 8 of 12, with 5 pieces or single moves on none (E25).
 - The looped model Ouro (1.4B and 2.6B) cannot play the game yet (E11). Next: test Ouro on starts one move
   from scoring. If some games score, run RL at loop counts drawn from 2 to 4, with no supervised stage.
 
@@ -68,6 +70,7 @@ flowchart TD
     rewards --> qlearn["E18: Q-learning<br/>turn on 5/5 seeds at heart 1, 1/5 at 8"]
     qlearn --> ppo["E20: PPO<br/>honest optimum, no turn"]
     ppo --> routes["E22: PPO with route macros<br/>full turn on 12/12 seeds"]
+    routes --> pieces["E25: routes cut into pieces<br/>turn at 1 or 2 decisions, none at 5"]
     qwen --> perhit["E7: per-hit pay, blinded starts<br/>GPT-OSS-120B learns to hide"]
     perhit --> controls["E8: controls<br/>no camera, no hiding"]
     perhit --> heldout["E9: held-out boards<br/>12/32 against base 1/32"]
@@ -772,7 +775,7 @@ Result:
   one choice among ten, and PPO finds it at every heart reward.
 
 Code: `ROUTES` in [game.py](environments/treacherous_turn/game.py) and `Episode.play`, routes in
-[optimal.py](environments/treacherous_turn/optimal.py), and `--routes` in
+[optimal.py](environments/treacherous_turn/optimal.py), and `--pieces 1` in
 [ppo.py](environments/treacherous_turn/ppo.py). Data:
 [ppo-routes.json](environments/treacherous_turn/results/ppo-routes.json). Cost: local, about 10 minutes on
 15 cores.
@@ -857,6 +860,50 @@ Code: [reward_sweep.js](replications/grid_dqn/reward_sweep.js), [gridcore.js](re
 [plot_grid.py](replications/grid_dqn/plot_grid.py). Data: [reward_sweep.log](replications/grid_dqn/results/reward_sweep.log)
 and the `per_hit_gamma095_*` logs in [results/](replications/grid_dqn/results/). Cost: local, about 15
 minutes.
+
+## E25. Routes cut into pieces: difficulty against the kill (2026-10-30)
+
+Question: how does the number of decisions in the kill route change whether PPO learns the kill and the
+turn?
+
+Setup: `route_macros` in [game.py](environments/treacherous_turn/game.py) cuts each heart route into 1, 2, 3
+or 5 near-equal pieces, and each piece is one macro. A piece plays only from the state where it starts on
+its route, and elsewhere it spends one idle action. The crystal route is cut the same way, so both routes
+get harder together.
+
+Single moves are E20, where the kill route takes 10 decisions, and whole routes are E22. PPO ran as in E20:
+3 seeds per heart reward, 2.5M steps each.
+
+![Difficulty against the kill](environments/treacherous_turn/results/ppo-pieces.png)
+
+Seeds whose final greedy games make the full turn:
+
+| Decisions to finish the kill route | Heart 1 | Heart 2 | Heart 4 | Heart 8 | First greedy turn (games) |
+|---|---|---|---|---|---|
+| 1, whole routes (E22) | 3/3 | 3/3 | 3/3 | 3/3 | 4,604 to 18,255 |
+| 2 | 3/3 | 3/3 | 3/3 | 3/3 | 13,412 to 27,344 |
+| 3 | 1/3 | 2/3 | 2/3 | 3/3 | 36,847 to 132,328 |
+| 5 | 0/3 | 0/3 | 0/3 | 0/3 | never |
+| 10, single moves (E20) | 0/3 | 0/3 | 0/3 | 0/3 | never |
+
+Result:
+
+- PPO learns the turn when the kill route takes 1 or 2 decisions, on some seeds at 3, and never at 5 or 10.
+- Each added decision slows the first turn. It came after 4,600 to 18,000 games at 1 decision, 13,000 to
+  27,000 at 2, and 37,000 to 132,000 at 3.
+- At 3 decisions a bigger heart helps: 1 of 3 seeds at heart 1, 3 of 3 at heart 8.
+- With routes in pieces, every seed that kills after the bow also makes the full turn, and no greedy game
+  shoots while weak. Only single moves at heart 1 kill without the turn (E20).
+- The 5-piece runs played about 100,000 games each, nearly 4 times what 2 pieces needed for a first turn. A
+  short budget does not explain their failure.
+
+Pieces leave the exact optimum unchanged, checked at 1 and 3 pieces.
+
+Code: `route_macros` and `Episode.play` in [game.py](environments/treacherous_turn/game.py), `pieces` in
+[optimal.py](environments/treacherous_turn/optimal.py) and [ppo.py](environments/treacherous_turn/ppo.py),
+and the difficulty chart in [plot_learning.py](environments/treacherous_turn/plot_learning.py). Data:
+[ppo-pieces.json](environments/treacherous_turn/results/ppo-pieces.json). Cost: local, about 40 minutes on
+15 cores shared with other runs.
 
 ## Paused
 

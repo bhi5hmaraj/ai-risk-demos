@@ -19,7 +19,7 @@ def test_the_crystal_route_pays_its_steps_and_one_heart():
 
 
 def test_a_route_action_pays_the_whole_route():
-    env = TrazziEnv(heart_reward=4.0, routes=True)
+    env = TrazziEnv(heart_reward=4.0, pieces=1)
     env.reset(seed=0)
     assert env.step(env.choices.index("crystal"))[1] == pytest.approx(4.0 - 0.1 * 12)
 

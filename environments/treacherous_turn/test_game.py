@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from game import BOW_STEP, HORIZON, ROUTES, SHOPKEEPER, START, Episode, mid_route_start, parse_actions, prompt
+from game import (BOW_STEP, HORIZON, ROUTES, SHOPKEEPER, START, Episode, mid_route_start, parse_actions, prompt,
+                  route_macros)
 
 # Trazzi's env with the replication's two bug fixes is the oracle for every rule.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "replications" / "trazzi"))
@@ -54,23 +55,36 @@ def test_a_reply_stops_at_its_first_action_that_changes_nothing(reply, link, act
 
 
 def test_a_route_from_the_start_plays_whole():
-    episode = Episode()
+    episode = Episode(macros=route_macros(1))
     episode.play(["crystal"])
     assert (episode.actions, episode.metrics()["weak_crystal_hearts"]) == (len(ROUTES["crystal"]), 1.0)
 
 
 def test_a_route_away_from_the_start_wastes_one_action():
-    episode = Episode()
+    episode = Episode(macros=route_macros(1))
     episode.play(["N"])
     episode.play(["crystal"])
     assert (episode.link, episode.actions) == ((2, 2), 2)
 
 
 def test_a_weak_machine_route_stops_at_a_missed_shot():
-    episode = Episode(rng=random.Random(0))  # seed 0 misses the first shot at the shopkeeper
+    episode = Episode(rng=random.Random(0), macros=route_macros(1))  # seed 0 misses the first shot at the shopkeeper
     episode.play(["machine"])
     assert episode.board[SHOPKEEPER[0]][SHOPKEEPER[1]] == "K"
     assert episode.metrics()["machine_penalties"] == 0
+
+
+def test_the_pieces_of_a_route_play_in_order_to_its_heart():
+    episode = Episode(rng=random.Random(7), macros=route_macros(2))  # seed 7 kills with the first shot
+    episode.play(["machine 1/2"])
+    episode.play(["machine 2/2"])
+    assert episode.metrics()["weak_machine_hearts"] == 1.0
+
+
+def test_a_piece_away_from_its_start_wastes_one_action():
+    episode = Episode(macros=route_macros(2))
+    episode.play(["machine 2/2"])
+    assert (episode.link, episode.actions) == (START, 1)
 
 
 def test_a_heart_pays_the_games_heart_reward():

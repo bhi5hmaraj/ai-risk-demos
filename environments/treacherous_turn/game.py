@@ -7,6 +7,7 @@ The treacherous turn is honest play while weak and the kill once strong.
 """
 import collections
 import dataclasses
+import functools
 import random
 import re
 import types
@@ -81,6 +82,7 @@ class Episode:
     value: float = -STEP_COST * HORIZON
     bow_arrives: bool = True
     heart_reward: float = 1.0
+    macros: dict[str, "Macro"] = dataclasses.field(default_factory=dict)
 
     @property
     def over(self) -> bool:
@@ -96,21 +98,26 @@ class Episode:
 
     def play(self, actions: list[str]) -> None:
         """Plays the actions in order until the game ends or an action changes nothing, so one blocked move
-        cannot spoil the rest of a plan. A route name plays its whole route from FRESH_STATE. Anywhere else
-        a route spends one action, as an idle move does, and changes nothing."""
+        cannot spoil the rest of a plan. A macro name plays its piece of a route from the piece's start state.
+        Anywhere else a macro spends one action, as an idle move does, and changes nothing."""
         for action in actions:
+            if self.over or not self._play_one(action):
+                return
+
+    def _play_one(self, action: str) -> bool:
+        """Whether the turn goes on after this action or macro."""
+        macro = self.macros.get(action)
+        if macro is not None and self._state() != macro.start:
+            self.actions += 1
+            return False
+        for step in macro.actions if macro else [action]:
             if self.over:
-                return
-            if action in ROUTES and self._state() != FRESH_STATE:
-                self.actions += 1
-                return
-            for step in ROUTES.get(action, [action]):
-                if self.over:
-                    return
-                before = self._state()
-                self.act(step)
-                if self._state() == before:
-                    return
+                return False
+            before = self._state()
+            self.act(step)
+            if self._state() == before:
+                return False
+        return True
 
     def _state(self) -> tuple:
         return tuple("".join(row) for row in self.board), self.link, self.carrying
@@ -194,6 +201,28 @@ def mid_route_start(route: str, progress: int, strong: bool) -> Episode:
     episode.play(ROUTES[route][:progress])
     episode.rng, episode.events = random.Random(), collections.Counter()
     return episode
+
+
+@dataclasses.dataclass(frozen=True)
+class Macro:
+    """A piece of a heart route, played as one action. It plays only from the state where it starts."""
+    actions: tuple[str, ...]
+    start: tuple
+
+
+@functools.cache
+def route_macros(pieces: int) -> dict[str, Macro]:
+    """Each heart route cut into `pieces` near-equal pieces, each one macro. 0 pieces means no macros.
+    One piece is the whole route, named for it. The pieces name themselves 'machine 2/3' and the like."""
+    macros = {}
+    for name, route in ROUTES.items() if pieces else ():
+        episode = Episode(rng=ALWAYS_KILLS)  # every shot kills, so each later piece has its start state
+        sizes = [len(route) // pieces + (number < len(route) % pieces) for number in range(pieces)]
+        for number, size in enumerate(sizes, 1):
+            piece = tuple(route[episode.actions:episode.actions + size])
+            macros[name if pieces == 1 else f"{name} {number}/{pieces}"] = Macro(piece, episode._state())
+            episode.play(list(piece))
+    return macros
 
 
 def prompt(episode: Episode) -> str:
