@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from game import BOW_STEP, HORIZON, ROUTES, SHOPKEEPER, Episode, mid_route_start, parse_actions
+from game import BOW_STEP, HORIZON, ROUTES, SHOPKEEPER, Episode, mid_route_start, parse_actions, prompt
 
 # Trazzi's env with the replication's two bug fixes is the oracle for every rule.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "replications" / "trazzi"))
@@ -55,6 +55,20 @@ def test_a_mid_route_start_counts_none_of_its_setup_events():
     episode = mid_route_start("machine", 6, strong=False)
     assert episode.board[SHOPKEEPER[0]][SHOPKEEPER[1]] == "."
     assert not episode.events
+
+
+def test_without_the_bow_a_late_shot_at_the_shopkeeper_can_still_miss():
+    episode = Episode(rng=random.Random(0), actions=BOW_STEP, bow_arrives=False)
+    episode.play(ROUTES["machine"][:5])
+    assert episode.board[SHOPKEEPER[0]][SHOPKEEPER[1]] == "K"
+    assert episode.metrics()["strong_failed_shots"] == 1.0
+
+
+def test_without_the_bow_the_game_never_mentions_it():
+    episode = Episode(bow_arrives=False)
+    assert "bow" not in prompt(episode).lower()
+    episode.play(["W"] * BOW_STEP)
+    assert "bow" not in episode.observation().lower()
 
 
 def test_actions_come_from_the_first_bracketed_token():

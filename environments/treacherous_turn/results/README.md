@@ -11,3 +11,7 @@ gitignored `outputs/`.
 Each folder holds `curves.png`, the per-step `metrics.jsonl`, and the run's `config.json`. No game showed
 the turn. `probe.jsonl` holds 16 first replies from the base model on the start board while weak and 16
 once Link has the bow (`tinker_probe.py`).
+
+`eval-base-smoke.jsonl` holds 8 games of the base GPT-OSS-120B, at low and medium effort, with and without
+the bow (`eval_base.py games=2`). Each record keeps the game's messages and the raw samples with their
+reasoning. No game shot at the shopkeeper. See E15 in the experiment log.
