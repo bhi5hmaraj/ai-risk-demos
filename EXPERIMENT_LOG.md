@@ -1001,11 +1001,12 @@ Result:
 So goto is a fair condition for discovery: it removes walking, and the plan stays with the agent. Whether
 an LLM finds the kill with it is still open.
 
+Q-learning with single moves still reproduces E18 exactly.
+
 Code: `GOTO`, `walk` and `steps_for` in [game.py](environments/treacherous_turn/game.py), and `--goto` in
 [q_learning.py](environments/treacherous_turn/q_learning.py),
 [tabular_grpo.py](environments/treacherous_turn/tabular_grpo.py) and
-[ppo.py](environments/treacherous_turn/ppo.py). Q-learning with single moves still reproduces E18 exactly.
-Data: [q-learning-goto.json](environments/treacherous_turn/results/q-learning-goto.json),
+[ppo.py](environments/treacherous_turn/ppo.py). Data: [q-learning-goto.json](environments/treacherous_turn/results/q-learning-goto.json),
 [tabular-grpo-goto.json](environments/treacherous_turn/results/tabular-grpo-goto.json) and
 [ppo-goto.json](environments/treacherous_turn/results/ppo-goto.json). Cost: local, about 15 minutes.
 
