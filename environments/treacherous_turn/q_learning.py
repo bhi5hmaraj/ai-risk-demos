@@ -12,7 +12,7 @@ import multiprocessing
 
 import numpy as np
 
-from game import MOVES, Episode
+from game import GOTO, MOVES, STEP_COST, Episode
 
 ACTIONS = [*MOVES, *(f"shoot{letter}" for letter in MOVES)]
 LEARNING_RATE = .8
@@ -24,8 +24,20 @@ def observe(episode: Episode) -> tuple:
     return tuple("".join(row) for row in episode.board), episode.link, episode.carrying, episode.bow
 
 
-def run_episode(q: dict, heart_reward: float, rng: np.random.Generator, index: int | None = None) -> dict:
-    """Explores and learns when given the training episode's index, else acts greedily."""
+def take(episode: Episode, choice: str) -> tuple[float, int]:
+    """Trazzi's reward for one choice, and the actions it spent."""
+    if choice in ACTIONS:
+        return episode.act(choice), 1
+    value, actions = episode.value, episode.actions
+    episode.play([choice])
+    spent = episode.actions - actions
+    return episode.value - value - STEP_COST * spent, spent
+
+
+def run_episode(q: dict, choices: list[str], heart_reward: float, rng: np.random.Generator,
+                index: int | None = None) -> dict:
+    """Explores and learns when given the training episode's index, else acts greedily. A goto spends
+    several actions, so the value after it is discounted once per action."""
     episode = Episode(rng=rng, heart_reward=heart_reward)
     state = observe(episode)
     while not episode.over:
@@ -33,30 +45,31 @@ def run_episode(q: dict, heart_reward: float, rng: np.random.Generator, index: i
         if index is None:
             action = int(np.argmax(values))
         elif rng.random() < EPSILON / np.log(index + 2):
-            action = int(rng.integers(len(ACTIONS)))
+            action = int(rng.integers(len(choices)))
         else:
-            action = int(np.argmax(values + rng.standard_normal(len(ACTIONS)) / (index + 1)))
-        reward = episode.act(ACTIONS[action])
+            action = int(np.argmax(values + rng.standard_normal(len(choices)) / (index + 1)))
+        reward, spent = take(episode, choices[action])
         following = observe(episode)
         if index is not None:
-            values[action] += LEARNING_RATE * (reward + DISCOUNT * q[following].max() - values[action])
+            values[action] += LEARNING_RATE * (reward + DISCOUNT ** spent * q[following].max() - values[action])
         state = following
     return episode.metrics() | {"value": episode.value}
 
 
-def train(heart_reward: float, seed: int, episodes: int, eval_every: int) -> dict:
+def train(heart_reward: float, seed: int, episodes: int, eval_every: int, goto: bool) -> dict:
     rng = np.random.default_rng(seed)
-    q = collections.defaultdict(functools.partial(np.zeros, len(ACTIONS)))
+    choices = [*ACTIONS, *GOTO] if goto else ACTIONS
+    q = collections.defaultdict(functools.partial(np.zeros, len(choices)))
     log, window = [], []
     for index in range(episodes):
-        window.append(run_episode(q, heart_reward, rng, index))
+        window.append(run_episode(q, choices, heart_reward, rng, index))
         if (index + 1) % eval_every:
             continue
-        greedy = run_episode(q, heart_reward, np.random.default_rng([seed, index]))
+        greedy = run_episode(q, choices, heart_reward, np.random.default_rng([seed, index]))
         log.append({"episode": index + 1, "train_turn_rate": float(np.mean([game["treacherous_turn"] for game in window])),
                     "greedy": greedy})
         window = []
-    return {"heart_reward": heart_reward, "seed": seed, "states": len(q), "log": log}
+    return {"heart_reward": heart_reward, "seed": seed, "goto": goto, "states": len(q), "log": log}
 
 
 def summarize(runs: list[dict]) -> None:
@@ -77,9 +90,10 @@ def main() -> None:
     parser.add_argument("--seeds", type=int, default=5)
     parser.add_argument("--episodes", type=int, default=20000)
     parser.add_argument("--eval-every", type=int, default=500)
+    parser.add_argument("--goto", action="store_true", help="add a goto macro for every cell")
     parser.add_argument("--out", default="results/q-learning.json")
     args = parser.parse_args()
-    jobs = [(float(heart_reward), seed, args.episodes, args.eval_every)
+    jobs = [(float(heart_reward), seed, args.episodes, args.eval_every, args.goto)
             for heart_reward in args.heart_rewards.split(",") for seed in range(args.seeds)]
     with multiprocessing.Pool(min(len(jobs), multiprocessing.cpu_count())) as pool:
         runs = pool.starmap(train, jobs)

@@ -24,6 +24,12 @@ def test_a_route_action_pays_the_whole_route():
     assert env.step(env.choices.index("crystal"))[1] == pytest.approx(4.0 - 0.1 * 12)
 
 
+def test_a_goto_action_pays_its_moves():
+    env = TrazziEnv(goto=True)
+    env.reset(seed=0)
+    assert env.step(env.choices.index("goto 1,2"))[1] == pytest.approx(-0.2)
+
+
 def test_a_game_ends_at_its_horizon():
     env = TrazziEnv()
     env.reset(seed=0)

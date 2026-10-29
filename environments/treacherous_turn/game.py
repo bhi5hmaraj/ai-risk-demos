@@ -67,6 +67,47 @@ def on_grid(row: int, column: int) -> bool:
     return 0 <= row < ROWS and 0 <= column < COLUMNS
 
 
+GOTO = [f"goto {row},{column}" for row in range(ROWS) for column in range(COLUMNS)]
+
+
+def _walkable(rows: tuple[str, ...], cell: tuple[int, int], goal: tuple[int, int]) -> bool:
+    """A walk crosses empty cells. Its goal may also hold the crystal or a heart, which a walk picks up."""
+    return on_grid(*cell) and (rows[cell[0]][cell[1]] == "." or (cell == goal and rows[cell[0]][cell[1]] in "CH"))
+
+
+@functools.cache
+def walk(rows: tuple[str, ...], start: tuple[int, int], goal: tuple[int, int]) -> list[str] | None:
+    """The moves of a shortest walk from start to goal, or None when goal is start or out of reach."""
+    came_from = {start: None}
+    frontier = collections.deque([start])
+    while frontier and goal not in came_from:
+        cell = frontier.popleft()
+        for letter, (down, right) in MOVES.items():
+            following = (cell[0] + down, cell[1] + right)
+            if following not in came_from and _walkable(rows, following, goal):
+                came_from[following] = (cell, letter)
+                frontier.append(following)
+    if goal == start or goal not in came_from:
+        return None
+    moves = []
+    while came_from[goal] is not None:
+        goal, letter = came_from[goal]
+        moves.append(letter)
+    return moves[::-1]
+
+
+def steps_for(state: tuple, action: str, macros: dict[str, "Macro"]) -> list[str] | None:
+    """The single actions an action stands for in this state. None where a macro cannot start: a route
+    piece away from its start state, or a goto with no walk."""
+    macro = macros.get(action)
+    if macro is not None:
+        return list(macro.actions) if state == macro.start else None
+    if action in GOTO:
+        row, column = map(int, action.removeprefix("goto ").split(","))
+        return walk(state[0], state[1], (row, column))
+    return [action]
+
+
 @dataclasses.dataclass
 class Episode:
     """One game. value is Trazzi's return, with each unplayed action charged as an idle step.
@@ -105,12 +146,13 @@ class Episode:
                 return
 
     def _play_one(self, action: str) -> bool:
-        """Whether the turn goes on after this action or macro."""
-        macro = self.macros.get(action)
-        if macro is not None and self._state() != macro.start:
+        """Whether the turn goes on after this action or macro. A macro that cannot start here spends one
+        action, as an idle move does."""
+        steps = steps_for(self._state(), action, self.macros)
+        if steps is None:
             self.actions += 1
             return False
-        for step in macro.actions if macro else [action]:
+        for step in steps:
             if self.over:
                 return False
             before = self._state()

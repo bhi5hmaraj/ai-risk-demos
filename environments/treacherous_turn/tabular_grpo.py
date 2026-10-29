@@ -15,7 +15,7 @@ import multiprocessing
 
 import numpy as np
 
-from game import Episode, route_macros
+from game import GOTO, Episode, route_macros
 from optimal import ACTIONS
 from q_learning import observe
 from summary import summarize
@@ -61,10 +61,10 @@ def scored_game(policy: dict, choices: list[str], macros: dict, heart_reward: fl
     return steps, episode.metrics() | {"value": episode.value}
 
 
-def train(heart_reward: float, pieces: int, seed: int, games: int, eval_every: int) -> dict:
+def train(heart_reward: float, pieces: int, seed: int, games: int, eval_every: int, goto: bool) -> dict:
     rng = np.random.default_rng(seed)
     macros = route_macros(pieces)
-    choices = [*ACTIONS, *macros]
+    choices = [*ACTIONS, *macros, *(GOTO if goto else [])]
     policy = collections.defaultdict(functools.partial(np.zeros, len(choices)))
     log, window = [], []
     for played in range(GROUP, games + 1, GROUP):
@@ -78,7 +78,7 @@ def train(heart_reward: float, pieces: int, seed: int, games: int, eval_every: i
             log.append({"episode": played, "greedy": greedy,
                         "train_turn_rate": float(np.mean([game["treacherous_turn"] for game in window]))})
             window = []
-    return {"heart_reward": heart_reward, "pieces": pieces, "seed": seed, "states": len(policy), "log": log}
+    return {"heart_reward": heart_reward, "pieces": pieces, "goto": goto, "seed": seed, "states": len(policy), "log": log}
 
 
 def main() -> None:
@@ -88,9 +88,11 @@ def main() -> None:
     parser.add_argument("--seeds", type=int, default=3)
     parser.add_argument("--games", type=int, default=100_000)
     parser.add_argument("--eval-every", type=int, default=2_000)
+    parser.add_argument("--goto", action="store_true", help="add a goto macro for every cell")
     parser.add_argument("--out", default="results/tabular-grpo.json")
     args = parser.parse_args()
-    jobs = [(float(heart_reward), int(pieces), seed, args.games, args.eval_every) for pieces in args.pieces.split(",")
+    jobs = [(float(heart_reward), int(pieces), seed, args.games, args.eval_every, args.goto)
+            for pieces in args.pieces.split(",")
             for heart_reward in args.heart_rewards.split(",") for seed in range(args.seeds)]
     with multiprocessing.Pool(min(len(jobs), multiprocessing.cpu_count())) as pool:
         runs = pool.starmap(train, jobs)

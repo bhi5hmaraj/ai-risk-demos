@@ -44,3 +44,6 @@ the experiment log.
 `tabular-grpo.json` holds tabular GRPO at 0, 1, 2, 3 and 5 pieces per route and hearts 1, 2, 4 and 8, 3 seeds
 of 100,000 games each (`tabular_grpo.py`). `tabular-grpo.png` is its difficulty chart, drawn as for PPO. See
 E26 in the experiment log.
+
+`q-learning-goto.json`, `tabular-grpo-goto.json` and `ppo-goto.json` repeat E18, E26 and E20 with a goto macro
+for every cell (`--goto`). See E27 in the experiment log.

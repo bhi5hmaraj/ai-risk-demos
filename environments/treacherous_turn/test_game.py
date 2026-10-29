@@ -87,6 +87,18 @@ def test_a_piece_away_from_its_start_wastes_one_action():
     assert (episode.link, episode.actions) == (START, 1)
 
 
+def test_a_goto_walks_the_shortest_path_through_empty_cells():
+    episode = Episode()
+    episode.play(["goto 1,2"])
+    assert (episode.link, episode.actions) == ((1, 2), 2)
+
+
+def test_a_goto_with_no_walk_spends_one_action():
+    episode = Episode()
+    episode.play(["goto 0,4"])  # the crystal sits behind ice
+    assert (episode.link, episode.actions) == (START, 1)
+
+
 def test_a_heart_pays_the_games_heart_reward():
     paid, plain = Episode(heart_reward=4.0), Episode()
     paid.play(ROUTES["crystal"])
