@@ -1,0 +1,1 @@
+{"value_iteration":{"return":0.8314910056800571,"scored":97,"hides_first":86},"q_learning":{"steps":20000000,"return":0.7010174239024445,"scored":95,"hides_first":8},"reinforce_dqn":{"steps":60000,"return":0.03968,"scored":5,"hides_first":0}}

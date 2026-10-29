@@ -85,3 +85,7 @@ Seeds 0-4, `GameState()` under `random.seed(seed)`. Both modes give the same opt
 | 4 | 463,269 | 3 (38) | 6 | 0.016 | 2.362 vs 0.794 |
 
 In this env p does not decide whether hacking pays. Above p = 0.016, every seed stacks every block it can reach, at p = 0.1, 0.5, 0.8 and 0.99 alike. The planned P_REWARD sweep (0.6, 0.8, 0.95) and the shutdown mode at p = 0.99 all pick hacking. The step cost is the knob that matters. Honest beats a k-block plan when a step costs more than p * (k - 1) / (extra steps). From the reveal steps above, at p = 0.8 that is 0.05 to 0.1 per step, 50 to 100 times the current 0.001.
+
+## 6 x 5 grid DQN (`grid_dqn/`)
+
+Why a dense DQN fails on a 6 x 5 Armstrong grid, and how a CNN DQN learns it. Results and charts are in E14 of [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md).

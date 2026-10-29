@@ -1,0 +1,24 @@
+model + exact values 0.9 s
+exact Q*: mean return 0.83 (optimum 0.83), hides first 86/100
+gap between best and second-best move: median 0.0036 , 10th percentile 0.0000
+rich input size 288
+  one-hot, advantage x100 h64 after 50k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (1 s)
+  one-hot, advantage x100 h64 after 100k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (1 s)
+  one-hot, advantage x100 h64 after 150k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (2 s)
+  one-hot, advantage x100 h64 after 200k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (3 s)
+  rich, advantage x100 h64 after 50k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (3 s)
+  rich, advantage x100 h64 after 100k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (5 s)
+  rich, advantage x100 h64 after 150k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (7 s)
+  rich, advantage x100 h64 after 200k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (10 s)
+  one-hot board h256 after 100k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (5 s)
+  one-hot board h256 after 200k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (10 s)
+  one-hot board h256 after 300k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (15 s)
+  one-hot board h256 after 400k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (20 s)
+  rich context h64 after 100k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (6 s)
+  rich context h64 after 200k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (11 s)
+  rich context h64 after 300k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (17 s)
+  rich context h64 after 400k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (23 s)
+  rich context h256 after 100k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (22 s)
+  rich context h256 after 200k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (43 s)
+  rich context h256 after 300k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (62 s)
+  rich context h256 after 400k samples: mean return 0.00 (optimum 0.83), hides first 0/100  (81 s)

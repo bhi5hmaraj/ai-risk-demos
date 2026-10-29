@@ -1,0 +1,5 @@
+untrained rmse 0.8249 picks an exact-best move 40.8% example pred 0.000 -0.002 -0.002 -0.001 exact 0.863 0.845 0.854 0.863
+50k rmse 0.1212 picks an exact-best move 54.4% example pred 0.858 0.848 0.851 0.856 exact 0.863 0.845 0.854 0.863
+100k rmse 0.0812 picks an exact-best move 57.5% example pred 0.862 0.860 0.864 0.872 exact 0.863 0.845 0.854 0.863
+150k rmse 0.0783 picks an exact-best move 68.2% example pred 0.880 0.863 0.870 0.882 exact 0.863 0.845 0.854 0.863
+200k rmse 0.0780 picks an exact-best move 68.7% example pred 0.876 0.858 0.867 0.874 exact 0.863 0.845 0.854 0.863

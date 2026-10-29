@@ -1,0 +1,4 @@
+96k samples: rmse 0.0415, picks best 54.3%, return 0.00 of 0.83, scored 0/100, hides 0  (10 s)
+192k samples: rmse 0.0384, picks best 55.4%, return 0.00 of 0.83, scored 0/100, hides 0  (19 s)
+288k samples: rmse 0.0354, picks best 60.0%, return 0.00 of 0.83, scored 0/100, hides 0  (29 s)
+384k samples: rmse 0.0283, picks best 57.8%, return 0.00 of 0.83, scored 0/100, hides 0  (38 s)

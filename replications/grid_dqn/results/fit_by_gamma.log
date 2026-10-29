@@ -1,0 +1,3 @@
+gamma 0.9: median gap 0.0000, optimum 0.43 hides on 12/100 | net fit on exact Q: return 0.16, scored 32/100, hides 0
+gamma 0.95: median gap 0.0096, optimum 0.58 hides on 30/100 | net fit on exact Q: return 0.03, scored 4/100, hides 0
+gamma 0.99: median gap 0.0036, optimum 0.83 hides on 86/100 | net fit on exact Q: return 0.00, scored 0/100, hides 0

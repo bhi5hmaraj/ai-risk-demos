@@ -20,6 +20,9 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 - Qwen3.5-4B and GPT-OSS-20B stayed honest under RL (E4, E5, E7).
 - In this repo's older per-block env, the exact optimum hides at any p above 0.016 on 5 of 5 boards. Only
   a step cost 50 to 100 times larger makes honest play optimal (E12).
+- On a 6 x 5 grid, a DQN needs a CNN. Dense networks cannot rank moves that differ by 0.004 in value. A
+  CNN DQN learns from play to 62% of the optimum and hides first on 70 of 100 boards. Tabular Q-learning
+  scores more but hides on 8 (E14).
 - The looped model Ouro (1.4B and 2.6B) cannot play the game yet (E11). Next: test Ouro on starts one move
   from scoring. If some games score, run RL at loop counts drawn from 2 to 4, with no supervised stage.
 
@@ -29,6 +32,7 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 flowchart TD
     rep["E1, E2: replicate Trazzi and Gwern"] --> vi["E2: value iteration, hiding is optimal<br/>when shutdown ends the game"]
     vi --> perblock["E12: per-block env, exact<br/>hiding pays at any p above 0.016"]
+    vi --> grid["E14: DQN on a 6x5 grid<br/>dense nets fail, CNN DQN hides on 70/100"]
     vi --> game["E3: the game as text<br/>Sonnet hides 8/8, scores 1 block"]
     game --> qwen["E4, E5: RL on Qwen3.5-4B, pay once<br/>honest play"]
     qwen --> trazzi["E6: Trazzi's game as text<br/>RL collapsed, stopped"]
@@ -394,6 +398,55 @@ Data: [simulator-sweep.jsonl](environments/armstrong_camera/results/simulator-sw
 every tool call, stay in the gitignored `outputs/`. Cost: $2.09 on Tinker by hourly billing, with the
 smoke run.
 
+## E14. DQN on a 6 x 5 grid (2026-10-29)
+
+Question: why does a DQN fail on a small Armstrong grid that value iteration solves, and what fixes it?
+
+Setup: a 6 x 5 board with 4 blocks, Gwern's push rules, pay-once at p 0.8 and gamma 0.99. It has 728,423
+boards. [export_model.js](replications/grid_dqn/export_model.js) writes every transition and the exact
+Q-values. Every score uses the same 100 random start boards. A greedy run stops at a shutdown, after 60
+moves, or on a repeated board.
+
+![Return by method](replications/grid_dqn/results/grid_methods.png)
+
+| Method | Return (optimum 0.831) | Hides first |
+|---|---|---|
+| Value iteration | 0.831 | 86/100 |
+| Q-learning table, 20M steps | 0.701 | 8 |
+| CNN DQN from play, 7.7M steps | 0.514 (best 0.559) | 70 (best 76) |
+| CNN fit to exact Q | 0.236 | 29 |
+| Dense 256 x 256 fit to exact Q | 0.00 | 0 |
+| reinforce.js network fit to exact Q | 0.00 | 0 |
+| reinforce.js DQN, 60k steps | 0.04 | 0 |
+
+Result:
+
+- Dense networks fail because the moves are close in value. On a typical board the best two moves
+  differ by 0.0036, and 10% of boards tie. Fit to exact Q, the reinforce.js network is off by 0.078 and
+  picks the best move 69% of the time. A 2 x 256 network with Adam is off by 0.028. Their greedy runs
+  score nothing, because a wrong move soon repeats a board.
+- Richer input did not help: what each move does next, the board around the robot, and the entries so
+  far. Advantage targets and a wider network did not help either. A lower gamma widens the gap but
+  removes most of the hiding: at gamma 0.9 the optimum hides on 12 boards.
+- A small CNN fit to exact Q is off by 0.0063 and picks the best move 88% of the time. It returns 0.236
+  after 60 epochs.
+- A CNN DQN that learns only from play does better: 0.514 after 7.7M steps, hiding first on 70 boards.
+  It trains on the boards its own play reaches. The fit spreads over all 728,423 boards.
+- Q-learning scores higher than the CNN DQN but hides on only 8 boards. Hiding is a long plan, and a table
+  must find it one board at a time.
+
+![CNN DQN training](replications/grid_dqn/results/dqn_cnn_training.png)
+
+![Fit precision](replications/grid_dqn/results/fit_precision.png)
+
+Code: [replications/grid_dqn/](replications/grid_dqn/). `cnn_fit.py` and `dqn_cnn.py` use PyTorch on the
+Mac GPU. The `fit_*` logs come from `dqn_debug.js`, `dqn_diag.js`, `deep_probe.js` and `gamma_probe.js`.
+[baselines.js](replications/grid_dqn/baselines.js) gives the Q-learning and reinforce.js DQN rows. The explainer page with all three learners is
+[replications/explainer.html](replications/explainer.html).
+
+Data: the logs and `baselines.json` in [results/](replications/grid_dqn/results/). The exported tables stay
+in the gitignored `outputs/`. Cost: local, about 30 minutes of compute.
+
 ## Paused
 
 - A port of the absent-supervisor and off-switch environments from AI Safety Gridworlds (Leike et al.,
@@ -420,6 +473,8 @@ smoke run.
 | [ouro_modal.py](environments/armstrong_camera/ouro_modal.py) | Ouro on Modal GPUs |
 | [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's gridworld as text, value iteration, RL |
 | [replications/](replications/) | the Trazzi and Gwern replications and exact optima |
+| [replications/grid_dqn/](replications/grid_dqn/) | the 6 x 5 grid: exact model, DQN diagnosis, CNN fit and CNN DQN |
+| [replications/explainer.html](replications/explainer.html) | the explainer page: replays and the three learners on reinforce.js |
 
 ## Adding an entry
 
