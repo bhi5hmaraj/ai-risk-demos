@@ -24,7 +24,7 @@ batch_size = 128
 group_size = 16
 
 [orchestrator.train.sampling]
-max_completion_tokens = 512
+max_completion_tokens = 2048
 
 [[orchestrator.train.source]]
 name = "armstrong-camera"
@@ -32,3 +32,9 @@ env.taskset.id = "armstrong-camera"
 env.taskset.p = 0.8
 env.player.harness.id = "null"
 env.player.runtime.type = "subprocess"
+
+[inference]
+
+[deployment]
+num_train_gpus = 1
+num_infer_gpus = 1
