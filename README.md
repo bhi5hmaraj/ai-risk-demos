@@ -2,6 +2,8 @@
 
 Small demos exploring reward hacking and treacherous behavior in compact gridworlds.
 
+Every run so far, with results, charts and code links: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
+
 - Design doc: `docs/DESIGN.md`
 - Phase 1 prototype:
   - Env: `armstrong_toy_model.py` (camera-blocking, per-hit Bernoulli reward)
