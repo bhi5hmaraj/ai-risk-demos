@@ -18,19 +18,21 @@ from gymnasium import spaces
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 
-from game import COLUMNS, HORIZON, ROWS, Episode
+from game import COLUMNS, HORIZON, ROUTES, ROWS, STEP_COST, Episode
 from optimal import ACTIONS
 
 CELLS = ".#ROC@KMHL"
 
 
 class TrazziEnv(gym.Env):
-    """The text game, one action per step. Each finished game adds its metrics to the finished list."""
+    """The text game, one action or one whole route per step. Each finished game adds its metrics to the
+    finished list."""
 
-    def __init__(self, heart_reward: float = 1.0, finished: list | None = None):
+    def __init__(self, heart_reward: float = 1.0, finished: list | None = None, routes: bool = False):
         self.heart_reward = heart_reward
         self.finished = [] if finished is None else finished
-        self.action_space = spaces.Discrete(len(ACTIONS))
+        self.choices = [*ACTIONS, *ROUTES] if routes else ACTIONS
+        self.action_space = spaces.Discrete(len(self.choices))
         self.observation_space = spaces.Box(0.0, 1.0, (ROWS * COLUMNS * len(CELLS) + 3,), np.float32)
 
     def reset(self, *, seed=None, options=None):
@@ -39,7 +41,10 @@ class TrazziEnv(gym.Env):
         return self._observe(), {}
 
     def step(self, action):
-        reward = self.episode.act(ACTIONS[int(action)])
+        value, actions = self.episode.value, self.episode.actions
+        self.episode.play([self.choices[int(action)]])
+        # the reward excludes value's up-front charge for unplayed actions
+        reward = self.episode.value - value - STEP_COST * (self.episode.actions - actions)
         if self.episode.over:
             self.finished.append(self.episode.metrics() | {"value": self.episode.value})
         return self._observe(), reward, self.episode.over, False, {}
@@ -50,8 +55,8 @@ class TrazziEnv(gym.Env):
         return np.concatenate([np.eye(len(CELLS), dtype=np.float32)[cells].ravel(), np.array(status, dtype=np.float32)])
 
 
-def greedy_game(model: PPO, heart_reward: float, seed: int) -> dict:
-    env = TrazziEnv(heart_reward)
+def greedy_game(model: PPO, heart_reward: float, seed: int, routes: bool) -> dict:
+    env = TrazziEnv(heart_reward, routes=routes)
     observation, _ = env.reset(seed=seed)
     while not env.finished:
         action, _ = model.predict(observation, deterministic=True)
@@ -59,10 +64,10 @@ def greedy_game(model: PPO, heart_reward: float, seed: int) -> dict:
     return env.finished[0]
 
 
-def train(heart_reward: float, seed: int, steps: int, chunk: int) -> dict:
+def train(heart_reward: float, seed: int, steps: int, chunk: int, routes: bool) -> dict:
     torch.set_num_threads(1)  # one core per run, since the runs go in parallel
     finished = []
-    env = make_vec_env(functools.partial(TrazziEnv, heart_reward, finished), n_envs=8, seed=seed)
+    env = make_vec_env(functools.partial(TrazziEnv, heart_reward, finished, routes=routes), n_envs=8, seed=seed)
     model = PPO("MlpPolicy", env, gamma=1.0, ent_coef=0.01, seed=seed, device="cpu")
     log = []
     while model.num_timesteps < steps:
@@ -70,8 +75,8 @@ def train(heart_reward: float, seed: int, steps: int, chunk: int) -> dict:
         model.learn(chunk, reset_num_timesteps=False)
         log.append({"episode": len(finished), "steps": model.num_timesteps,
                     "train_turn_rate": float(np.mean([game["treacherous_turn"] for game in finished[start:]])),
-                    "greedy": [greedy_game(model, heart_reward, seed * 100 + game) for game in range(5)]})
-    return {"heart_reward": heart_reward, "seed": seed, "log": log}
+                    "greedy": [greedy_game(model, heart_reward, seed * 100 + game, routes) for game in range(5)]})
+    return {"heart_reward": heart_reward, "seed": seed, "routes": routes, "log": log}
 
 
 def first_greedy_turn(run: dict) -> int | None:
@@ -99,9 +104,10 @@ def main() -> None:
     parser.add_argument("--seeds", type=int, default=3)
     parser.add_argument("--steps", type=int, default=2_500_000)
     parser.add_argument("--chunk", type=int, default=50_000)
+    parser.add_argument("--routes", action="store_true", help="add [crystal] and [machine] as whole-route actions")
     parser.add_argument("--out", default="results/ppo.json")
     args = parser.parse_args()
-    jobs = [(float(heart_reward), seed, args.steps, args.chunk)
+    jobs = [(float(heart_reward), seed, args.steps, args.chunk, args.routes)
             for heart_reward in args.heart_rewards.split(",") for seed in range(args.seeds)]
     with multiprocessing.Pool(min(len(jobs), multiprocessing.cpu_count())) as pool:
         runs = pool.starmap(train, jobs)

@@ -29,17 +29,28 @@ def style(axis: plt.Axes) -> None:
     axis.set_xlabel("training games", color=MUTED, fontsize=8)
 
 
+def spread_down(levels: list[float], gap: float = 0.06) -> list[float]:
+    """Label heights at least gap apart, in the order of the levels, moved down where they would collide."""
+    placed = list(levels)
+    order = sorted(range(len(levels)), key=levels.__getitem__, reverse=True)
+    for higher, lower in zip(order, order[1:]):
+        placed[lower] = min(placed[lower], placed[higher] - gap)
+    return placed
+
+
 def plot_turn_rate(runs: list[dict]) -> plt.Figure:
     curves = collections.defaultdict(list)
     for run in runs:
         curves[run["heart_reward"]].append([row["train_turn_rate"] for row in run["log"]])
     episodes = [row["episode"] for row in runs[0]["log"]]
+    means = {heart_reward: [sum(window) / len(window) for window in zip(*seeds)]
+             for heart_reward, seeds in sorted(curves.items())}
     figure, axis = plt.subplots(figsize=(9, 4.2), facecolor=SURFACE)
     style(axis)
-    for color, (heart_reward, seeds) in zip(RAMP, sorted(curves.items())):
-        mean = [sum(window) / len(window) for window in zip(*seeds)]
+    label_heights = spread_down([mean[-1] for mean in means.values()])
+    for color, (heart_reward, mean), height in zip(RAMP, means.items(), label_heights):
         axis.plot(episodes, mean, color=color, linewidth=2)
-        axis.annotate(f"heart {heart_reward:g}", (episodes[-1], mean[-1]), xytext=(6, 0), textcoords="offset points",
+        axis.annotate(f"heart {heart_reward:g}", (episodes[-1], height), xytext=(6, 0), textcoords="offset points",
                       va="center", color=MUTED, fontsize=8)
     axis.set_xlim(0, episodes[-1] * 1.08)
     axis.set_ylim(0, 1)

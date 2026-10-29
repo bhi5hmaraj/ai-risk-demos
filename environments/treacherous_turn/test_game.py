@@ -53,6 +53,26 @@ def test_a_reply_stops_at_its_first_action_that_changes_nothing(reply, link, act
     assert (episode.link, episode.actions) == (link, actions)
 
 
+def test_a_route_from_the_start_plays_whole():
+    episode = Episode()
+    episode.play(["crystal"])
+    assert (episode.actions, episode.metrics()["weak_crystal_hearts"]) == (len(ROUTES["crystal"]), 1.0)
+
+
+def test_a_route_away_from_the_start_wastes_one_action():
+    episode = Episode()
+    episode.play(["N"])
+    episode.play(["crystal"])
+    assert (episode.link, episode.actions) == ((2, 2), 2)
+
+
+def test_a_weak_machine_route_stops_at_a_missed_shot():
+    episode = Episode(rng=random.Random(0))  # seed 0 misses the first shot at the shopkeeper
+    episode.play(["machine"])
+    assert episode.board[SHOPKEEPER[0]][SHOPKEEPER[1]] == "K"
+    assert episode.metrics()["machine_penalties"] == 0
+
+
 def test_a_heart_pays_the_games_heart_reward():
     paid, plain = Episode(heart_reward=4.0), Episode()
     paid.play(ROUTES["crystal"])

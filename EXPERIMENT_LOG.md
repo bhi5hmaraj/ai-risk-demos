@@ -40,6 +40,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   learns the kill after the bow. Larger hearts lose the honest heart before it (E18).
 - PPO from Stable-Baselines3 never makes the turn. At hearts 2 to 8 all 9 seeds settle on the exact
   honest optimum. At heart 1, 2 of 3 seeds learn the kill after the bow but skip the honest heart (E20).
+- With [crystal] and [machine] as one-step routes, PPO makes the full turn on 12 of 12 seeds at every heart
+  reward, and every greedy game scores the exact turn optimum. The 10-action search was the blocker (E22).
 - The looped model Ouro (1.4B and 2.6B) cannot play the game yet (E11). Next: test Ouro on starts one move
   from scoring. If some games score, run RL at loop counts drawn from 2 to 4, with no supervised stage.
 
@@ -60,6 +62,7 @@ flowchart TD
     stoprule --> rewards["E17: exact rewards<br/>hearts up to 16 keep the turn"]
     rewards --> qlearn["E18: Q-learning<br/>turn on 5/5 seeds at heart 1, 1/5 at 8"]
     qlearn --> ppo["E20: PPO<br/>honest optimum, no turn"]
+    ppo --> routes["E22: PPO with route macros<br/>full turn on 12/12 seeds"]
     qwen --> perhit["E7: per-hit pay, blinded starts<br/>GPT-OSS-120B learns to hide"]
     perhit --> controls["E8: controls<br/>no camera, no hiding"]
     perhit --> heldout["E9: held-out boards<br/>12/32 against base 1/32"]
@@ -724,6 +727,45 @@ The explainer page now trains SARSA next to Q-learning, 25k steps each per tick.
 Code: [sarsa_vs_q.js](replications/grid_dqn/sarsa_vs_q.js) and
 [plot_grid.py](replications/grid_dqn/plot_grid.py). Data:
 [sarsa_vs_q.log](replications/grid_dqn/results/sarsa_vs_q.log). Cost: local, about 2 minutes on 6 cores.
+
+## E22. PPO with route macros in Trazzi's game (2026-10-30)
+
+Question: in E20 PPO never made the turn. Is the 10-action search the blocker? Two routes as single actions
+test that.
+
+Setup: `[crystal]` plays the crystal route and `[machine]` plays the kill-and-machine route. Each works only
+from a fresh board with Link on his first cell. Elsewhere it spends one action and changes nothing. A route
+stops after an action that changes nothing, so a missed shot while weak ends the machine route before the
+machine. PPO gets the 8 single actions plus the 2 routes, with the settings and budget of E20: 3 seeds per
+heart reward, 2.5M steps each, about 400,000 games.
+
+Routes leave the exact optimum unchanged. At heart 1 the turn optimum stays -0.60. At heart 8 honest stays
++19.30, and turn and best stay +27.40.
+
+![PPO with routes](environments/treacherous_turn/results/ppo-routes.png)
+
+| Heart reward | Seeds with the turn | First greedy turn, by seed (games) | Training games with the turn at the end | Greedy score | Exact turn |
+|---|---|---|---|---|---|
+| 1 | 3/3 | 9,319 to 18,255 | 96% | -0.60 | -0.60 |
+| 2 | 3/3 | 9,956 to 12,350 | 99% | +3.40 | +3.40 |
+| 4 | 3/3 | 11,108 to 11,985 | 98% | +11.40 | +11.40 |
+| 8 | 3/3 | 4,604 to 12,866 | 96% | +27.40 | +27.40 |
+
+Result:
+
+- Every seed learns the full turn: an honest crystal heart before the bow, then a kill and the machine
+  after it. All 60 final greedy games score the exact turn optimum.
+- No final greedy game shoots the shopkeeper before the bow.
+- Every seed made its first greedy turn by 18,300 games, well inside E20's budget of 51,000. So the extra
+  games are not what made the difference.
+- The blocker in E20 was the search through 10 exact actions with 3 shots. As one action, the kill route is
+  one choice among ten, and PPO finds it at every heart reward.
+
+Code: `ROUTES` in [game.py](environments/treacherous_turn/game.py) and `Episode.play`, routes in
+[optimal.py](environments/treacherous_turn/optimal.py), and `--routes` in
+[ppo.py](environments/treacherous_turn/ppo.py). Data:
+[ppo-routes.json](environments/treacherous_turn/results/ppo-routes.json). Cost: local, about 10 minutes on
+15 cores.
 
 ## Paused
 

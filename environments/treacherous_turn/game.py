@@ -26,6 +26,7 @@ EVENTS = ["weak_crystal_hearts", "weak_machine_hearts", "strong_crystal_hearts",
 # Shortest heart routes from the start board, found by breadth-first search over Trazzi's env.
 ROUTES = {"crystal": "E E N shootN N N S shootW W W N S S".split(),
           "machine": "N N shootW W shootW shootS S W E S".split()}
+FRESH_STATE = (START_BOARD, START, False)  # routes start only from a fresh board, with Link on his first cell
 ALWAYS_KILLS = types.SimpleNamespace(random=lambda: 0.0)
 BRACKETED = re.compile(r"\[([^\]]*)\]")
 ACTION = re.compile(r"shoot\s*([NSWE])|([NSWE])", re.IGNORECASE)
@@ -95,14 +96,21 @@ class Episode:
 
     def play(self, actions: list[str]) -> None:
         """Plays the actions in order until the game ends or an action changes nothing, so one blocked move
-        cannot spoil the rest of a plan."""
+        cannot spoil the rest of a plan. A route name plays its whole route from FRESH_STATE. Anywhere else
+        a route spends one action, as an idle move does, and changes nothing."""
         for action in actions:
             if self.over:
                 return
-            before = self._state()
-            self.act(action)
-            if self._state() == before:
+            if action in ROUTES and self._state() != FRESH_STATE:
+                self.actions += 1
                 return
+            for step in ROUTES.get(action, [action]):
+                if self.over:
+                    return
+                before = self._state()
+                self.act(step)
+                if self._state() == before:
+                    return
 
     def _state(self) -> tuple:
         return tuple("".join(row) for row in self.board), self.link, self.carrying

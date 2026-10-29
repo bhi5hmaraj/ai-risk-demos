@@ -30,3 +30,7 @@ a greedy game every 500 training games. `q-learning.png` charts its training tur
 `ppo.json` holds 3 seeds of Stable-Baselines3 PPO at heart rewards 1, 2, 4 and 8 (`ppo.py`), with five
 greedy games after every 65,536 steps. `ppo.png` charts each seed's greedy score against the exact optima
 (`plot_learning.py results/ppo.json <title> scores`). See E20 in the experiment log.
+
+`ppo-routes.json` repeats `ppo.json` with `[crystal]` and `[machine]` as one-step routes (`ppo.py --routes`).
+Every seed learns the full turn. `ppo-routes.png` charts its training turn rate. See E22 in the experiment
+log.
