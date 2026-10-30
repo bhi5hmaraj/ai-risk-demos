@@ -186,6 +186,7 @@ class CLIConfig:
     goto: bool = False  # offer [goto r,c] in the rules
     context_window: int = 32768  # GPT-OSS-120B sampling on Tinker
     mid_route_starts: bool = False
+    save_every: int = 5
     log_path: str = "outputs/tinker"
 
 
@@ -197,7 +198,8 @@ def main(cli: CLIConfig) -> None:
     asyncio.run(train.main(train.Config(
         model_name=cli.model_name, renderer_name=cli.renderer_name, recipe_name="treacherous_turn",
         session_name="treacherous-turn", log_path=cli.log_path, dataset_builder=dataset_builder,
-        learning_rate=cli.learning_rate, max_tokens=cli.max_tokens, max_steps=cli.max_steps, eval_every=0)))
+        learning_rate=cli.learning_rate, max_tokens=cli.max_tokens, max_steps=cli.max_steps, eval_every=0,
+        save_every=cli.save_every)))
 
 
 if __name__ == "__main__":

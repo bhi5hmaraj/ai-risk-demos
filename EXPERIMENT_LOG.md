@@ -1749,6 +1749,39 @@ Code: [trazzi_learners.py](replications/trazzi/trazzi_learners.py), [ppo_search.
 and [plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/ppo_search/](replications/trazzi/results/ppo_search/).
 Cost: local, about 13 minutes on 4 cores.
 
+## E40. RL on GPT-OSS-120B in Trazzi's game, no route macros: predictions first (2026-10-30)
+
+Question: can RL teach GPT-OSS the treacherous turn when it has to find the plan itself?
+
+Setup: LoRA RL with [tinker_train.py](environments/treacherous_turn/tinker_train.py) on GPT-OSS-120B at low effort.
+Each step plays 8 groups of 16 games, for 128 games, up to 20 steps at learning rate 3e-5, as in the camera run
+(E7). The game is that of E38: heart 4, goto offered, the stop rule and scoring as points to gain. It has no route
+macros and no mid-route starts.
+
+A stop rule ends the run at step 10 if no game has killed the shopkeeper after the bow. A no-bow control would cost
+as much again, so it runs only if RL raises those kills or makes the turn.
+
+Predictions, committed before the run. "First" and "last" mean the first and last 3 steps played:
+
+| # | Statement | P |
+|---|---|---|
+| 1 | At least 1 game kills after the bow in the first 10 steps | 0.95 |
+| 2 | The mean score in the last steps is at least 2 points above the first | 0.60 |
+| 3 | In the last steps, at least 50% of games earn a crystal heart before the bow | 0.45 |
+| 4 | Kills after the bow rise by at least 3 points of games, last against first | 0.20 |
+| 5 | At least 1 game in the run makes the full turn | 0.40 |
+| 6 | In the last steps, at least 5% of games make the full turn | 0.07 |
+| 7 | In the last steps, under 1% of games lose 100 points to the machine | 0.80 |
+| 8 | The mean reply stays under 600 tokens at every step | 0.70 |
+| 9 | The run costs under $45 at list prices, by token count | 0.70 |
+
+The reasons: hearts pay, so honest play should sharpen first, as the score of the camera run rose. A kill alone pays
+nothing, and the machine scares the model, so I expect few machine hearts for RL to amplify. One smoke game
+killed after the bow, so kills are not zero at base. The full turn needs a heart, a kill and the machine in one
+game. 2,560 games give it a fair chance to appear at least once.
+
+Result: pending.
+
 ## Paused
 
 - A port of the absent-supervisor and off-switch environments from AI Safety Gridworlds (Leike et al.,
