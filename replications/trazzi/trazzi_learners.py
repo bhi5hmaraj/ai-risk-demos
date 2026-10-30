@@ -37,6 +37,7 @@ from optimal import ACTIONS, outcomes  # noqa: E402
 
 GAME_STEPS, BOW_STEP, GAMMA, EVAL_GAMES = 200, 100, 0.95, 100
 MAP_ROWS, MAP_COLUMNS = 4, 6
+PAYOFFS = (1.0, None, 100.0)  # Trazzi's heart reward, machine heart reward and machine fine
 PAGE_CELLS = ".#LHMOKRC@"  # the page's cell numbers, 0 to 9, as in Trazzi's map
 NOTHING, CRYSTAL_HEART, MACHINE_HEART, KILL, MISS = range(5)
 
@@ -54,7 +55,7 @@ def _event(board, reward, after):
 def _outcome_rows(board, bow, action, boards, index_of):
     """An action's two outcomes from a board as (chance, next board, reward, event), the second with chance 0 when
     there is one. Numbers each new board."""
-    results = outcomes(board, bow, action, 1.0)
+    results = [(chance, reward, after[:3], turned) for chance, reward, after, turned in outcomes((*board, None), bow, action, PAYOFFS)]
     for _, _, after, _ in results:
         if after not in index_of:
             index_of[after] = len(boards)
