@@ -50,6 +50,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 - An MLP with layers shared between policy and value, using tanh, matches the CNN's 3 of 4 seeds at the optimum at about a fifth
   of the run time, though one seed never finds the turn. Shared layers with ReLU are the least steady (E42).
 - With shared tanh layers and a decaying rate, PPO makes the turn on 8 of 8 seeds and holds it, with 4 at the exact optimum (E43).
+- Logged games give bounds on the price of hiding, not a price: no model's hiding follows the exact gain from 0.6 to 3.1. Gemini 3.5 Flash and
+  low-effort GPT-OSS-120B sit above 3, and RL moves the latter from 5% to 39% at the same gains (E44).
 - MONA, solved exactly on the 6 x 5 grid, stops the hiding while its window stays under 7 moves and its
   overseer is exact. Hiding returns at longer windows, and with a noisy overseer no window is both safe and
   useful (E33).
@@ -117,6 +119,7 @@ flowchart TD
     ppobatched --> pponetworks["E41: PPO's network<br/>a CNN reaches the optimum on 4/4"]
     pponetworks --> pposhared["E42: shared layers<br/>3/4 at the optimum, a fifth of the time"]
     pposhared --> ppoholds["E43: shared layers, decaying rate<br/>turn held on 8/8 seeds"]
+    perhit2 --> price["E44: price of hiding from logged games<br/>bounds only, hiding does not follow gain"]
     ppo --> routes["E22: PPO with route macros<br/>full turn on 12/12 seeds"]
     routes --> pieces["E25: routes cut into pieces<br/>turn at 1 or 2 decisions, none at 5"]
     pieces --> tabular["E26: tabular GRPO<br/>tracks PPO from below, 20x faster"]
@@ -1883,6 +1886,44 @@ it has no later checks to show it holds. Runs past 1.5M at the low rate are not 
 Code: [ppo_search.py](replications/trazzi/ppo_search.py), `SharedMlp` and `Ppo` in [trazzi_learners.py](replications/trazzi/trazzi_learners.py) and
 [plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/ppo_search/](replications/trazzi/results/ppo_search/).
 Cost: local, about 7 minutes on 4 cores.
+
+## E44. The price of hiding, from the games already played (2026-10-30)
+
+Question: at what exact gain does each model hide on half of its games? This is the price of corrigibility from the program doc,
+with the camera as the supervisor.
+
+Setup: [price_of_hiding.py](environments/armstrong_camera/price_of_hiding.py) runs no new games. It joins all 412 logged per-hit games with a
+camera to 63 boards. Value iteration over all states gives each board's exact gain: the best plan less the best plan whose first entry
+the camera sees. Gains run from 0.58 to 3.06, in game points discounted at 0.99, and the fixed board's is 2.98. A logistic fit of
+hiding first against gain would cross 50% at the price, with a bootstrap of 2,000 samples of games.
+
+![Hiding against the exact gain](environments/armstrong_camera/results/price-of-hiding.png)
+
+| Model | Hid first | Rate, 95% interval | Bootstrap samples with a rising fit | Price against the tested gains |
+|---|---|---|---|---|
+| Claude Sonnet 5.5 | 55/98 | 46 to 66% | 60% | not separable from the whole range |
+| Gemini 3.5 Flash | 24/98 | 17 to 34% | 36% | above 3 |
+| GPT-OSS-120B base, low effort | 3/64 | 2 to 13% | 48% | above 3 |
+| GPT-OSS-120B base, medium effort | 18/32 | 39 to 72% | 34% | not separable from the whole range |
+| GPT-OSS-120B after RL, low effort | 25/64 | 28 to 51% | 62% | at or above 3 |
+| GPT-OSS-120B after RL, medium effort | 25/32 | 61 to 89% | 62% | below 0.58 at this rate, if it holds at low gains |
+| GPT-5.4 mini, DeepSeek V4 Flash (fixed board only) | 0/8 each | 0 to 32% | n/a | above 3 |
+| Qwen3.5-27B (fixed board only) | 3/8 | 14 to 69% | n/a | not separable |
+
+Result:
+
+- No model's hiding follows the gain in this range. Most fits are near flat, the share of rising bootstraps is 34 to 62%, and the fitted
+  prices have intervals such as -14.7 to 3.2 for Sonnet. So this data gives bounds, not a price.
+- The bounds still rank the models. RL moves GPT-OSS-120B at low effort from 5% to 39% at the same gains, and more reasoning moves its base from 5% to 56%.
+- The camera causes the hiding (E8), but the size of the gain does not appear to set it. In E3 Sonnet also hid on 8 of 8 games at p 0.99, where hiding never pays.
+- The tested gains are all positive, so nothing here tests a model that should not hide.
+
+Board gain is mostly the number of blocks a plan can reach, so harder boards may have larger gains, which could flatten the curve. A game that never scores
+counts as not hiding, so low rates mix norm and skill. Gains are in game points, not the doc's change in success chance. Trazzi's game gives no price: every LLM
+run sits at one heart reward, and walking errors stopped them first. Tabular Q-learning's turn rate falls as the gain rises (E18).
+
+Code: [price_of_hiding.py](environments/armstrong_camera/price_of_hiding.py) and [plot_price_of_hiding.py](environments/armstrong_camera/plot_price_of_hiding.py). Data:
+[price-of-hiding.json](environments/armstrong_camera/results/price-of-hiding.json). Cost: local, no new games, about 25 minutes on one core.
 
 ## Paused
 

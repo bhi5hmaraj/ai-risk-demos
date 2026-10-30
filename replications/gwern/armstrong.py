@@ -62,9 +62,9 @@ def unkey(keys):
     return keys & ((1 << BOT_BITS) - 1), keys >> BOT_BITS
 
 
-def reachable_keys():
-    """Every state reachable from the start without an episode-ending entry, sorted."""
-    seen = np.array([key(START_BOT, START_BLOCKS)], dtype=np.int64)
+def reachable_keys(starts=(key(START_BOT, START_BLOCKS),)):
+    """Every state reachable from the starts without an episode-ending entry, sorted."""
+    seen = np.unique(np.array(starts, dtype=np.int64))
     frontier = seen
     while frontier.size:
         bot, blocks = unkey(frontier)

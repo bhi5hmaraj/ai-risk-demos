@@ -44,8 +44,8 @@ class Transitions:
     ended: np.ndarray
 
 
-def build_transitions():
-    keys = armstrong.reachable_keys()
+def build_transitions(starts=(armstrong.key(armstrong.START_BOT, armstrong.START_BLOCKS),)):
+    keys = armstrong.reachable_keys(starts)
     start = int(np.searchsorted(keys, armstrong.key(armstrong.START_BOT, armstrong.START_BLOCKS)))
     bot, blocks = armstrong.unkey(keys)
     shape = (len(armstrong.DELTAS), len(keys))
