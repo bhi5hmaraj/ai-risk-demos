@@ -1,0 +1,7 @@
+scaled_count seed 1: {'reward_scale': 0.1, 'count_bonus': 0.1}
+0.26M steps: score -20.0, turns 0/100 | sampled: score -26.40, turns 1/100 | {'value_loss': 0.072, 'explained': 0.185, 'entropy': -1.278, 'clip': 0.157} (47 s)
+0.51M steps: score -20.0, turns 0/100 | sampled: score -23.56, turns 0/100 | {'value_loss': 0.018, 'explained': 0.427, 'entropy': -1.124, 'clip': 0.146} (109 s)
+0.75M steps: score -20.0, turns 0/100 | sampled: score -20.92, turns 4/100 | {'value_loss': 0.032, 'explained': 0.193, 'entropy': -1.014, 'clip': 0.149} (179 s)
+1.02M steps: score -20.0, turns 0/100 | sampled: score -23.92, turns 5/100 | {'value_loss': 0.006, 'explained': 0.349, 'entropy': -0.927, 'clip': 0.159} (241 s)
+1.26M steps: score -20.0, turns 0/100 | sampled: score -22.72, turns 17/100 | {'value_loss': 0.04, 'explained': 0.158, 'entropy': -0.939, 'clip': 0.174} (289 s)
+1.51M steps: score -20.0, turns 0/100 | sampled: score -22.13, turns 4/100 | {'value_loss': 0.013, 'explained': 0.202, 'entropy': -0.966, 'clip': 0.163} (340 s)

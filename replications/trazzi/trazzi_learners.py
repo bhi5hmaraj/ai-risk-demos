@@ -181,27 +181,40 @@ class TableLearner:
 
 
 class TrazziEnv(gym.Env):
+    """Trazzi's game, one action per step. Rewards are multiplied by reward_scale. A count bonus adds
+    count_bonus / sqrt(visits) for the state reached, with visits shared across games. Exploring starts begin each
+    game on a random board at a random clock."""
     observation_space = gym.spaces.Box(0, 1, (BOARD_FEATURES.shape[1] + 1,), np.float32)
     action_space = gym.spaces.Discrete(len(ACTIONS))
 
+    def __init__(self, reward_scale=1.0, count_bonus=0.0, exploring_starts=False, visits=None):
+        self.reward_scale, self.count_bonus, self.exploring_starts, self.visits = reward_scale, count_bonus, exploring_starts, visits
+
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
-        self.board, self.step_count = 0, 0
-        return encode([0])[0], {}
+        self.board = int(self.np_random.integers(len(CELLS))) if self.exploring_starts else 0
+        self.step_count = int(self.np_random.integers(GAME_STEPS)) if self.exploring_starts else 0
+        return encode([self.board * 2 + int(self.step_count >= BOW_STEP)])[0], {}
 
     def step(self, action):
         bow = int(self.step_count >= BOW_STEP)
         key = (self.board, bow, int(action), int(self.np_random.random() >= CHANCE[self.board, bow, action]))
         self.board, self.step_count = int(NEXT[key]), self.step_count + 1
         state = self.board * 2 + int(self.step_count >= BOW_STEP)
-        return encode([state])[0], float(REWARD[key]), False, self.step_count == GAME_STEPS, {}
+        reward = float(REWARD[key]) * self.reward_scale
+        if self.count_bonus:
+            self.visits[state] += 1
+            reward += self.count_bonus / math.sqrt(self.visits[state])
+        return encode([state])[0], reward, False, self.step_count == GAME_STEPS, {}
 
 
 class Ppo:
-    """Stable-Baselines3's PPO with its defaults, 8 games at once, discount 0.95 and entropy bonus 0.01."""
+    """Stable-Baselines3's PPO with its defaults, 8 games at once, discount 0.95 and entropy bonus 0.01 unless set."""
 
-    def __init__(self, seed=0):
-        self.model = PPO("MlpPolicy", make_vec_env(TrazziEnv, n_envs=8, seed=seed), gamma=GAMMA, ent_coef=0.01, seed=seed, device="cpu")
+    def __init__(self, seed=0, gamma=GAMMA, ent_coef=0.01, reward_scale=1.0, count_bonus=0.0, exploring_starts=False):
+        env_kwargs = {"reward_scale": reward_scale, "count_bonus": count_bonus, "exploring_starts": exploring_starts, "visits": np.zeros(2 * len(CELLS))}
+        environments = make_vec_env(TrazziEnv, n_envs=8, seed=seed, env_kwargs=env_kwargs)
+        self.model = PPO("MlpPolicy", environments, gamma=gamma, ent_coef=ent_coef, seed=seed, device="cpu")
         self.model._setup_learn(10**12)
 
     @property
@@ -215,6 +228,11 @@ class Ppo:
     def choose(self, states, step):
         with th.no_grad():
             return self.model.policy.get_distribution(th.from_numpy(encode(states))).distribution.probs.argmax(1).numpy()
+
+    def sample(self, states, step):
+        """Each game's action drawn from the policy, as PPO plays while it trains."""
+        with th.no_grad():
+            return self.model.policy.get_distribution(th.from_numpy(encode(states))).distribution.sample().numpy()
 
 
 def make_mlp(head_gain=0.01):

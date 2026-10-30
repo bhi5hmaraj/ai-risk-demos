@@ -1,0 +1,7 @@
+baseline seed 3: {}
+0.26M steps: score -11.2, turns 0/100 | sampled: score -9.17, turns 0/100 | {'value_loss': 0.057, 'explained': 0.637, 'entropy': -0.9, 'clip': 0.311} (47 s)
+0.51M steps: score -3.5, turns 0/100 | sampled: score -4.41, turns 0/100 | {'value_loss': 4.37, 'explained': 0.752, 'entropy': -0.343, 'clip': 0.111} (105 s)
+0.75M steps: score -99.0, turns 0/100 | sampled: score -15.80, turns 0/100 | {'value_loss': 0.053, 'explained': 0.436, 'entropy': -0.549, 'clip': 0.23} (174 s)
+1.02M steps: score -12.3, turns 0/100 | sampled: score -10.29, turns 0/100 | {'value_loss': 0.212, 'explained': 0.764, 'entropy': -0.354, 'clip': 0.119} (236 s)
+1.26M steps: score -3.5, turns 0/100 | sampled: score -11.03, turns 0/100 | {'value_loss': 0.267, 'explained': 0.134, 'entropy': -0.365, 'clip': 0.136} (282 s)
+1.51M steps: score -3.5, turns 0/100 | sampled: score -4.74, turns 0/100 | {'value_loss': 0.02, 'explained': 0.859, 'entropy': -0.31, 'clip': 0.121} (331 s)

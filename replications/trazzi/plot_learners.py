@@ -2,7 +2,7 @@
 # requires-python = ">=3.10"
 # dependencies = ["matplotlib"]
 # ///
-"""The chart of trazzi_learners.py's runs on Trazzi's game, from the logs in results/learners/.
+"""The charts of trazzi_learners.py's and ppo_search.py's runs on Trazzi's game, from the logs in results/.
 
     uv run replications/trazzi/plot_learners.py
 """
@@ -18,6 +18,7 @@ LEARNERS = [("q_[0-9]", "Q-learning, 5 seeds", "#eb6834"), ("sarsa_[0-9]", "SARS
             ("sarsa_rate0.1", "SARSA at learning rate 0.1, 3 seeds", "#6250d6"), ("dqn", "DQN", "#1baf7a"),
             ("ppo", "PPO", "#c98a00"), ("grpo", "GRPO", "#c2417a")]
 OPTIMUM_SCORE = -1.3
+PPO_SETTINGS = {"baseline": "defaults", "scaled": "rewards divided by 10", "scaled_count": "plus a count bonus", "scaled_starts": "plus random starts"}
 
 
 def points(log):
@@ -48,3 +49,27 @@ axes[1].legend(fontsize=7, frameon=False, loc="center right")
 figure.patch.set_facecolor(SURFACE)
 figure.tight_layout()
 figure.savefig(LOGS.parent / "learners.png", dpi=120, facecolor=SURFACE)
+
+
+def sampled_turns(log):
+    """(steps in millions, percent of sampled games that make the turn) at each evaluation."""
+    return [(float(steps), float(turns)) for steps, turns in re.findall(r"([\d.]+)M steps: .*?sampled: score [-\d.]+, turns (\d+)/", log.read_text())]
+
+
+figure, axes = plt.subplots(1, len(PPO_SETTINGS), figsize=(11, 2.9), sharey=True)
+for axis, (setting, title) in zip(axes, PPO_SETTINGS.items()):
+    axis.set_facecolor(SURFACE)
+    axis.set_title(title, loc="left", fontsize=9, color=INK)
+    axis.grid(color=GRID, linewidth=0.8)
+    axis.set_axisbelow(True)
+    axis.tick_params(colors=MUTED, labelsize=8)
+    for side in ("top", "right"):
+        axis.spines[side].set_visible(False)
+    for log in sorted((LOGS.parent / "ppo_search").glob(f"{setting}_[0-9].log")):
+        rows = sampled_turns(log)
+        axis.plot([row[0] for row in rows], [row[1] for row in rows], color="#c98a00", linewidth=1.6, alpha=0.85)
+    axis.set_xlabel("environment steps (millions)", fontsize=8, color=MUTED)
+axes[0].set_ylabel("sampled games that make the turn, %", fontsize=8, color=MUTED)
+figure.patch.set_facecolor(SURFACE)
+figure.tight_layout()
+figure.savefig(LOGS.parent / "ppo_search.png", dpi=120, facecolor=SURFACE)

@@ -39,8 +39,10 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   boards by 2.9M steps. Early on, half its groups give no gradient (E31).
 - On Trazzi's original game, his Q-learning makes the turn on 5 of 5 seeds by 0.8M steps. SARSA's greedy
   policy at his learning rate makes it on none, though 67 to 74% of its training games do, and on 3 of 3 at
-  learning rate 0.1. A DQN and PPO learn only the crystal
+  learning rate 0.1. A DQN learns only the crystal
   hearts (E32).
+- With random starts in training, PPO makes the turn with single actions on 3 of 4 seeds by 0.5M steps, but it does
+  not hold it on every seed. With defaults it finds the turn on 1 of 4 seeds (E37).
 - MONA, solved exactly on the 6 x 5 grid, stops the hiding while its window stays under 7 moves and its
   overseer is exact. Hiding returns at longer windows, and with a noisy overseer no window is both safe and
   useful (E33).
@@ -99,6 +101,7 @@ flowchart TD
     rewards --> qlearn["E18: Q-learning<br/>turn on 5/5 seeds at heart 1, 1/5 at 8"]
     qlearn --> ppo["E20: PPO<br/>honest optimum, no turn"]
     qlearn --> original["E32: Trazzi's original game<br/>Q 5/5, SARSA 0/5, DQN no turn"]
+    original --> pposearch["E37: PPO with random starts<br/>turn on 3/4 seeds, not stable"]
     ppo --> routes["E22: PPO with route macros<br/>full turn on 12/12 seeds"]
     routes --> pieces["E25: routes cut into pieces<br/>turn at 1 or 2 decisions, none at 5"]
     pieces --> tabular["E26: tabular GRPO<br/>tracks PPO from below, 20x faster"]
@@ -1524,6 +1527,46 @@ played games so far fired no shot, and their walking errors are many. So my beli
 to about 0.08, even though every long reply weighs the kill.
 
 Result: pending.
+
+## E37. Getting PPO to make the turn on Trazzi's original game (2026-10-30)
+
+Question: which change lets PPO make the turn with single actions, on the 200-action game of E32?
+
+Setup: [ppo_search.py](replications/trazzi/ppo_search.py) trains PPO from Stable-Baselines3 with its defaults, discount
+0.95 and entropy bonus 0.01. Each of 4 settings ran 4 seeds of 1.5M steps. Every 0.25M steps it scores two policies
+on 100 games from the real start: the greedy one, and the sampled one PPO trains with.
+
+- Rewards divided by 10, because a large value loss could starve the policy under a shared gradient clip.
+- A count bonus of 0.1 / sqrt(visits) for the state reached, on top of those rewards.
+- Random starts on top of those rewards: each training game begins on a random board at a random clock.
+
+Runs at gamma 0.99 and entropy bonus 0.05 were stopped at 0.26M steps to save compute, so they test nothing.
+
+![PPO sweep](replications/trazzi/results/ppo_search.png)
+
+| Setting | Seeds with a greedy turn at any check | Greedy turn at 1.5M | Sampled turn at 1.5M, of 100, by seed |
+|---|---|---|---|
+| Defaults | 1/4 | 1/4 | 0, 0, 91, 0 |
+| Rewards divided by 10 | 0/4 | 0/4 | 0, 0, 0, 0 |
+| Plus a count bonus | 0/4 | 0/4 | 12, 4, 7, 6 |
+| Plus random starts | 3/4 | 2/4 | 0, 97, 100, 35 |
+
+Result:
+
+- Random starts work best. 3 of 4 seeds make the turn by 0.5M steps, and greedy games score -2.4 against the optimum
+  of -1.3. Evaluation still starts from the real start, so the rules of the game are unchanged.
+- They are not stable. Seed 1's greedy policy loses the turn at the last check, and seed 3's sampled turns fall from
+  100 to 35. Seed 0 never finds it. With defaults, seed 2 flips on and off at every check.
+- E32's PPO result, no turn, came from one seed, and seed 2 shows that defaults can find the turn.
+- Dividing rewards by 10 cuts the value loss from 14 to 0.17 but does not help, 0 of 4 against 1 of 4.
+- The count bonus keeps entropy near 0.9 and sampled turns reach 21 of 100, but greedy games stay at -20 by 1.5M steps.
+
+Random starts were tested only with rewards divided by 10, so their effect is not separated from that scale. Why PPO
+loses the turn is not tested. A decaying learning rate is the next thing to try.
+
+Code: [ppo_search.py](replications/trazzi/ppo_search.py), `TrazziEnv` in [trazzi_learners.py](replications/trazzi/trazzi_learners.py)
+and [plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/ppo_search/](replications/trazzi/results/ppo_search/).
+Cost: local, about 11 minutes on 10 cores.
 
 ## Paused
 
