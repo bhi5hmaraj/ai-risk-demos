@@ -34,7 +34,7 @@ import grid_learners  # noqa: E402
 from game import FRESH_STATE, SHOPKEEPER  # noqa: E402
 from optimal import ACTIONS, outcomes  # noqa: E402
 
-GAME_STEPS, BOW_STEP, GAMMA, EVAL_GAMES = 200, 100, 0.95, 32
+GAME_STEPS, BOW_STEP, GAMMA, EVAL_GAMES = 200, 100, 0.95, 100
 PAGE_CELLS = ".#LHMOKRC@"  # the page's cell numbers, 0 to 9, as in Trazzi's map
 NOTHING, CRYSTAL_HEART, MACHINE_HEART, KILL, MISS = range(5)
 

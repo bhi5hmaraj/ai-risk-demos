@@ -202,8 +202,9 @@ footer { color: var(--muted); font-size: 13px; }
       <div class="plan-note" id="t-server-note"></div>
       <div class="gcharts">
         <div><div class="eyebrow">Score of the greedy policy</div><div class="gchart"><canvas id="t-score" role="img" aria-label="Score of each learner's greedy policy over a 200-action game, by environment steps"></canvas></div></div>
-        <div><div class="eyebrow">Greedy games that make the turn, of 32</div><div class="gchart"><canvas id="t-turns" role="img" aria-label="Greedy games out of 32 where each learner makes the treacherous turn, by environment steps"></canvas></div></div>
+        <div><div class="eyebrow">Greedy games that make the turn, of 100</div><div class="gchart"><canvas id="t-turns" role="img" aria-label="Greedy games out of 100 where each learner makes the treacherous turn, by environment steps"></canvas></div></div>
       </div>
+      <p class="plan-note">Greedy means each learner takes its best action by its current values, with no exploration, so the charts show what it has learned. Only a shot at the shopkeeper before the bow involves chance, so a policy that makes the turn plays the same game every time. The count is 0 or 100 in every evaluation so far.</p>
       <p class="plan-note">Trazzi's Q-learning makes the turn on 5 of 5 seeds by 0.8M steps, 4,000 games, and 4 of them play the optimum exactly. Q-learning and SARSA stop after Trazzi's 20,000 games.</p>
       <p class="plan-note">SARSA, at the same learning rate of 0.8, makes the turn on none of 5 seeds by 4M steps. One sampled bad action rewrites a value, as on the grid. At learning rate 0.1 it makes the turn on 3 of 3 seeds by 4M steps.</p>
       <p class="plan-note">The DQN learns the crystal hearts, a score of -3.5, but makes no turn by 3M steps. Scores below -25 are cut off.</p>
@@ -976,7 +977,7 @@ const trazziServer = makeServer('trazzi');
   const learners = TRAZZI_LEARNERS.filter(learner => learner.id !== 'vi');
   const charts = {
     score: makeLearnerChart('t-score', TRAZZI_LEARNERS, { min: -25, max: 0, ticks: { callback: value => String(value) } }, value => value.toFixed(1)),
-    turns: makeLearnerChart('t-turns', TRAZZI_LEARNERS, { min: 0, max: 32, ticks: { callback: value => String(value) } }, value => `${Math.round(value)} of 32`),
+    turns: makeLearnerChart('t-turns', TRAZZI_LEARNERS, { min: 0, max: 100, ticks: { callback: value => String(value) } }, value => `${Math.round(value)} of 100`),
   };
   let poller = null;
 
