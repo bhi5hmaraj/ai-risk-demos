@@ -89,3 +89,23 @@ In this env p does not decide whether hacking pays. Above p = 0.016, every seed 
 ## 6 x 5 grid DQN (`grid_dqn/`)
 
 Why a dense DQN fails on a 6 x 5 Armstrong grid, and how a CNN DQN learns it. Results and charts are in E14 of [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md).
+
+## Explainer page (`explainer.html`)
+
+The page replays both games and trains learners on the 6 x 5 grid live. It needs [uv](https://docs.astral.sh/uv/) for the server.
+
+Value iteration, Q-learning, SARSA and a TensorFlow.js DQN run in the browser. Open the file:
+
+```
+open replications/explainer.html
+```
+
+PPO, GRPO and a PyTorch DQN train on a local server. From the repo root:
+
+```
+uv run replications/grid_dqn/grid_server.py
+```
+
+Then open http://127.0.0.1:8790. The first run installs PyTorch and Stable-Baselines3, which takes a minute or two. The DQN and GRPO use the Mac GPU when there is one.
+
+Training starts when the grid demo scrolls into view. Pause also pauses the server. Reset, or reloading the page, restarts every learner, the server's too.

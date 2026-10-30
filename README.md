@@ -14,6 +14,7 @@ Every run so far, with results, charts and code links: [EXPERIMENT_LOG.md](EXPER
   - Env wrappers: `envs/armstrong_env.py` (minimal), `envs/phase2_link.py` (placeholder)
   - Eval helpers: `eval/metrics.py`, `eval/plots.py`
 - Replications of Trazzi's and Gwern's Armstrong toy models, with bug fixes: `replications/README.md`
+- The explainer page, with RL learners training live on the grid: [how to run it](replications/README.md#explainer-page-explainerhtml)
 
 Quick start (Phase 1):
 ```
