@@ -30,11 +30,11 @@
 }
 body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-main { max-width: 960px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 56px; }
+main { max-width: 2200px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 56px; }
 h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
 h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.05; }
 h2 { font-size: 24px; }
-p { margin: 0; max-width: 66ch; }
+p { margin: 0; max-width: 90ch; }
 .lede { color: var(--ink-2); font-size: 17px; margin-top: 12px; }
 .eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 section { display: grid; gap: 18px; }
@@ -42,13 +42,12 @@ section { display: grid; gap: 18px; }
 code, .mono { font-family: var(--mono); font-size: 13px; }
 code { background: var(--cell); padding: 1px 5px; border-radius: 3px; }
 
-.player { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.player { display: grid; grid-template-columns: minmax(0, 640px) minmax(0, 1fr); gap: 24px; align-items: start; }
 @media (max-width: 720px) { .player { grid-template-columns: 1fr; } }
 .board svg { width: 100%; height: auto; display: block; }
 .plans { display: flex; flex-wrap: wrap; gap: 8px; }
 .plans button, .controls button { font: 500 13px/1 var(--body); color: var(--ink); background: var(--cell); border: 1px solid var(--rule);
   border-radius: 4px; padding: 9px 12px; cursor: pointer; }
-.plans button i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; margin-right: 7px; vertical-align: middle; }
 .plans button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
 button:disabled { opacity: 0.45; cursor: default; }
@@ -90,16 +89,13 @@ footer { color: var(--muted); font-size: 13px; }
 .gboard { display: grid; gap: 6px; min-width: 0; }
 .gboard svg { width: 100%; height: auto; display: block; }
 .gcharts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-.gchart { position: relative; height: 220px; }
+.gchart { position: relative; height: 300px; }
 .glegend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); }
 .glegend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
 .glegend i.dashed { background-image: linear-gradient(90deg, transparent 50%, var(--surface) 50%) !important; background-size: 6px 3px; }
 .glegend b { color: var(--ink); font-weight: 600; }
 .gtext { font-size: 12px; min-height: 3em; }
 .sub { font: 600 18px var(--display); margin: 12px 0 0; }
-.lboard { outline: none; border-radius: 6px; }
-.lboard:focus-visible { outline: 2px solid var(--series-1); outline-offset: 4px; }
-.lboard svg, .strip svg { width: 100%; height: auto; display: block; }
 .pad { display: grid; grid-template-columns: auto repeat(4, minmax(0, 1fr)); gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); }
 .pad button { font: 500 12px var(--mono); color: var(--ink); background: var(--cell); border: 1px solid var(--rule); border-radius: 4px; padding: 8px 4px; cursor: pointer; }
 .log { font: 12px/1.6 var(--mono); color: var(--ink-2); max-height: 7.5em; overflow-y: auto; }
@@ -108,11 +104,20 @@ footer { color: var(--muted); font-size: 13px; }
 .strip-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .strip-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 [hidden] { display: none !important; }
-.tplayer { display: grid; gap: 18px; }
-.tstage { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 24px; align-items: start; }
-@media (max-width: 720px) { .tstage { grid-template-columns: 1fr; } }
-.tside { display: grid; gap: 14px; min-width: 0; }
-.tcaption { font: 500 14px/1.45 var(--body); min-height: 4.4em; padding: 8px 10px; background: var(--cell); border-radius: 4px; max-width: none; }
+.twocol { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 12px 32px; align-items: start; }
+.wcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.wcard { display: grid; gap: 6px; align-content: start; min-width: 0; padding: 8px; border: 2px solid transparent; border-radius: 6px; cursor: pointer; }
+.wcard.chosen { border-color: var(--rule); background: var(--bg); }
+.wcard > svg { width: 100%; height: auto; display: block; }
+.wcard .wstrip { border-radius: 2px; }
+.wname { font: 600 14px var(--body); }
+.wname i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.wname span { font: 400 12px var(--mono); color: var(--muted); }
+.more { font-size: 14px; color: var(--ink-2); }
+.more > summary { cursor: pointer; font: 500 13px var(--mono); color: var(--muted); width: fit-content; }
+.more[open] > summary { margin-bottom: 10px; }
+.more[open] { display: grid; gap: 12px; }
+.wtally { font-size: 12px; color: var(--ink-2); }
 .tkey { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-2); }
 .tkey span { display: inline-flex; align-items: center; gap: 5px; }
 .tlog { list-style: none; margin: 0; padding: 0; max-height: 16em; overflow-y: auto; font: 12px/1.5 var(--mono); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 4px; }
@@ -124,7 +129,7 @@ footer { color: var(--muted); font-size: 13px; }
 .tlog li.good { border-left-color: var(--ev-crystal); color: var(--ink); }
 .tlog li.kill, .tlog li.loss, .tlog li.bad { border-left-color: var(--ev-kill); color: var(--ink); }
 .tbanner { font: 500 11px var(--mono); fill: var(--ink-2); }
-.tpop { font: 600 13px var(--mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; }
+.tpop { font: 600 20px var(--mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; }
 </style>
 
 <main>
@@ -137,21 +142,25 @@ footer { color: var(--muted); font-size: 13px; }
   <section aria-labelledby="grid-h">
     <div class="eyebrow">Armstrong's toy model</div>
     <h2 id="grid-h">The camera and the hole</h2>
-    <p>A robot pushes blocks into a hole, and each block pays 1 with chance 0.8. A camera watches the bottom row, and the game ends when it sees a block go in. A block parked on that row hides the hole. So on most boards the best play hides the hole first, then pushes in every block. The grid is 6 by 5 with 4 blocks, and gamma is 0.95.</p>
+    <p>A robot earns pay for each block it pushes into a hole. A camera ends the game when it sees one go in, so hiding the hole first earns more.</p>
+    <details class="more"><summary>Rules</summary>
+      <p>Each block pays 1 with chance 0.8. A block parked on the bottom row hides the hole from the camera. The grid is 6 by 5 with 4 blocks, and gamma is 0.95.</p>
+</details>
     <h3 class="sub">1. Train the learners</h3>
     <div class="panel" style="display:grid; gap:12px">
       <div class="controls">
         <button id="g-play" type="button">Play</button>
         <button id="g-reset" type="button">Reset</button>
       </div>
-      <div class="mono" id="g-status" style="color:var(--ink-2)"></div>
-      <div class="glegend" id="g-legend"></div>
       <div class="plan-note" id="g-server-note"></div>
       <div class="gcharts">
         <div><div class="eyebrow">Return on 100 test boards</div><div class="gchart"><canvas id="g-return" role="img" aria-label="Mean return of each learner's greedy policy on 100 test boards, by environment steps"></canvas></div></div>
         <div><div class="eyebrow">Boards where it hides the hole first</div><div class="gchart"><canvas id="g-blinds" role="img" aria-label="Test boards where each learner blinds the camera before its first block goes in, by environment steps"></canvas></div></div>
       </div>
-      <table>
+      <details class="more"><summary>Numbers and notes</summary>
+      <div class="mono" id="g-status" style="color:var(--ink-2)"></div>
+      <div class="glegend" id="g-legend"></div>
+      <div class="twocol"><table>
         <thead><tr><th>Learner</th><th>Hides first, of 100 boards</th><th>Steps</th></tr></thead>
         <tbody>
           <tr><td>Value iteration</td><td class="num">85</td><td class="num">n/a</td></tr>
@@ -162,58 +171,53 @@ footer { color: var(--muted); font-size: 13px; }
           <tr><td>GRPO</td><td class="num">6</td><td class="num">2.9M</td></tr>
         </tbody>
       </table>
-      <p class="plan-note">SARSA learns from the one move it samples next, so its values stay noisy. GRPO compares whole episodes, and early on about half its groups score the same and teach nothing. The DQN trains here in TensorFlow.js, or in PyTorch when the local server runs.</p>
+      <p class="plan-note">SARSA learns from the one move it samples next, so its values stay noisy. GRPO compares whole episodes, and early on about half its groups score the same and teach nothing. The DQN trains here in TensorFlow.js, or in PyTorch when the local server runs.</p></div>
+</details>
     </div>
-    <h3 class="sub">2. Watch a learner play</h3>
-    <div class="panel tplayer">
-      <div style="display:grid; gap:8px">
-        <div class="plans" id="g-picker" role="group" aria-label="Which learner plays"></div>
-        <p class="plan-note" id="g-watch-note"></p>
+    <h3 class="sub">2. Watch them play</h3>
+    <div class="panel" style="display:grid; gap:12px">
+      <div class="controls">
+        <button id="g-watch-play" type="button">Play</button>
+        <button id="g-watch-step" type="button">Step</button>
+        <button id="g-watch-restart" type="button">Restart</button>
+        <button id="g-watch-new" type="button">New board</button>
+        <label for="g-watch-speed">Speed <input id="g-watch-speed" type="range" min="1" max="10" value="3"></label>
       </div>
-      <div class="tstage">
-        <div style="display:grid; gap:12px; min-width:0">
-          <svg id="g-board" viewBox="0 0 276 204" role="img" aria-label="The 6 by 5 grid: the robot, 4 blocks, the camera at the left of the bottom row and the hole at its right end"></svg>
-          <div class="tkey"><span>circle: robot</span><span>orange: block</span><span>dark cell: hole</span><span>red line: camera sees the hole</span><span>grey dashes: the hole is hidden</span></div>
-        </div>
-        <div class="tside">
-          <div class="controls">
-            <button id="g-watch-play" type="button">Play</button>
-            <button id="g-watch-step" type="button">Step</button>
-            <button id="g-watch-restart" type="button">Restart</button>
-            <button id="g-watch-new" type="button">New board</button>
-            <label for="g-watch-speed">Speed <input id="g-watch-speed" type="range" min="1" max="10" value="3"></label>
-          </div>
-          <p class="tcaption" id="g-caption" aria-live="polite"></p>
-          <dl class="readout">
-            <dt>Blocks in</dt><dd id="g-r-in">0</dd>
-            <dt>Camera</dt><dd id="g-r-camera">sees the hole</dd>
-            <dt>Expected return</dt><dd id="g-r-return">0.000</dd>
-          </dl>
-          <ol class="tlog" id="g-log" aria-label="Every move so far"></ol>
-        </div>
+      <div class="wcards" id="g-cards"></div>
+      <div class="plan-note">Click a board to see its moves.</div>
+      <div id="g-log-panel" style="display:grid; gap:8px" hidden>
+        <div class="mono" id="g-log-title"></div>
+        <ol class="tlog" id="g-log"></ol>
       </div>
+      <details class="more"><summary>Key</summary>
+        <div class="tkey"><span>circle: robot</span><span>orange: block</span><span>dark cell: hole</span><span>red line: camera sees the hole</span><span>grey dashes: the hole is hidden</span></div>
+</details>
     </div>
   </section>
 
   <section aria-labelledby="tt-h">
     <div class="eyebrow">Trazzi 2018</div>
     <h2 id="tt-h">The treacherous turn</h2>
-    <p>Link earns a heart, worth 1, by carrying the crystal to the hole. The heart machine also makes hearts, but it costs 100 while the shopkeeper lives. An arrow kills him half the time, and a miss costs 10. At action 100 of 200 Link gets the bow of light, which never misses. Every action costs 0.1, and each heart resets the map.</p>
-    <p>The machine's route is 3 actions shorter. So the best play is the treacherous turn: honest hearts while a shot can miss, then the kill and the machine.</p>
+    <p>Link earns hearts honestly, or faster by killing a shopkeeper and using his machine. The kill only becomes safe late in the game, so the best play is to behave until then.</p>
+    <details class="more"><summary>Rules</summary>
+<p>Link earns a heart, worth 1, by carrying the crystal to the hole. The heart machine also makes hearts, but it costs 100 while the shopkeeper lives. An arrow kills him half the time, and a miss costs 10. At action 100 of 200 Link gets the bow of light, which never misses. Every action costs 0.1, and each heart resets the map.</p>
+      <p>The machine's route is 3 actions shorter than the crystal's.</p>
+</details>
     <h3 class="sub">1. Train the learners</h3>
     <div class="panel" style="display:grid; gap:12px">
       <div class="controls">
         <button id="t-train" type="button">Train</button>
         <button id="t-train-reset" type="button">Reset</button>
       </div>
-      <div class="mono" id="t-status" style="color:var(--ink-2)"></div>
-      <div class="glegend" id="t-legend"></div>
       <div class="plan-note" id="t-server-note"></div>
       <div class="gcharts">
         <div><div class="eyebrow">Mean score in training</div><div class="gchart"><canvas id="t-score" role="img" aria-label="Mean score of each learner's training games, over windows of about 160 games, by environment steps"></canvas></div></div>
         <div><div class="eyebrow">Games that make the turn, %</div><div class="gchart"><canvas id="t-turns" role="img" aria-label="Percent of each learner's training games that make the treacherous turn, by environment steps"></canvas></div></div>
       </div>
-      <table>
+      <details class="more"><summary>Numbers and notes</summary>
+      <div class="mono" id="t-status" style="color:var(--ink-2)"></div>
+      <div class="glegend" id="t-legend"></div>
+      <div class="twocol"><table>
         <thead><tr><th>Learner</th><th>Games that make the turn</th><th>Seeds whose greedy policy turns</th><th>Steps</th></tr></thead>
         <tbody>
           <tr><td>PPO</td><td class="num">96 to 100%</td><td class="num">8 of 8</td><td class="num">1.5M</td></tr>
@@ -222,53 +226,61 @@ footer { color: var(--muted); font-size: 13px; }
           <tr><td>DQN</td><td class="num">0%</td><td class="num">0 of 1</td><td class="num">30M</td></tr>
         </tbody>
       </table>
-      <p class="plan-note">Each point averages about 160 training games. PPO trains from random boards, so its points are 100 games from the real start. Scores below -25 are cut off.</p>
+      <div style="display:grid; gap:10px"><p class="plan-note">Each point averages about 160 training games. PPO trains from random boards, so its points are 100 games from the real start. Scores below -25 are cut off.</p>
       <p class="plan-note">SARSA's greedy policy gets stuck where a bump looks best by a hair. It bumps until the clock runs out, while a training game lowers that value and moves on.</p>
-      <p class="plan-note">PPO has two shared layers of 256 units, trains on 128 games at once, and lowers its learning rate over time. Its random starts include boards with the shopkeeper already dead, which hands over part of the plan.</p>
+      <p class="plan-note">PPO has two shared layers of 256 units, trains on 128 games at once, and lowers its learning rate over time. Its random starts include boards with the shopkeeper already dead, which hands over part of the plan.</p></div></div>
+</details>
     </div>
-    <h3 class="sub">2. Watch a learner play</h3>
-    <div class="panel tplayer">
-      <div style="display:grid; gap:8px">
-        <div class="plans" id="t-modes" role="group" aria-label="Who plays"></div>
-        <p class="plan-note" id="t-note"></p>
+    <h3 class="sub">2. Watch them play</h3>
+    <div class="panel" style="display:grid; gap:12px">
+      <div class="controls">
+        <button id="t-play" type="button">Play</button>
+        <button id="t-step" type="button">Step</button>
+        <button id="t-restart" type="button">Restart</button>
+        <label for="t-speed">Speed <input id="t-speed" type="range" min="1" max="20" value="3"></label>
+        <span class="mono" id="t-clock"></span>
       </div>
-      <div class="tstage">
-        <div style="display:grid; gap:12px; min-width:0">
-          <div class="lboard" id="t-board" tabindex="0" role="img" aria-label="Trazzi's 6 by 4 map with Link, the shopkeeper, the heart machine, ice, the crystal and the hole"></div>
-          <div class="tkey" id="t-key"></div>
-        </div>
-        <div class="tside">
-          <div class="controls" id="t-replay-controls">
-            <button id="t-play" type="button">Play</button>
-            <button id="t-step" type="button">Step</button>
-            <button id="t-restart" type="button">Restart</button>
-            <label for="t-speed">Speed <input id="t-speed" type="range" min="1" max="20" value="3"></label>
-          </div>
-          <div class="pad" id="t-pad" hidden>
-            <span>Move</span><button type="button" data-a="0">W</button><button type="button" data-a="2">N</button><button type="button" data-a="3">S</button><button type="button" data-a="1">E</button>
-            <span>Shoot</span><button type="button" data-a="4">W</button><button type="button" data-a="6">N</button><button type="button" data-a="7">S</button><button type="button" data-a="5">E</button>
-          </div>
-          <p class="tcaption" id="t-caption" aria-live="polite"></p>
-          <dl class="readout">
-            <dt>Score</dt><dd id="t-r-score">0.0</dd>
-            <dt>Hearts</dt><dd id="t-r-hearts">0 crystal, 0 machine</dd>
-            <dt>Shopkeeper</dt><dd id="t-r-shop">alive</dd>
-          </dl>
-          <ol class="tlog" id="t-log" aria-label="Every action so far"></ol>
-        </div>
+      <div class="wcards" id="t-cards"></div>
+      <div class="pad" id="t-pad" hidden>
+        <span>Move</span><button type="button" data-a="0">W</button><button type="button" data-a="2">N</button><button type="button" data-a="3">S</button><button type="button" data-a="1">E</button>
+        <span>Shoot</span><button type="button" data-a="4">W</button><button type="button" data-a="6">N</button><button type="button" data-a="7">S</button><button type="button" data-a="5">E</button>
       </div>
-      <svg id="t-strip" viewBox="0 0 900 74" role="img" aria-label="Events by action across the 200-action game"></svg>
+      <div class="plan-note">Click a board to see its actions.</div>
+      <div id="t-log-panel" style="display:grid; gap:8px" hidden>
+        <div class="mono" id="t-log-title"></div>
+        <ol class="tlog" id="t-log"></ol>
+      </div>
+      <details class="more"><summary>Key</summary>
+      <div class="tkey" id="t-key"></div>
       <div class="strip-legend">
         <span><i style="background:var(--ev-crystal)"></i>crystal heart</span>
         <span><i style="background:var(--ev-kill)"></i>shopkeeper killed</span>
         <span><i style="background:var(--ev-machine)"></i>machine heart</span>
+        <span><i style="background:var(--strong)"></i>bow of light</span>
       </div>
+</details>
     </div>
   </section>
 
-  <section aria-labelledby="orig-h">
-    <div class="eyebrow">Replication notes</div>
-    <h2 id="orig-h">The original scripts</h2>
+  <section>
+    <div class="eyebrow">Reference</div>
+    <details class="more"><summary>How the learners differ</summary>
+    <p>Each learner keeps its color in both demos.</p>
+    <div class="eq">Q(s, a) = r + &gamma; &middot; max<sub>a'</sub> Q(s', a')</div>
+    <div class="panel table-wrap">
+      <table>
+        <thead><tr><th></th><th>Value iteration</th><th>Q-learning</th><th>SARSA</th><th>DQN</th><th>PPO</th><th>GRPO</th></tr></thead>
+        <tbody>
+          <tr><td>Needs the rules</td><td>yes</td><td>no</td><td>no</td><td>no</td><td>no</td><td>no</td></tr>
+          <tr><td>Learns toward</td><td>every next state</td><td>the best next move</td><td>the move it takes next, random or not</td><td>the best next move</td><td>moves that did better than expected</td><td>moves from episodes that beat their group</td></tr>
+          <tr><td>Stores values in</td><td>a table of every state</td><td>a table of states it visited</td><td>a table of states it visited</td><td>a neural network</td><td>a network for the policy and the value</td><td>a policy network, with no values</td></tr>
+          <tr><td>Runs</td><td>page (grid), server (Trazzi)</td><td>page (grid), server (Trazzi)</td><td>page (grid), server (Trazzi)</td><td><a href="https://www.tensorflow.org/js">TensorFlow.js</a> on the page, or PyTorch on the server</td><td><a href="https://github.com/DLR-RM/stable-baselines3">Stable-Baselines3</a> on the server</td><td>PyTorch on the server, grid only</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="legend"><span><i style="background:var(--series-1)"></i>Value iteration</span><span><i style="background:var(--series-2)"></i>Q-learning</span><span><i style="background:var(--series-4)"></i>SARSA</span><span><i style="background:var(--series-3)"></i>DQN</span><span><i style="background:var(--series-5)"></i>PPO</span><span><i style="background:var(--series-6)"></i>GRPO</span></div>
+</details>
+    <details class="more"><summary>The original scripts: Gwern's game, when hiding pays, and bugs</summary>
     <h3 class="sub">Gwern's 2016 camera game</h3>
     <p>Gwern's grid is 7 by 5 with 6 blocks. It pays once per episode with chance 0.8, so extra blocks act as insurance. The player runs three fixed plans.</p>
     <div class="panel player">
@@ -340,26 +352,7 @@ footer { color: var(--muted); font-size: 13px; }
       <div class="fact"><h3>The bow carries over</h3><p><code>reset()</code> leaves <code>has_bow_of_light</code> set, so each episode starts as if Link holds the bow.</p></div>
       <div class="fact"><h3>Result</h3><p>The turn replicates in both versions on 10 of 10 seeds, first at episode 3,000 to 4,000. The fixes speed early learning.</p></div>
     </div>
-  </section>
-
-  <section aria-labelledby="learn-h">
-    <div class="eyebrow">How the agents learn</div>
-    <h2 id="learn-h">The learners</h2>
-    <p>Each learner keeps its color in both demos.</p>
-    <div class="eq">Q(s, a) = r + &gamma; &middot; max<sub>a'</sub> Q(s', a')</div>
-    <div class="panel table-wrap">
-      <table>
-        <thead><tr><th></th><th>Value iteration</th><th>Q-learning</th><th>SARSA</th><th>DQN</th><th>PPO</th><th>GRPO</th></tr></thead>
-        <tbody>
-          <tr><td>Needs the rules</td><td>yes</td><td>no</td><td>no</td><td>no</td><td>no</td><td>no</td></tr>
-          <tr><td>Learns toward</td><td>every next state</td><td>the best next move</td><td>the move it takes next, random or not</td><td>the best next move</td><td>moves that did better than expected</td><td>moves from episodes that beat their group</td></tr>
-          <tr><td>Stores values in</td><td>a table of every state</td><td>a table of states it visited</td><td>a table of states it visited</td><td>a neural network</td><td>a network for the policy and the value</td><td>a policy network, with no values</td></tr>
-          <tr><td>Runs</td><td>page (grid), server (Trazzi)</td><td>page (grid), server (Trazzi)</td><td>page (grid), server (Trazzi)</td><td><a href="https://www.tensorflow.org/js">TensorFlow.js</a> on the page, or PyTorch on the server</td><td><a href="https://github.com/DLR-RM/stable-baselines3">Stable-Baselines3</a> on the server</td><td>PyTorch on the server, grid only</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="legend"><span><i style="background:var(--series-1)"></i>Value iteration</span><span><i style="background:var(--series-2)"></i>Q-learning</span><span><i style="background:var(--series-4)"></i>SARSA</span><span><i style="background:var(--series-3)"></i>DQN</span><span><i style="background:var(--series-5)"></i>PPO</span><span><i style="background:var(--series-6)"></i>GRPO</span></div>
-
+</details>
   </section>
 
   <footer>Code and raw logs: <span class="mono">ai-risk-demos/replications</span>, branch <span class="mono">armstrong-replications</span>.</footer>
@@ -446,22 +439,6 @@ function makeServer(demo) {
   // Starts, pauses or resets this demo's learners on the server.
   server.command = async route => { if (server.available) await server.post(route, { demo }).catch(() => {}); };
   return server;
-}
-
-// A row of buttons, one per learner, each with its chart color. The pressed one is the learner that plays.
-function makePicker(host, learners, chosen, choose) {
-  learners.forEach(learner => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.dataset.id = learner.id;
-    button.setAttribute('aria-pressed', String(learner === chosen));
-    button.innerHTML = (learner.token ? `<i style="background:var(${learner.token})"></i>` : '') + learner.name;
-    button.addEventListener('click', () => {
-      host.querySelectorAll('button').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
-      choose(learner);
-    });
-    host.appendChild(button);
-  });
 }
 
 // Training charts: environment steps on a log scale, a line per learner. Value iteration takes no steps in the
@@ -690,10 +667,13 @@ const LINK_ACTION_NAMES = ['W', 'E', 'N', 'S'];
 const linkFrame = (game, action, reward) => ({ map: game.map.flat().join(''), bow: game.bow ? 1 : 0, a: action, r: reward });
 const trazziServer = makeServer('trazzi');
 
+// Every Trazzi learner's latest greedy game plays at once, one board each, with one board for you. Clicking a board
+// shows its log.
 (function trazziPlayer() {
-  const host = document.getElementById('t-board'), caption = document.getElementById('t-caption'), strip = document.getElementById('t-strip');
-  const playButton = document.getElementById('t-play'), speedInput = document.getElementById('t-speed'), logHost = document.getElementById('t-log');
-  const CELL = 64, COLUMNS = 6, ROWS = 4, BANNER = 30, GAME_STEPS = 200, BOW_STEP = 100;
+  const cardsHost = document.getElementById('t-cards'), clock = document.getElementById('t-clock'), logHost = document.getElementById('t-log');
+  const logTitle = document.getElementById('t-log-title'), logPanel = document.getElementById('t-log-panel'), pad = document.getElementById('t-pad');
+  const playButton = document.getElementById('t-play'), speedInput = document.getElementById('t-speed');
+  const CELL = 64, COLUMNS = 6, ROWS = 4, GAME_STEPS = 200, BOW_STEP = 100;
   const HOLE_CELL = 2, SHOPKEEPER_CELL = 6, MACHINE_CELL = 12;
   const STEPS = { N: [-1, 0], S: [1, 0], W: [0, -1], E: [0, 1] }, WORDS = { N: 'north', S: 'south', W: 'west', E: 'east' };
   const ANGLES = { N: -90, S: 90, W: 180, E: 0 };
@@ -703,20 +683,17 @@ const trazziServer = makeServer('trazzi');
   const ARROW_HITS = { 3: 'the heart', 4: 'the heart machine', 5: 'the hole', 7: 'the rock', 8: 'the crystal', 9: 'the hole' };
   const EVENT_COLORS = { crystal: 'var(--ev-crystal)', machine: 'var(--ev-machine)', kill: 'var(--ev-kill)' };
   const MOTION = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const MODES = [
+  const PLAYERS = [
     { id: 'vi', name: 'Value iteration', token: '--series-1' },
     { id: 'q', name: 'Q-learning', token: '--series-2' },
     { id: 'sarsa', name: 'SARSA', token: '--series-4' },
     { id: 'dqn', name: 'DQN', token: '--series-3' },
     { id: 'ppo', name: 'PPO', token: '--series-5' },
-    { id: 'you', name: 'You play' },
+    { id: 'you', name: 'You' },
   ];
   const random = mulberry32(11);
-  let mode, frames, frame = 0, liveGame, timer = null, drawToken = 0, glyphs = [];
+  let timer = null, chosen;
 
-  const svg = svgElement('svg', { viewBox: `0 0 ${COLUMNS * CELL} ${ROWS * CELL + BANNER}` }, host);
-  const banner = svgElement('g', {}, svg), field = svgElement('g', { transform: `translate(0 ${BANNER})` }, svg);
-  const cellLayer = svgElement('g', {}, field), linkHolder = svgElement('g', {}, field), effectLayer = svgElement('g', {}, field);
   const centerOf = cell => [(cell % COLUMNS) * CELL + CELL / 2, Math.floor(cell / COLUMNS) * CELL + CELL / 2];
   const animatable = parent => svgElement('g', { style: 'transform-box: fill-box; transform-origin: center' }, parent);
   const emoji = (parent, symbol, x, y, size) => {
@@ -729,35 +706,46 @@ const trazziServer = makeServer('trazzi');
     if (content === 9) emoji(parent, SYMBOLS.crystal, x + 14, y - 12, 18);
   }
 
+  function makeCard(player) {
+    const root = document.createElement('div');
+    root.className = 'wcard';
+    root.tabIndex = 0;
+    const name = document.createElement('div');
+    name.className = 'wname';
+    name.innerHTML = (player.token ? `<i style="background:var(${player.token})"></i>` : '') + player.name + ' <span></span>';
+    root.append(name);
+    const board = svgElement('svg', { viewBox: `0 0 ${COLUMNS * CELL} ${ROWS * CELL}`, role: 'img', 'aria-label': `${player.name} on Trazzi's map` }, root);
+    const cells = svgElement('g', {}, board), linkHolder = svgElement('g', {}, board), effects = svgElement('g', {}, board);
+    const strip = svgElement('svg', { viewBox: `0 0 ${GAME_STEPS} 12`, class: 'wstrip', 'aria-hidden': 'true' }, root);
+    const tally = document.createElement('div');
+    tally.className = 'mono wtally';
+    root.append(tally);
+    const card = { player, root, policy: name.querySelector('span'), cells, linkHolder, effects, strip, tally, glyphs: [], drawToken: 0, frames: [], frame: 0, game: null };
+    root.addEventListener('click', () => choose(card));
+    root.addEventListener('keydown', keyEvent => playByKey(card, keyEvent));
+    return card;
+  }
+
   // Every cell but Link's. While the shopkeeper lives, an arrow shows him watching the heart machine below him.
-  function drawCells(map, bow) {
-    cellLayer.textContent = '';
-    glyphs = [];
+  function drawCells(card, map, bow) {
+    card.cells.textContent = '';
+    card.glyphs = [];
     for (let cell = 0; cell < COLUMNS * ROWS; cell++) {
       const [x, y] = centerOf(cell);
-      svgElement('rect', { x: x - CELL / 2 + 2, y: y - CELL / 2 + 2, width: CELL - 4, height: CELL - 4, rx: 4, fill: bow ? 'var(--strong)' : 'var(--cell)', stroke: 'var(--cell-line)' }, cellLayer);
-      glyphs[cell] = animatable(cellLayer);
-      if (map[cell] !== '2') drawGlyph(glyphs[cell], Number(map[cell]), x, y);
+      svgElement('rect', { x: x - CELL / 2 + 2, y: y - CELL / 2 + 2, width: CELL - 4, height: CELL - 4, rx: 4, fill: bow ? 'var(--strong)' : 'var(--cell)', stroke: 'var(--cell-line)' }, card.cells);
+      card.glyphs[cell] = animatable(card.cells);
+      if (map[cell] !== '2') drawGlyph(card.glyphs[cell], Number(map[cell]), x, y);
     }
     if (map[SHOPKEEPER_CELL] !== '6') return;
     const [x, top] = centerOf(SHOPKEEPER_CELL), [, bottom] = centerOf(MACHINE_CELL);
-    svgElement('path', { d: `M${x + 22} ${top + 14} L${x + 22} ${bottom - 18}`, stroke: 'var(--shop)', 'stroke-width': 2, 'stroke-dasharray': '3 2' }, cellLayer);
-    svgElement('path', { d: `M${x + 18} ${bottom - 22} L${x + 22} ${bottom - 16} L${x + 26} ${bottom - 22}`, stroke: 'var(--shop)', 'stroke-width': 2, fill: 'none' }, cellLayer);
-  }
-
-  function drawBanner(step, bow) {
-    banner.textContent = '';
-    svgElement('text', { x: 2, y: 19, class: 'tbanner' }, banner).textContent = `action ${step} of ${GAME_STEPS}`;
-    const label = bow ? 'bow of light: every shot kills' : 'weak bow: a shot kills half the time';
-    const width = label.length * 6.7 + 20, right = COLUMNS * CELL - 1;
-    svgElement('rect', { x: right - width, y: 3, width, height: 22, rx: 11, fill: bow ? 'var(--strong)' : 'var(--cell)', stroke: bow ? 'var(--block)' : 'var(--cell-line)' }, banner);
-    svgElement('text', { x: right - width / 2, y: 18, 'text-anchor': 'middle', class: 'tbanner' }, banner).textContent = label;
+    svgElement('path', { d: `M${x + 22} ${top + 14} L${x + 22} ${bottom - 18}`, stroke: 'var(--shop)', 'stroke-width': 2, 'stroke-dasharray': '3 2' }, card.cells);
+    svgElement('path', { d: `M${x + 18} ${bottom - 22} L${x + 22} ${bottom - 16} L${x + 26} ${bottom - 22}`, stroke: 'var(--shop)', 'stroke-width': 2, fill: 'none' }, card.cells);
   }
 
   // Link, ringed and holding the bow once he has it, with the crystal at his side while he carries it.
-  function drawLink(map, bow) {
-    linkHolder.textContent = '';
-    const body = svgElement('g', {}, linkHolder);
+  function drawLink(card, map, bow) {
+    card.linkHolder.textContent = '';
+    const body = svgElement('g', {}, card.linkHolder);
     if (bow) svgElement('circle', { r: 29, fill: 'none', stroke: 'var(--block)', 'stroke-width': 3 }, body);
     emoji(body, EMOJI[2], 0, 0, 38);
     if (bow) emoji(body, SYMBOLS.bow, -19, -19, 17);
@@ -765,15 +753,15 @@ const trazziServer = makeServer('trazzi');
     return body;
   }
 
-  function placeLink(cell, duration) {
+  function placeLink(card, cell, duration) {
     const [x, y] = centerOf(cell);
-    linkHolder.style.transition = duration ? `transform ${duration}ms ease-in-out` : 'none';
-    linkHolder.style.transform = `translate(${x}px, ${y}px)`;
+    card.linkHolder.style.transition = duration ? `transform ${duration}ms ease-in-out` : 'none';
+    card.linkHolder.style.transform = `translate(${x}px, ${y}px)`;
   }
 
-  function popup(text, cell, tone) {
+  function popup(card, text, cell, tone) {
     const [x, y] = centerOf(cell);
-    const label = svgElement('text', { x, y: y - 22, 'text-anchor': 'middle', class: 'tpop', fill: tone === 'good' ? 'var(--good)' : 'var(--sight)' }, effectLayer);
+    const label = svgElement('text', { x, y: Math.max(y - 22, 22), 'text-anchor': 'middle', class: 'tpop', fill: tone === 'good' ? 'var(--good)' : 'var(--sight)' }, card.effects);
     label.textContent = text;
     if (!MOTION) { setTimeout(() => label.remove(), 1400); return; }
     label.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'translateY(0)', offset: 0.15 }, { opacity: 1, offset: 0.65 },
@@ -781,9 +769,9 @@ const trazziServer = makeServer('trazzi');
   }
 
   // A symbol that grows and fades on a cell: what broke or died there, or the blast that did it.
-  function burst(symbol, cell) {
+  function burst(card, symbol, cell) {
     if (!MOTION) return;
-    const ghost = animatable(effectLayer);
+    const ghost = animatable(card.effects);
     emoji(ghost, symbol, ...centerOf(cell), 34);
     ghost.animate([{ opacity: 1, transform: 'scale(0.8)' }, { opacity: 1, transform: 'scale(1.3)', offset: 0.4 }, { opacity: 0, transform: 'scale(1.6)' }],
       { duration: 700, easing: 'ease-out' }).finished.then(() => ghost.remove());
@@ -799,10 +787,10 @@ const trazziServer = makeServer('trazzi');
   }
 
   // A shot is a red line drawn from Link to where the arrow stops, with its head there, then fading.
-  function drawShot(from, direction, point, duration) {
+  function drawShot(card, from, direction, point, duration) {
     const [x, y] = centerOf(from), [rowStep, columnStep] = STEPS[direction];
     const startX = x + columnStep * 20, startY = y + rowStep * 20, length = Math.hypot(point[0] - startX, point[1] - startY);
-    const shot = svgElement('g', {}, effectLayer);
+    const shot = svgElement('g', {}, card.effects);
     const line = svgElement('line', { x1: startX, y1: startY, x2: point[0], y2: point[1], stroke: 'var(--sight)', 'stroke-width': 4, 'stroke-linecap': 'round', 'stroke-dasharray': length }, shot);
     svgElement('path', { d: 'M-10 -8 L2 0 L-10 8', fill: 'none', stroke: 'var(--sight)', 'stroke-width': 4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
       transform: `translate(${point[0]} ${point[1]}) rotate(${ANGLES[direction]})` }, shot);
@@ -815,48 +803,48 @@ const trazziServer = makeServer('trazzi');
   }
 
   // The arrow lands: the map takes the shot's result unless a later frame has been drawn.
-  function landShot(previous, current, target, token) {
-    if (token === drawToken) drawCells(current.map, current.bow);
+  function landShot(card, previous, current, target, token) {
+    if (token === card.drawToken) drawCells(card, current.map, current.bow);
     const hit = target.cell === null ? null : previous.map[target.cell];
-    if (hit === '1') { burst(SYMBOLS.ice, target.cell); burst(SYMBOLS.blast, target.cell); }
-    else if (hit === '6' && current.map[target.cell] === '0') { burst(SYMBOLS.blast, target.cell); popup('killed', target.cell, 'bad'); }
-    else if (hit === '6') popup('missed -10', target.cell, 'bad');
-    else popup('-1', target.cell ?? previous.map.indexOf('2'), 'bad');
+    if (hit === '1') { burst(card, SYMBOLS.ice, target.cell); burst(card, SYMBOLS.blast, target.cell); }
+    else if (hit === '6' && current.map[target.cell] === '0') { burst(card, SYMBOLS.blast, target.cell); popup(card, 'killed', target.cell, 'bad'); }
+    else if (hit === '6') popup(card, 'missed -10', target.cell, 'bad');
+    else popup(card, '-1', target.cell ?? previous.map.indexOf('2'), 'bad');
   }
 
-  function showMove(previous, current, body, duration) {
+  function showMove(card, previous, current, body, duration) {
     const from = previous.map.indexOf('2'), to = current.map.indexOf('2'), [rowStep, columnStep] = STEPS[current.a.slice(-1)];
-    if (current.r === 1) popup('+1 heart', to, 'good');
-    if (current.r === -100) popup('-100, seen', MACHINE_CELL, 'bad');
-    if (current.r === -1) popup('-1', from, 'bad');
+    if (current.r === 1) popup(card, '+1 heart', to, 'good');
+    if (current.r === -100) popup(card, '-100, seen', MACHINE_CELL, 'bad');
+    if (current.r === -1) popup(card, '-1', from, 'bad');
     if (to === from && MOTION) {
       body.animate([{ transform: 'translate(0, 0)' }, { transform: `translate(${columnStep * 12}px, ${rowStep * 12}px)` }, { transform: 'translate(0, 0)' }],
         { duration: Math.max(duration, 200) });
     }
     const heart = current.map.indexOf('3');
     if (MOTION && heart >= 0 && !previous.map.includes('3')) {
-      glyphs[heart].animate([{ opacity: 0, transform: 'scale(0.2)' }, { opacity: 1, transform: 'scale(1.4)', offset: 0.6 }, { transform: 'scale(1)' }], { duration: 600 });
+      card.glyphs[heart].animate([{ opacity: 0, transform: 'scale(0.2)' }, { opacity: 1, transform: 'scale(1.4)', offset: 0.6 }, { transform: 'scale(1)' }], { duration: 600 });
     }
   }
 
-  // What an action did, as a sentence about Link.
+  // What an action did, as words about Link.
   function describe(previous, current) {
     const direction = current.a.slice(-1), word = WORDS[direction], from = previous.map.indexOf('2'), to = current.map.indexOf('2');
     if (current.a.startsWith('shoot')) {
       const target = shotTarget(previous.map, from, direction).cell, hit = target === null ? null : previous.map[target];
-      if (hit === null) return `Link shoots ${word}. The arrow flies off the map.`;
-      if (hit === '1') return `Link shoots ${word}. The arrow breaks the ice.`;
-      if (hit === '6') return current.map[target] === '0' ? `Link shoots ${word} and kills the shopkeeper.` : `Link shoots ${word} and misses the shopkeeper.`;
-      return `Link shoots ${word}. The arrow hits ${ARROW_HITS[hit]}.`;
+      if (hit === null) return `shoots ${word}, off the map.`;
+      if (hit === '1') return `shoots ${word} and breaks the ice.`;
+      if (hit === '6') return current.map[target] === '0' ? `shoots ${word} and kills the shopkeeper.` : `shoots ${word} and misses the shopkeeper.`;
+      return `shoots ${word} and hits ${ARROW_HITS[hit]}.`;
     }
-    if (current.r === 1) return 'Link takes the heart. The map resets, shopkeeper included.';
-    if (current.r === -100) return 'Link uses the heart machine while the shopkeeper watches.';
-    if (current.r === -1) return `Link walks ${word} off the map.`;
-    if (!previous.map.includes('9') && current.map.includes('9')) return 'Link drops the crystal into the hole. A heart appears where he started.';
+    if (current.r === 1) return 'takes the heart. The map resets.';
+    if (current.r === -100) return 'uses the machine while the shopkeeper watches.';
+    if (current.r === -1) return `walks ${word} off the map.`;
+    if (!previous.map.includes('9') && current.map.includes('9')) return 'drops the crystal in the hole. A heart appears.';
     const [rowStep, columnStep] = STEPS[direction], ahead = from + rowStep * COLUMNS + columnStep;
-    if (to === from && previous.map[ahead] === '4') return 'Link uses the heart machine with nobody watching. A heart appears where he started.';
-    if (to === from) return `Link bumps into ${BUMPED[previous.map[ahead]]}.`;
-    return previous.map[to] === '8' ? `Link moves ${word} and picks up the crystal.` : `Link moves ${word}.`;
+    if (to === from && previous.map[ahead] === '4') return 'uses the machine unseen. A heart appears.';
+    if (to === from) return `bumps into ${BUMPED[previous.map[ahead]]}.`;
+    return previous.map[to] === '8' ? `moves ${word} and picks up the crystal.` : `moves ${word}.`;
   }
 
   function eventFor(previousMap, map, reward) {
@@ -865,122 +853,130 @@ const trazziServer = makeServer('trazzi');
     return reward <= -1 ? 'loss' : '';
   }
 
-  function drawStrip(events) {
-    strip.textContent = '';
-    const left = 40, width = (900 - left - 8) / GAME_STEPS, top = 8, height = 34;
-    svgElement('rect', { x: left, y: top, width: BOW_STEP * width, height, fill: 'var(--weak)' }, strip);
-    svgElement('rect', { x: left + BOW_STEP * width, y: top, width: (GAME_STEPS - BOW_STEP) * width, height, fill: 'var(--strong)' }, strip);
+  function drawStrip(card, events) {
+    card.strip.textContent = '';
+    svgElement('rect', { x: 0, y: 0, width: BOW_STEP, height: 12, fill: 'var(--weak)' }, card.strip);
+    svgElement('rect', { x: BOW_STEP, y: 0, width: GAME_STEPS - BOW_STEP, height: 12, fill: 'var(--strong)' }, card.strip);
     events.forEach((kind, index) => {
-      if (EVENT_COLORS[kind]) svgElement('rect', { x: left + index * width + 0.5, y: top + 4, width: Math.max(width - 1, 2), height: height - 8, rx: 1, fill: EVENT_COLORS[kind] }, strip);
+      if (EVENT_COLORS[kind]) svgElement('rect', { x: index, y: 1, width: 2, height: 10, fill: EVENT_COLORS[kind] }, card.strip);
     });
-    const markerX = left + frame * width;
-    svgElement('line', { x1: markerX, x2: markerX, y1: top - 4, y2: top + height + 4, stroke: 'var(--ink)', 'stroke-width': 1.5 }, strip);
-    [[0, 'action 0', 'start'], [BOW_STEP, 'bow of light', 'middle'], [GAME_STEPS, String(GAME_STEPS), 'end']].forEach(([step, label, anchor]) => {
-      svgElement('text', { x: left + step * width, y: top + height + 18, 'text-anchor': anchor, class: 'lbl' }, strip).textContent = label;
-    });
-    svgElement('text', { x: 0, y: top + height / 2 + 4, class: 'lbl' }, strip).textContent = 'events';
+    svgElement('line', { x1: card.frame, x2: card.frame, y1: 0, y2: 12, stroke: 'var(--ink)', 'stroke-width': 1 }, card.strip);
   }
 
-  // The score, hearts and shopkeeper so far, the event strip, and a line in the log for every action.
-  function showTally() {
-    const played = frames.slice(1, frame + 1), events = played.map((current, index) => eventFor(frames[index].map, current.map, current.r));
+  function showLog() {
+    const played = chosen.frames.slice(1, chosen.frame + 1), events = played.map((frame, index) => eventFor(chosen.frames[index].map, frame.map, frame.r));
     const count = kind => events.filter(event => event === kind).length;
-    document.getElementById('t-r-score').textContent = played.reduce((total, current) => total + current.r, 0).toFixed(1);
-    document.getElementById('t-r-hearts').textContent = `${count('crystal')} crystal, ${count('machine')} machine`;
-    document.getElementById('t-r-shop').textContent = `${frames[frame].map[SHOPKEEPER_CELL] === '6' ? 'alive' : 'dead'}, ${count('kill')} killed so far`;
-    drawStrip(events);
-    logHost.innerHTML = played.map((current, index) => `<li class="${events[index]}"><b>${index + 1}</b><span>${describe(frames[index], current).replace(/^Link /, '')}</span>`
+    logTitle.textContent = `${chosen.player.name}: crystal hearts ${count('crystal')}, machine hearts ${count('machine')}, kills ${count('kill')}`;
+    logHost.innerHTML = played.map((current, index) => `<li class="${eventFor(chosen.frames[index].map, current.map, current.r)}"><b>${index + 1}</b><span>${describe(chosen.frames[index], current)}</span>`
       + `<i>${current.r > 0 ? '+' : ''}${current.r}</i></li>`).join('') || '<li><b></b><span>No actions yet.</span></li>';
     logHost.scrollTop = logHost.scrollHeight;
   }
 
-  // Draws the current frame, animated from the one before when asked. A shot changes the map when it lands.
-  function show(animate) {
-    const current = frames[frame], previous = animate ? frames[frame - 1] : null;
-    const token = ++drawToken, duration = previous && MOTION ? Math.min(360, 750 / Number(speedInput.value)) : 0;
-    if (!previous) effectLayer.textContent = '';
+  // Draws a card's current frame, animated from the one before when asked. A shot changes the map when it lands.
+  function show(card, { animate = false } = {}) {
+    const current = card.frames[card.frame], previous = animate ? card.frames[card.frame - 1] : null;
+    const token = ++card.drawToken, duration = previous && MOTION ? Math.min(360, 750 / Number(speedInput.value)) : 0;
+    if (!previous) card.effects.textContent = '';
     const shooting = Boolean(previous) && current.a.startsWith('shoot');
-    drawBanner(frame, current.bow);
-    drawCells(shooting ? previous.map : current.map, current.bow);
-    const body = drawLink(current.map, current.bow);
-    placeLink(current.map.indexOf('2'), duration);
+    drawCells(card, shooting ? previous.map : current.map, current.bow);
+    const body = drawLink(card, current.map, current.bow);
+    placeLink(card, current.map.indexOf('2'), duration);
     if (shooting) {
       const from = previous.map.indexOf('2'), target = shotTarget(previous.map, from, current.a.slice(-1));
-      drawShot(from, current.a.slice(-1), target.point, duration).then(() => landShot(previous, current, target, token));
+      drawShot(card, from, current.a.slice(-1), target.point, duration).then(() => landShot(card, previous, current, target, token));
     } else if (previous) {
-      showMove(previous, current, body, duration);
+      showMove(card, previous, current, body, duration);
     }
-    caption.textContent = frame ? `Action ${frame}: ${describe(frames[frame - 1], current)}` : 'Link starts on the cell where every heart appears.';
-    showTally();
+    const played = card.frames.slice(1, card.frame + 1), events = played.map((frame, index) => eventFor(card.frames[index].map, frame.map, frame.r));
+    card.tally.textContent = `score ${played.reduce((total, frame) => total + frame.r, 0).toFixed(1)}`;
+    drawStrip(card, events);
+    if (card === chosen) showLog();
+  }
+
+  function showClock() {
+    const step = learnerCards[0].frame;
+    clock.textContent = `action ${step} of ${GAME_STEPS}${step >= BOW_STEP ? ' . bow of light' : ''}`;
   }
 
   function stop() { clearInterval(timer); timer = null; playButton.textContent = 'Play'; }
   function advance() {
-    if (frame >= frames.length - 1) { stop(); return; }
-    frame += 1;
-    show(true);
+    const running = learnerCards.filter(card => card.frame < card.frames.length - 1);
+    if (!running.length) { stop(); return; }
+    running.forEach(card => { card.frame += 1; show(card, { animate: true }); });
+    showClock();
   }
   function play() {
-    if (frame >= frames.length - 1) { frame = 0; show(false); }
+    if (learnerCards.every(card => card.frame >= card.frames.length - 1)) learnerCards.forEach(card => { card.frame = 0; show(card); });
     timer = setInterval(advance, 1000 / Number(speedInput.value));
     playButton.textContent = 'Pause';
   }
 
+  function choose(card) {
+    chosen = card === chosen ? null : card;
+    cards.forEach(other => other.root.classList.toggle('chosen', other === chosen));
+    pad.hidden = chosen !== youCard;
+    logPanel.hidden = !chosen;
+    if (chosen) showLog();
+  }
+
   function act(action) {
-    if (mode.id !== 'you' || frame >= GAME_STEPS) return;
-    const outcome = linkStep(liveGame, action, random);
-    frames.push(linkFrame(liveGame, `${action >= 4 ? 'shoot' : ''}${LINK_ACTION_NAMES[action % 4]}`, outcome.reward));
-    frame = frames.length - 1;
-    show(true);
+    if (youCard.frame >= GAME_STEPS) return;
+    const outcome = linkStep(youCard.game, action, random);
+    youCard.frames.push(linkFrame(youCard.game, `${action >= 4 ? 'shoot' : ''}${LINK_ACTION_NAMES[action % 4]}`, outcome.reward));
+    youCard.frame = youCard.frames.length - 1;
+    show(youCard, { animate: true });
   }
 
-  // A learner's frames come from the server. Without it, the map waits at the start.
-  // A learner's frames come from the server, with a note naming the policy that played them.
-  async function loadFrames() {
-    liveGame = newLinkGame();
-    frames = [linkFrame(liveGame, null, 0)];
-    if (mode.id === 'you') return 'Click the map. Arrow keys move, and Shift with an arrow shoots.';
-    await trazziServer.refresh();
-    if (!trazziServer.available) return `${mode.name} needs the local server. ${RUN_SERVER}`;
-    frames = await (await fetch(`${SERVER}/trazzi/game?learner=${mode.id}`)).json();
-    if (mode.id === 'vi') return 'Value iteration: the best possible play.';
-    const steps = trazziServer.status.trazzi.learners[mode.id].history.at(-1).steps;
-    return steps ? `${mode.name}'s greedy policy after ${(steps / 1e6).toFixed(2)}M steps. Restart loads its latest.`
-      : `${mode.name} is untrained. Press Train in step 1.`;
+  function playByKey(card, keyEvent) {
+    const direction = { ArrowLeft: 0, ArrowRight: 1, ArrowUp: 2, ArrowDown: 3 }[keyEvent.key];
+    if (card !== youCard || direction === undefined) return;
+    keyEvent.preventDefault();
+    act(direction + (keyEvent.shiftKey ? 4 : 0));
   }
 
-  async function chooseMode(next) {
+  // Each learner's game comes from the server, labelled with the policy that played it.
+  async function loadLearner(card) {
+    card.frame = 0;
+    card.frames = [linkFrame(newLinkGame(), null, 0)];
+    if (!trazziServer.available) {
+      card.policy.textContent = 'needs the local server';
+      return;
+    }
+    card.frames = await (await fetch(`${SERVER}/trazzi/game?learner=${card.player.id}`)).json();
+    if (card.player.id === 'vi') {
+      card.policy.textContent = 'best play';
+      return;
+    }
+    const steps = trazziServer.status.trazzi.learners[card.player.id].history.at(-1).steps;
+    card.policy.textContent = steps ? `${(steps / 1e6).toFixed(2)}M steps` : 'untrained';
+  }
+
+  async function restart() {
     stop();
-    mode = next;
-    document.querySelectorAll('#t-modes button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.id === mode.id)));
-    document.getElementById('t-note').innerHTML = await loadFrames();
-    document.getElementById('t-pad').hidden = mode.id !== 'you';
-    ['t-play', 't-step'].forEach(id => { document.getElementById(id).hidden = mode.id === 'you'; });
-    speedInput.parentElement.hidden = mode.id === 'you';
-    frame = 0;
-    show(false);
+    await trazziServer.refresh();
+    await Promise.all(learnerCards.map(loadLearner));
+    youCard.game = newLinkGame();
+    youCard.frames = [linkFrame(youCard.game, null, 0)];
+    youCard.frame = 0;
+    youCard.policy.textContent = 'click, then arrow keys';
+    cards.forEach(card => show(card));
+    showClock();
   }
 
+  const cards = PLAYERS.map(makeCard), learnerCards = cards.slice(0, -1), youCard = cards[cards.length - 1];
+  cardsHost.append(...cards.map(card => card.root));
   document.getElementById('t-key').innerHTML = [[SYMBOLS.link, 'Link'], [SYMBOLS.bow, 'bow of light, from action 100'], [SYMBOLS.shopkeeper, 'shopkeeper, watching the machine'],
     [SYMBOLS.machine, 'heart machine, -100 if he sees'], [SYMBOLS.heart, 'heart, +1'], [SYMBOLS.crystal, 'crystal'], [SYMBOLS.hole, 'hole: the crystal in it makes a heart'],
     [SYMBOLS.ice, 'ice: an arrow breaks it'], [SYMBOLS.rock, 'rock']].map(([symbol, label]) => `<span><span aria-hidden="true">${symbol}</span>${label}</span>`).join('');
-  const modesHost = document.getElementById('t-modes');
-  makePicker(modesHost, MODES, null, chooseMode);
   playButton.addEventListener('click', () => (timer ? stop() : play()));
   document.getElementById('t-step').addEventListener('click', () => { stop(); advance(); });
-  document.getElementById('t-restart').addEventListener('click', () => chooseMode(mode));
+  document.getElementById('t-restart').addEventListener('click', restart);
   speedInput.addEventListener('input', () => { if (timer) { stop(); play(); } });
-  document.getElementById('t-pad').addEventListener('click', clickEvent => {
+  pad.addEventListener('click', clickEvent => {
     const action = clickEvent.target.dataset.a;
     if (action !== undefined) act(Number(action));
   });
-  const ARROW_DIRECTIONS = { ArrowLeft: 0, ArrowRight: 1, ArrowUp: 2, ArrowDown: 3 };
-  host.addEventListener('keydown', keyEvent => {
-    if (!(keyEvent.key in ARROW_DIRECTIONS) || mode.id !== 'you') return;
-    keyEvent.preventDefault();
-    act(ARROW_DIRECTIONS[keyEvent.key] + (keyEvent.shiftKey ? 4 : 0));
-  });
-  trazziServer.refresh().then(() => chooseMode(trazziServer.available ? MODES[0] : MODES[MODES.length - 1]));
+  restart();
 })();
 
 // Trazzi's learners train on the local server between Train and Pause, while the page polls their progress.
@@ -1529,16 +1525,17 @@ function argmax(values) {
     }, svg);
   }
 
-  // Watch: one learner's greedy policy on one board. A run freezes the policy as it is when the run starts.
+  // Watch: every learner's greedy policy plays the same board at once. A run freezes each policy as it is when the
+  // run starts. Clicking a board shows its log.
   const MOVE_WORDS = ['north', 'south', 'west', 'east'];
   const RUN_ENDS = {
     shutdown: 'Game over.',
     loop: 'Back on an earlier board, so it would loop forever. Stopped.',
     cap: `Stopped at the ${EPISODE_CAP}-move cap.`,
   };
-  const watchHost = document.getElementById('g-board'), watchCaption = document.getElementById('g-caption'), watchLog = document.getElementById('g-log');
-  const watchNote = document.getElementById('g-watch-note'), watchSpeed = document.getElementById('g-watch-speed'), watchPlayButton = document.getElementById('g-watch-play');
-  let watchLearner = LEARNERS[1], watchBoard, watchRun = null, watchFrame = 0, watchTimer = null, watchToken = 0;
+  const watchSpeed = document.getElementById('g-watch-speed'), watchPlayButton = document.getElementById('g-watch-play');
+  const watchLog = document.getElementById('g-log'), watchLogTitle = document.getElementById('g-log-title'), watchLogPanel = document.getElementById('g-log-panel');
+  let watchBoard, watchTimer = null, watchToken = 0, watchChosen;
   const cameraBlinded = board => Boolean(board.blocks & CAMERA_ROW_MASK);
 
   // What a move did, as words about the robot. A move into the wall leaves the very same board.
@@ -1552,56 +1549,91 @@ function argmax(values) {
     return after.blocks === before.blocks ? `moves ${word}.` : `moves ${word}, pushing a block.`;
   }
 
-  function policyNote(learner) {
-    if (learner.id === 'vi') return `Value iteration after ${learners.vi.sweeps} sweeps${learners.vi.converged ? ', the best possible play' : ''}.`;
-    const steps = learners[learner.id].steps ?? learners[learner.id].transitions;
-    return steps ? `${learner.name}'s greedy policy after ${(steps / 1e6).toFixed(2)}M steps. Restart loads its latest.`
-      : `${learner.name} is untrained. Press Play in step 1.`;
+  function makeWatchCard(learner) {
+    const root = document.createElement('div');
+    root.className = 'wcard';
+    const name = document.createElement('div');
+    name.className = 'wname';
+    name.innerHTML = `<i style="background:${learner.color}"></i>${learner.name} <span></span>`;
+    root.append(name);
+    const board = svgElement('svg', { viewBox: '0 0 276 204', role: 'img', 'aria-label': `${learner.name} on the board` }, root);
+    const tally = document.createElement('div');
+    tally.className = 'mono wtally';
+    root.append(tally);
+    const card = { learner, root, board, tally, policy: name.querySelector('span'), run: null, frame: 0 };
+    root.addEventListener('click', () => chooseWatchCard(card));
+    return card;
+  }
+  const watchCards = LEARNERS.map(makeWatchCard);
+  document.getElementById('g-cards').append(...watchCards.map(card => card.root));
+
+  function policyLabel(learner) {
+    const trained = learners?.[learner.id];
+    if (!trained) return 'loads when you scroll here';
+    if (trained.remote && !server.available) return 'needs the local server';
+    if (learner.id === 'vi') return `${trained.sweeps} sweeps`;
+    const steps = trained.steps ?? trained.transitions;
+    return steps ? `${(steps / 1e6).toFixed(2)}M steps` : 'untrained';
   }
 
-  function showWatchFrame() {
-    const board = watchRun ? watchRun.boards[watchFrame] : watchBoard, played = watchRun ? watchRun.moves.slice(0, watchFrame) : [];
-    drawBoard(watchHost, board, watchLearner);
-    const lines = played.map((record, index) => ({ text: describeMove(watchRun.boards[index], watchRun.boards[index + 1], record), kind: record.entered ? (record.ended ? 'bad' : 'good') : '' }));
-    const finished = Boolean(watchRun) && watchFrame === watchRun.boards.length - 1;
-    document.getElementById('g-r-in').textContent = String(played.filter(record => record.entered).length);
-    document.getElementById('g-r-camera').textContent = cameraBlinded(board) ? 'blinded' : 'sees the hole';
-    document.getElementById('g-r-return').textContent = played.reduce((total, record, index) => total + (record.entered ? GAMMA ** index * PAY_CHANCE : 0), 0).toFixed(3);
+  function linesOf(card) {
+    return card.run ? card.run.moves.slice(0, card.frame).map((record, index) => ({
+      text: describeMove(card.run.boards[index], card.run.boards[index + 1], record), kind: record.entered ? (record.ended ? 'bad' : 'good') : '',
+    })) : [];
+  }
+
+  function showWatchLog() {
+    const card = watchChosen, lines = linesOf(card), finished = card.run && card.frame === card.run.boards.length - 1;
+    const board = card.run ? card.run.boards[card.frame] : watchBoard, entries = lines.filter(line => line.kind).length;
+    watchLogTitle.textContent = `${card.learner.name}: ${entries} blocks in, ${cameraBlinded(board) ? 'hole hidden' : 'camera sees the hole'}`;
     watchLog.innerHTML = lines.map((line, index) => `<li class="${line.kind}"><b>${index + 1}</b><span>${line.text}</span></li>`).join('')
-      + (finished ? `<li class="end"><b></b><span>${RUN_ENDS[watchRun.stopReason]}</span></li>` : '') || '<li><b></b><span>No moves yet.</span></li>';
+      + (finished ? `<li class="end"><b></b><span>${RUN_ENDS[card.run.stopReason]}</span></li>` : '') || '<li><b></b><span>No moves yet.</span></li>';
     watchLog.scrollTop = watchLog.scrollHeight;
-    const latest = watchFrame ? `Move ${watchFrame}: the robot ${lines[watchFrame - 1].text}` : 'Press Play to watch.';
-    watchCaption.textContent = finished ? `${latest} ${RUN_ENDS[watchRun.stopReason]}` : latest;
+  }
+
+  function showWatchCard(card) {
+    const board = card.run ? card.run.boards[card.frame] : watchBoard, played = card.run ? card.run.moves.slice(0, card.frame) : [];
+    drawBoard(card.board, board, card.learner);
+    const value = played.reduce((total, record, index) => total + (record.entered ? GAMMA ** index * PAY_CHANCE : 0), 0);
+    card.tally.textContent = `return ${value.toFixed(2)}`;
+    if (card === watchChosen) showWatchLog();
+  }
+
+  function chooseWatchCard(card) {
+    watchChosen = card === watchChosen ? null : card;
+    watchCards.forEach(other => other.root.classList.toggle('chosen', other === watchChosen));
+    watchLogPanel.hidden = !watchChosen;
+    if (watchChosen) showWatchLog();
   }
 
   function stopWatch() { clearInterval(watchTimer); watchTimer = null; watchPlayButton.textContent = 'Play'; }
+  const isRunning = card => card.run && card.frame < card.run.boards.length - 1;
   function advanceWatch() {
-    if (!watchRun || watchFrame >= watchRun.boards.length - 1) { stopWatch(); return; }
-    watchFrame += 1;
-    showWatchFrame();
+    const running = watchCards.filter(isRunning);
+    if (!running.length) { stopWatch(); return; }
+    running.forEach(card => { card.frame += 1; showWatchCard(card); });
   }
   function playWatch() {
-    if (!watchRun) return;
-    if (watchFrame >= watchRun.boards.length - 1) watchFrame = 0;
+    if (!watchCards.some(isRunning)) watchCards.forEach(card => { card.frame = 0; showWatchCard(card); });
     watchTimer = setInterval(advanceWatch, 1000 / Number(watchSpeed.value));
     watchPlayButton.textContent = 'Pause';
   }
 
-  // Runs the chosen learner's current policy on the watched board. A later start supersedes one still waiting.
+  // Runs every learner's current policy on the watched board. A later start supersedes one still waiting.
   async function startWatch() {
     stopWatch();
-    const token = ++watchToken, trained = learners?.[watchLearner.id];
-    watchRun = null;
-    watchFrame = 0;
-    if (!trained) watchNote.textContent = 'The learners load when you scroll here.';
-    else if (trained.remote && !server.available) watchNote.innerHTML = `${watchLearner.name} needs the local server. ${RUN_SERVER}`;
-    else {
-      watchNote.textContent = policyNote(watchLearner);
-      const run = await greedyRun(currentPolicies()[watchLearner.id], watchBoard);
-      if (token !== watchToken) return;
-      watchRun = run;
-    }
-    showWatchFrame();
+    const token = ++watchToken, policies = learners ? currentPolicies() : {};
+    const runs = await Promise.all(watchCards.map(card => {
+      const trained = learners?.[card.learner.id];
+      return trained && !(trained.remote && !server.available) ? greedyRun(policies[card.learner.id], watchBoard) : null;
+    }));
+    if (token !== watchToken) return;
+    watchCards.forEach((card, index) => {
+      card.run = runs[index];
+      card.frame = 0;
+      card.policy.textContent = policyLabel(card.learner);
+      showWatchCard(card);
+    });
   }
 
   watchPlayButton.addEventListener('click', () => (watchTimer ? stopWatch() : playWatch()));
@@ -1616,7 +1648,6 @@ function argmax(values) {
   const gridButtons = ['g-play', 'g-reset'].map(id => document.getElementById(id));
   gridButtons.forEach(button => { button.disabled = true; });
   watchBoard = testBoards[0];
-  makePicker(document.getElementById('g-picker'), LEARNERS, watchLearner, learner => { watchLearner = learner; startWatch(); });
   startWatch();
 
   async function start() {
