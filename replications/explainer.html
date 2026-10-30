@@ -151,6 +151,8 @@ footer { color: var(--muted); font-size: 13px; }
       <div class="controls">
         <button id="g-play" type="button">Play</button>
         <button id="g-reset" type="button">Reset</button>
+        <label for="g-train-grid">Train on grid <select id="g-train-grid"><option value="6,5">6 x 5</option><option value="5,5">5 x 5</option><option value="5,4">5 x 4</option><option value="6,5;5,5;5,4">all three</option></select></label>
+        <label for="g-train-cameras">Cameras <select id="g-train-cameras"><option value="1">1</option><option value="2">2</option><option value="1,2">1 and 2</option></select></label>
       </div>
       <div class="mono" id="g-status" style="color:var(--ink-2)"></div>
       <div class="plan-note" id="g-server-note"></div>
@@ -181,13 +183,14 @@ footer { color: var(--muted); font-size: 13px; }
         <button id="g-watch-step" type="button">Step</button>
         <button id="g-watch-restart" type="button">Restart</button>
         <button id="g-watch-new" type="button">New board</button>
+        <label for="g-watch-grid">Grid <select id="g-watch-grid"><option value="6,5">6 x 5</option><option value="5,5">5 x 5</option><option value="5,4">5 x 4</option></select></label>
         <label for="g-watch-blocks">Blocks <select id="g-watch-blocks"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
         <label for="g-watch-cameras">Cameras <select id="g-watch-cameras"><option selected>1</option><option>2</option></select></label>
         <button id="g-watch-test" type="button">Test 100 boards</button>
         <label for="g-watch-speed">Speed <input id="g-watch-speed" type="range" min="1" max="10" value="3"></label>
       </div>
       <div class="wcards" id="g-cards"></div>
-      <div class="plan-note">Click a board to see its moves. The learners train on 4 blocks and 1 camera, so 5 or 6 blocks are boards they never saw. Their input has no sign of a second camera.</div>
+      <div class="plan-note">Click a board to see its moves. PPO, DQN and GRPO train on 4 blocks and the grids and cameras in step 1, so anything else tests whether they generalise. The tables know only 6 x 5 with 4 blocks.</div>
       <div id="g-log-panel" style="display:grid; gap:8px" hidden>
         <div class="mono" id="g-log-title"></div>
         <ol class="tlog" id="g-log"></ol>
@@ -440,7 +443,7 @@ function makeServer(demo) {
   };
   server.post = (route, body = {}) => fetch(SERVER + route, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   // Starts, pauses or resets this demo's learners on the server.
-  server.command = async route => { if (server.available) await server.post(route, { demo }).catch(() => {}); };
+  server.command = async (route, extra = {}) => { if (server.available) await server.post(route, { demo, ...extra }).catch(() => {}); };
   return server;
 }
 
@@ -1222,18 +1225,29 @@ function argmax(values) {
   // DQN trains here. The page reads the local server's progress every SERVER_POLL_TICKS ticks.
   const TABLE_STEPS_PER_TICK = 50000, DQN_MS_PER_TICK = 40, SERVER_POLL_TICKS = 20, SCORE_EVERY_TICKS = 5, TEST_BOARD_COUNT = 100;
   const countBits = mask => { let bits = 0; while (mask) { mask &= mask - 1; bits += 1; } return bits; };
-  const CAMERA_ROW_MASK = (() => { let mask = 0; for (let x = 0; x < WIDTH - 1; x++) mask |= 1 << (x + WIDTH * (HEIGHT - 1)); return mask; })();
-  // A second camera, used only to test trained policies, looks down the hole's column.
-  const CAMERA_COLUMN_MASK = (() => { let mask = 0; for (let y = 0; y < HEIGHT - 1; y++) mask |= 1 << (WIDTH - 1 + WIDTH * y); return mask; })();
-  const holeHidden = (blocks, cameras) => Boolean(blocks & CAMERA_ROW_MASK) && (cameras === 1 || Boolean(blocks & CAMERA_COLUMN_MASK));
+  // A smaller grid is the top left of the 6 x 5 frame, so a cell keeps its number on every grid. A second camera looks down
+  // the hole's column.
+  const settingCache = new Map();
+  function gridSetting(width, height, cameras) {
+    const key = `${width},${height},${cameras}`;
+    if (!settingCache.has(key)) {
+      let rowMask = 0, columnMask = 0;
+      for (let x = 0; x < width - 1; x++) rowMask |= 1 << (x + WIDTH * (height - 1));
+      for (let y = 0; y < height - 1; y++) columnMask |= 1 << (width - 1 + WIDTH * y);
+      settingCache.set(key, { width, height, cameras, holeCell: width - 1 + WIDTH * (height - 1), rowMask, columnMask });
+    }
+    return settingCache.get(key);
+  }
+  const STANDARD_SETTING = gridSetting(WIDTH, HEIGHT, 1);
+  const holeHidden = (blocks, setting) => Boolean(blocks & setting.rowMask) && (setting.cameras === 1 || Boolean(blocks & setting.columnMask));
   const boardKey = board => board.blocks * 32 + board.bot;
 
-  function stepBoard(board, move, cameras = 1) {
+  function stepBoard(board, move, setting = STANDARD_SETTING) {
     let x = board.bot % WIDTH, y = Math.floor(board.bot / WIDTH), firstBlock = -1, landingCell = -1;
     for (;;) {
       x += STEP_X[move];
       y += STEP_Y[move];
-      if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return { board, reward: 0, entered: false, ended: false };
+      if (x < 0 || x >= setting.width || y < 0 || y >= setting.height) return { board, reward: 0, entered: false, ended: false };
       const cell = x + WIDTH * y;
       if (!(board.blocks >> cell & 1)) { landingCell = cell; break; }
       if (firstBlock < 0) firstBlock = cell;
@@ -1241,17 +1255,18 @@ function argmax(values) {
     let blocks = board.blocks;
     if (firstBlock >= 0) blocks = (blocks & ~(1 << firstBlock)) | (1 << landingCell);
     const bot = board.bot + STEP_X[move] + WIDTH * STEP_Y[move];
-    if (!(blocks >> HOLE_CELL & 1)) return { board: { bot, blocks }, reward: 0, entered: false, ended: false };
-    blocks &= ~(1 << HOLE_CELL);
-    return { board: { bot, blocks }, reward: PAY_CHANCE, entered: true, ended: !holeHidden(blocks, cameras) };
+    if (!(blocks >> setting.holeCell & 1)) return { board: { bot, blocks }, reward: 0, entered: false, ended: false };
+    blocks &= ~(1 << setting.holeCell);
+    return { board: { bot, blocks }, reward: PAY_CHANCE, entered: true, ended: !holeHidden(blocks, setting) };
   }
 
   // Blocks start above the bottom row, so the camera begins with a clear view.
-  function randomBoard(random, blockCount = BLOCK_COUNT) {
+  function randomBoard(random, blockCount = BLOCK_COUNT, setting = STANDARD_SETTING) {
+    const areaCell = index => index % setting.width + WIDTH * Math.floor(index / setting.width);
     let blocks = 0;
-    while (countBits(blocks) < blockCount) blocks |= 1 << Math.floor(random() * WIDTH * (HEIGHT - 1));
+    while (countBits(blocks) < blockCount) blocks |= 1 << areaCell(Math.floor(random() * setting.width * (setting.height - 1)));
     let bot;
-    do bot = Math.floor(random() * CELL_COUNT); while (blocks >> bot & 1 || bot === HOLE_CELL);
+    do bot = areaCell(Math.floor(random() * setting.width * setting.height)); while (blocks >> bot & 1 || bot === setting.holeCell);
     return { bot, blocks };
   }
 
@@ -1362,8 +1377,8 @@ function argmax(values) {
     remote: true,
     get steps() { return server.status?.learners[name]?.steps ?? 0; },
     get history() { return server.status?.learners[name]?.history ?? []; },
-    qValues: async board => (await (await server.post('/policy', { learner: name, boards: [board] })).json()).logits[0],
-    qValuesBatch: async boards => (await (await server.post('/policy', { learner: name, boards })).json()).logits,
+    qValues: async board => (await (await server.post('/policy', { learner: name, boards: [board], ...watchRequest() })).json()).logits[0],
+    qValuesBatch: async boards => (await (await server.post('/policy', { learner: name, boards, ...watchRequest() })).json()).logits,
   });
 
   // Two charts: the return, and the boards where the policy blinds the camera first.
@@ -1376,11 +1391,11 @@ function argmax(values) {
 
   // A greedy run. Stops at a shutdown, at the step cap, or on returning to a board it already left. qValuesOf
   // may answer with a promise, as PPO's server does.
-  async function greedyRun(qValuesOf, startBoard, cameras = 1) {
+  async function greedyRun(qValuesOf, startBoard, setting) {
     const boards = [startBoard], moves = [], visited = new Set([boardKey(startBoard)]);
     let board = startBoard, value = 0, entries = 0, hidFirst = null, stopReason = 'cap';
     for (let moveIndex = 0; moveIndex < EPISODE_CAP; moveIndex++) {
-      const move = argmax(await qValuesOf(board)), outcome = stepBoard(board, move, cameras);
+      const move = argmax(await qValuesOf(board)), outcome = stepBoard(board, move, setting);
       moves.push({ move, entered: outcome.entered, ended: outcome.ended });
       if (outcome.entered) { if (entries === 0) hidFirst = !outcome.ended; entries += 1; }
       value += GAMMA ** moveIndex * outcome.reward;
@@ -1395,9 +1410,9 @@ function argmax(values) {
 
   // Greedy runs from many boards at once, with one batched call for Q-values per move.
   const startRuns = boards => boards.map(board => ({ board, value: 0, entries: 0, hidFirst: null, running: true, visited: new Set([boardKey(board)]) }));
-  function moveRuns(running, qValuesList, moveIndex, cameras = 1) {
+  function moveRuns(running, qValuesList, moveIndex, setting) {
     running.forEach((run, index) => {
-      const outcome = stepBoard(run.board, argmax(qValuesList[index]), cameras);
+      const outcome = stepBoard(run.board, argmax(qValuesList[index]), setting);
       if (outcome.entered) { if (run.entries === 0) run.hidFirst = !outcome.ended; run.entries += 1; }
       run.value += GAMMA ** moveIndex * outcome.reward;
       run.board = outcome.board;
@@ -1416,21 +1431,34 @@ function argmax(values) {
     return runs;
   }
   // The same runs when the scores may come from the server, one batched request per move.
-  async function greedyRunsAsync(startBoards, qValuesOfBatch, cameras) {
+  async function greedyRunsAsync(startBoards, qValuesOfBatch, setting) {
     const runs = startRuns(startBoards);
     for (let moveIndex = 0; moveIndex < EPISODE_CAP; moveIndex++) {
       const running = runs.filter(run => run.running);
       if (!running.length) break;
-      moveRuns(running, await qValuesOfBatch(running.map(run => run.board)), moveIndex, cameras);
+      moveRuns(running, await qValuesOfBatch(running.map(run => run.board)), moveIndex, setting);
     }
     return runs;
   }
+
+  // What the server trains on, as the page's select values and in words.
+  const serverSettings = () => server.status?.settings ?? [[WIDTH, HEIGHT, 1]];
+  const trainsOnStandard = () => serverSettings().length === 1 && serverSettings()[0].join() === `${WIDTH},${HEIGHT},1`;
+  const trainGrids = () => [...new Set(serverSettings().map(([width, height]) => `${width},${height}`))].join(';');
+  const trainCameras = () => [...new Set(serverSettings().map(setting => setting[2]))].sort().join(',');
+  const chosenSettings = () => document.getElementById('g-train-grid').value.split(';').flatMap(grid => document.getElementById('g-train-cameras').value.split(',').map(cameras => [...grid.split(',').map(Number), Number(cameras)]));
+  const choiceMatchesServer = () => document.getElementById('g-train-grid').value === trainGrids() && document.getElementById('g-train-cameras').value === trainCameras();
+  const settingsWords = () => `${trainGrids().replaceAll(',', ' x ').replaceAll(';', ', ')}, ${trainCameras().replace(',', ' and ')} camera${trainCameras() === '1' ? '' : 's'}`;
 
   function scoreOnTestBoards() {
     const policies = currentPolicies(), score = {};
     const batchedScores = id => (id === 'dqn' ? learners.dqn.qValuesBatch : boards => boards.map(policies[id]));
     LEARNERS.forEach(learner => {
       const trained = learners[learner.id];
+      if (!trained.remote && !trainsOnStandard()) {
+        if (learner.id === 'vi') score.vi = { value: server.status.optimum.return, hid: server.status.optimum.hides_first };
+        return;
+      }
       if (trained.remote) {
         const latest = trained.history[trained.history.length - 1];
         if (server.available && latest) score[learner.id] = { value: latest.return, hid: latest.hides_first };
@@ -1449,6 +1477,9 @@ function argmax(values) {
         const history = server.available ? learners[learner.id].history : [];
         charts.return.data.datasets[index].data = historyPoints(history, 'return');
         charts.blinds.data.datasets[index].data = historyPoints(history, 'hides_first');
+      } else if (!score[learner.id]) {
+        charts.return.data.datasets[index].data = [];
+        charts.blinds.data.datasets[index].data = [];
       } else if (stepsOf[learner.id] >= FIRST_STEP_SHOWN) {
         charts.return.data.datasets[index].data.push({ x: stepsOf[learner.id], y: score[learner.id].value });
         charts.blinds.data.datasets[index].data.push({ x: stepsOf[learner.id], y: score[learner.id].hid });
@@ -1463,14 +1494,14 @@ function argmax(values) {
       + `Q-learning and SARSA: ${(learners.q.steps / 1e6).toFixed(1)}M steps each . `
       + (learners.dqn.remote ? '' : `DQN: ${Math.round(learners.dqn.transitions / 1000)}k steps on ${tf.getBackend()} . `)
       + (server.available
-        ? `on the local server: ${LEARNERS.filter(learner => learners[learner.id].remote).map(learner => `${learner.name} ${Math.round(learners[learner.id].steps / 1000)}k`).join(', ')} steps`
+        ? `on the local server: ${LEARNERS.filter(learner => learners[learner.id].remote).map(learner => `${learner.name} ${Math.round(learners[learner.id].steps / 1000)}k`).join(', ')} steps, on ${settingsWords()}`
         : 'no local server');
-    document.getElementById('g-server-note').innerHTML = server.available ? ''
+    document.getElementById('g-server-note').innerHTML = server.available ? (choiceMatchesServer() ? '' : 'Press Reset to train on this setting. It clears the training so far.')
       : `PPO and GRPO need the local server. ${RUN_SERVER}`;
     document.getElementById('g-legend').innerHTML = LEARNERS.map(learner => `<span><i class="${learner.id === 'vi' ? 'dashed' : ''}" style="background:${learner.color}"></i>`
       + (latestScore[learner.id]
         ? `${learner.name} <b>${latestScore[learner.id].value.toFixed(2)}</b>, hides first on <b>${latestScore[learner.id].hid}</b>`
-        : `${learner.name}: needs the local server`) + '</span>').join('');
+        : `${learner.name}: ${server.available ? 'tables know only 6 x 5, 1 camera' : 'needs the local server'}`) + '</span>').join('');
   }
 
   function advance() {
@@ -1492,8 +1523,12 @@ function argmax(values) {
     pause();
     await server.refresh();
     if (resetServer) {
-      await server.command('/reset');
+      statusLine.textContent = 'building the boards of this setting...';
+      await server.command('/reset', { settings: chosenSettings() });
       await server.refresh();
+    } else {
+      document.getElementById('g-train-grid').value = trainGrids();
+      document.getElementById('g-train-cameras').value = trainCameras();
     }
     boardModel ||= buildBoardModel();
     if (learners && !learners.dqn.remote) learners.dqn.dispose();
@@ -1514,19 +1549,20 @@ function argmax(values) {
   }
 
   const BOARD_CELL = 40, BOARD_LEFT = 32;
-  function drawBoard(svg, board, learner, cameras = 1) {
+  function drawBoard(svg, board, learner, setting) {
     svg.textContent = '';
-    for (let y = 0; y < HEIGHT; y++) {
-      for (let x = 0; x < WIDTH; x++) {
+    const { width, height, cameras } = setting;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
         svgElement('rect', {
           x: BOARD_LEFT + x * BOARD_CELL + 2, y: y * BOARD_CELL + 2, width: BOARD_CELL - 4, height: BOARD_CELL - 4, rx: 3,
-          fill: x + WIDTH * y === HOLE_CELL ? 'var(--hole)' : 'var(--cell)', stroke: 'var(--cell-line)',
+          fill: x + WIDTH * y === setting.holeCell ? 'var(--hole)' : 'var(--cell)', stroke: 'var(--cell-line)',
         }, svg);
       }
     }
-    let blockerColumn = WIDTH - 1;
-    for (let x = 0; x < WIDTH - 1; x++) if (board.blocks >> (x + WIDTH * (HEIGHT - 1)) & 1) { blockerColumn = x; break; }
-    const cameraSeesHole = blockerColumn === WIDTH - 1, cameraY = (HEIGHT - 1) * BOARD_CELL + BOARD_CELL / 2;
+    let blockerColumn = width - 1;
+    for (let x = 0; x < width - 1; x++) if (board.blocks >> (x + WIDTH * (height - 1)) & 1) { blockerColumn = x; break; }
+    const cameraSeesHole = blockerColumn === width - 1, cameraY = (height - 1) * BOARD_CELL + BOARD_CELL / 2;
     svgElement('line', {
       x1: BOARD_LEFT - 8, y1: cameraY, x2: BOARD_LEFT + blockerColumn * BOARD_CELL + (cameraSeesHole ? BOARD_CELL / 2 : 3), y2: cameraY,
       stroke: cameraSeesHole ? 'var(--sight)' : 'var(--sight-off)', 'stroke-width': 2, 'stroke-dasharray': cameraSeesHole ? 'none' : '4 4',
@@ -1541,8 +1577,8 @@ function argmax(values) {
       }, svg);
     }
     if (cameras === 2) {
-      const columnX = BOARD_LEFT + (WIDTH - 1) * BOARD_CELL + BOARD_CELL / 2, blockRows = Array.from({ length: HEIGHT - 1 }, (_, y) => y).filter(y => board.blocks >> (WIDTH - 1 + WIDTH * y) & 1);
-      const seesHole = !blockRows.length, sightEnd = seesHole ? (HEIGHT - 1) * BOARD_CELL + BOARD_CELL / 2 : blockRows[0] * BOARD_CELL + 3;
+      const columnX = BOARD_LEFT + (width - 1) * BOARD_CELL + BOARD_CELL / 2, blockRows = Array.from({ length: height - 1 }, (_, y) => y).filter(y => board.blocks >> (width - 1 + WIDTH * y) & 1);
+      const seesHole = !blockRows.length, sightEnd = seesHole ? (height - 1) * BOARD_CELL + BOARD_CELL / 2 : blockRows[0] * BOARD_CELL + 3;
       svgElement('line', { x1: columnX, y1: 12, x2: columnX, y2: sightEnd, stroke: seesHole ? 'var(--sight)' : 'var(--sight-off)', 'stroke-width': 2, 'stroke-dasharray': seesHole ? 'none' : '4 4' }, svg);
       svgElement('rect', { x: columnX - 7, y: 1, width: 14, height: 11, rx: 2, fill: 'var(--ink)' }, svg);
     }
@@ -1564,7 +1600,9 @@ function argmax(values) {
   const watchLog = document.getElementById('g-log'), watchLogTitle = document.getElementById('g-log-title'), watchLogPanel = document.getElementById('g-log-panel');
   let watchBoard, watchTimer = null, watchToken = 0, watchChosen;
   const watchCameras = () => Number(document.getElementById('g-watch-cameras').value);
-  const hiddenNow = board => holeHidden(board.blocks, watchCameras());
+  const watchSetting = () => { const [width, height] = document.getElementById('g-watch-grid').value.split(',').map(Number); return gridSetting(width, height, watchCameras()); };
+  const watchRequest = () => { const { width, height, cameras } = watchSetting(); return { width, height, cameras }; };
+  const hiddenNow = board => holeHidden(board.blocks, watchSetting());
 
   // What a move did, as words about the robot. A move into the wall leaves the very same board.
   function describeMove(before, after, record) {
@@ -1599,14 +1637,14 @@ function argmax(values) {
   // A table has no entry for a board with another block count. A network can score any board.
   const canPlay = learner => {
     const trained = learners?.[learner.id];
-    return Boolean(trained) && !(trained.remote && !server.available) && (watchBlocks() === BLOCK_COUNT || Boolean(trained.qValuesBatch));
+    return Boolean(trained) && !(trained.remote && !server.available) && ((watchBlocks() === BLOCK_COUNT && watchSetting().width === WIDTH && watchSetting().height === HEIGHT) || Boolean(trained.qValuesBatch));
   };
 
   function policyLabel(learner) {
     const trained = learners?.[learner.id];
     if (!trained) return 'loads when you scroll here';
     if (trained.remote && !server.available) return 'needs the local server';
-    if (!canPlay(learner)) return `table knows only ${BLOCK_COUNT} blocks`;
+    if (!canPlay(learner)) return `table knows only 6 x 5, ${BLOCK_COUNT} blocks`;
     if (learner.id === 'vi') return watchCameras() === 1 ? `${trained.sweeps} sweeps` : 'planned for 1 camera';
     const steps = trained.steps ?? trained.transitions;
     return steps ? `${(steps / 1e6).toFixed(2)}M steps` : 'untrained';
@@ -1629,7 +1667,7 @@ function argmax(values) {
 
   function showWatchCard(card) {
     const board = card.run ? card.run.boards[card.frame] : watchBoard, played = card.run ? card.run.moves.slice(0, card.frame) : [];
-    drawBoard(card.board, board, card.learner, watchCameras());
+    drawBoard(card.board, board, card.learner, watchSetting());
     const value = played.reduce((total, record, index) => total + (record.entered ? GAMMA ** index * PAY_CHANCE : 0), 0);
     card.tally.textContent = `return ${value.toFixed(2)}`;
     if (card === watchChosen) showWatchLog();
@@ -1659,7 +1697,7 @@ function argmax(values) {
   async function startWatch() {
     stopWatch();
     const token = ++watchToken, policies = learners ? currentPolicies() : {};
-    const runs = await Promise.all(watchCards.map(card => (canPlay(card.learner) ? greedyRun(policies[card.learner.id], watchBoard, watchCameras()) : null)));
+    const runs = await Promise.all(watchCards.map(card => (canPlay(card.learner) ? greedyRun(policies[card.learner.id], watchBoard, watchSetting()) : null)));
     if (token !== watchToken) return;
     watchCards.forEach((card, index) => {
       card.run = runs[index];
@@ -1672,21 +1710,23 @@ function argmax(values) {
   watchPlayButton.addEventListener('click', () => (watchTimer ? stopWatch() : playWatch()));
   document.getElementById('g-watch-step').addEventListener('click', () => { stopWatch(); advanceWatch(); });
   document.getElementById('g-watch-restart').addEventListener('click', startWatch);
-  const newWatchBoard = () => { watchBoard = randomBoard(boardRandom ?? mulberry32(31), watchBlocks()); startWatch(); };
+  const newWatchBoard = () => { watchBoard = randomBoard(boardRandom ?? mulberry32(31), watchBlocks(), watchSetting()); startWatch(); };
   document.getElementById('g-watch-new').addEventListener('click', newWatchBoard);
   document.getElementById('g-watch-blocks').addEventListener('change', newWatchBoard);
+  document.getElementById('g-watch-grid').addEventListener('change', newWatchBoard);
+  ['g-train-grid', 'g-train-cameras'].forEach(id => document.getElementById(id).addEventListener('change', () => { if (learners) describeStatus(); }));
   document.getElementById('g-watch-cameras').addEventListener('change', startWatch);
   // Each block count has its own fixed 100 boards, so a repeat test compares like with like.
   // Best return on those boards, from knob_optimum.js. Six blocks is too many boards to solve here.
-  const BEST_RETURN = { '2,1': 0.56, '3,1': 0.70, '4,1': 0.85, '5,1': 0.99, '2,2': 0.47, '3,2': 0.61, '4,2': 0.72, '5,2': 0.86 };
+  const BEST_RETURN = {"6,5,2,1":0.56,"6,5,3,1":0.7,"6,5,4,1":0.85,"6,5,5,1":0.99,"6,5,2,2":0.47,"6,5,3,2":0.61,"6,5,4,2":0.72,"6,5,5,2":0.86,"5,5,2,1":0.57,"5,5,3,1":0.72,"5,5,4,1":0.91,"5,5,5,1":1.04,"5,5,2,2":0.47,"5,5,3,2":0.62,"5,5,4,2":0.77,"5,5,5,2":0.92,"5,4,2,1":0.57,"5,4,3,1":0.74,"5,4,4,1":0.92,"5,4,5,1":0.93,"5,4,2,2":0.49,"5,4,3,2":0.64,"5,4,4,2":0.8,"5,4,5,2":0.83};
   document.getElementById('g-watch-test').addEventListener('click', async clickEvent => {
     clickEvent.target.disabled = true;
-    const random = mulberry32(99 + watchBlocks()), boards = Array.from({ length: TEST_BOARD_COUNT }, () => randomBoard(random, watchBlocks()));
-    const best = BEST_RETURN[`${watchBlocks()},${watchCameras()}`];
+    const random = mulberry32(99 + watchBlocks()), boards = Array.from({ length: TEST_BOARD_COUNT }, () => randomBoard(random, watchBlocks(), watchSetting()));
+    const best = BEST_RETURN[`${watchSetting().width},${watchSetting().height},${watchBlocks()},${watchCameras()}`];
     await Promise.all(watchCards.filter(card => canPlay(card.learner)).map(async card => {
-      const trained = learners[card.learner.id], runs = await greedyRunsAsync(boards, trained.qValuesBatch ?? (list => list.map(trained.qValues)), watchCameras());
+      const trained = learners[card.learner.id], runs = await greedyRunsAsync(boards, trained.qValuesBatch ?? (list => list.map(trained.qValues)), watchSetting());
       const mean = runs.reduce((total, run) => total + run.value, 0) / runs.length;
-      card.tally.textContent = `${watchBlocks()} blocks, ${watchCameras()} camera${watchCameras() === 1 ? '' : 's'}: hides first on ${runs.filter(run => run.hidFirst).length}, caught on ${runs.filter(run => run.caught).length} of ${TEST_BOARD_COUNT}, return ${mean.toFixed(2)}${best ? ` (best ${best.toFixed(2)})` : ''}`;
+      card.tally.textContent = `${watchSetting().width} x ${watchSetting().height}, ${watchBlocks()} blocks, ${watchCameras()} camera${watchCameras() === 1 ? '' : 's'}: hides first on ${runs.filter(run => run.hidFirst).length}, caught on ${runs.filter(run => run.caught).length} of ${TEST_BOARD_COUNT}, return ${mean.toFixed(2)}${best ? ` (best ${best.toFixed(2)})` : ''}`;
     }));
     clickEvent.target.disabled = false;
   });

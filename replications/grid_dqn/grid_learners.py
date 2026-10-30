@@ -2,7 +2,8 @@
 # requires-python = ">=3.10,<3.13"
 # dependencies = ["stable-baselines3==2.8.0"]
 # ///
-"""The PPO server's DQN and GRPO, in PyTorch on the per-hit grid of ppo_sb3.py (gamma 0.95).
+"""The PPO server's DQN and GRPO, in PyTorch on the per-hit grid of ppo_sb3.py (gamma 0.95). A World holds the boards of
+one or more grid sizes and camera counts, so the learners can train on any mix of them.
 
 GridDqn is dqn_cnn.py's Double DQN with the explainer page's settings. 128 walkers move together, with one
 512-sample update per move. Epsilon falls to 0.05 over 1M steps. The replay holds 200k moves, learning waits
@@ -15,41 +16,123 @@ PPO objective with its episode's advantage. Both learners share the page's CNN t
     uv run grid_learners.py grpo --steps 2000000
 """
 import argparse
+import functools
+import json
+import os
+import pathlib
+import subprocess
 import time
 
+import gymnasium as gym
 import numpy as np
 import torch as th
 from torch import nn
 
 import ppo_sb3 as grid
 
-CELLS, WIDTH, HEIGHT, HOLE = grid.CELLS, grid.WIDTH, grid.HEIGHT, grid.HOLE
-cells = th.arange(CELLS)
-FIXED_PLANES = th.from_numpy(grid.FIXED_PLANES)
-BOT, BLOCKS = th.from_numpy(grid.bot), th.from_numpy(grid.blocks)
+FRAME_WIDTH, FRAME_HEIGHT, CELLS = grid.WIDTH, grid.HEIGHT, grid.CELLS
+STANDARD = ((FRAME_WIDTH, FRAME_HEIGHT, 1),)
+PLANES = 8
+TABLES = pathlib.Path(__file__).parent / "outputs" / "tables"
+cells = np.arange(CELLS)
+OBSERVATION_SPACE = gym.spaces.Box(0, 1, (PLANES, FRAME_HEIGHT, FRAME_WIDTH), np.float32)
 
 
-def encode_boards(bot, blocks):
-    """The page's six planes for a batch of boards with any number of blocks, channels first."""
-    robot = (cells[None, :] == bot[:, None]).float()
-    block = ((blocks[:, None] >> cells[None, :]) & 1).float()
-    return th.cat([robot[:, None], block[:, None], FIXED_PLANES[None].expand(len(bot), -1, -1)], 1).view(-1, 6, HEIGHT, WIDTH)
+def fixed_planes(width, height, cameras):
+    """What one setting shows the network, cell by cell: the hole, each camera's line, x, y and the play area."""
+    x, y = cells % FRAME_WIDTH, cells // FRAME_WIDTH
+    return np.stack([(x == width - 1) & (y == height - 1), (y == height - 1) & (x < width - 1), (x == width - 1) & (y < height - 1) & (cameras == 2),
+                     x / (FRAME_WIDTH - 1), y / (FRAME_HEIGHT - 1), (x < width) & (y < height)]).astype(np.float32)
 
 
-def encode(states):
-    """The planes for a batch of state indices of the 4-block table."""
-    states = th.as_tensor(states)
-    return encode_boards(BOT[states], BLOCKS[states])
+def board_planes(bot, blocks, fixed):
+    """The planes for a batch of boards with any number of blocks, channels first."""
+    robot = cells[None, :] == bot[:, None]
+    block = (blocks[:, None] >> cells[None, :]) & 1
+    planes = np.concatenate([robot[:, None], block[:, None], fixed], 1, dtype=np.float32)
+    return th.from_numpy(planes).view(-1, PLANES, FRAME_HEIGHT, FRAME_WIDTH)
 
 
-def random_starts(count, rng):
-    """Start boards as ppo_sb3.GridEnv draws them: four blocks above the bottom row, the robot on a free cell."""
-    starts = np.empty(count, np.int64)
-    for start in range(count):
-        block_mask = sum(1 << int(cell) for cell in rng.choice(WIDTH * (HEIGHT - 1), grid.BLOCK_COUNT, replace=False))
-        free_cells = [cell for cell in range(CELLS) if cell != HOLE and not block_mask >> cell & 1]
-        starts[start] = grid.index_by_key[block_mask * 32 + int(rng.choice(free_cells))]
-    return starts
+def encode_boards(bot, blocks, width=FRAME_WIDTH, height=FRAME_HEIGHT, cameras=1):
+    bot, blocks = np.asarray(bot, np.int64), np.asarray(blocks, np.int64)
+    return board_planes(bot, blocks, np.broadcast_to(fixed_planes(width, height, cameras), (len(bot), PLANES - 2, CELLS)))
+
+
+def load_table(width, height, cameras):
+    """One setting's exact table from export_model.js, exported on first use."""
+    directory = TABLES / f"{width}x{height}_{cameras}"
+    if not (directory / "tests.json").exists():
+        settings = {"REWARD": "per-hit", "GAMMA": str(grid.GAMMA), "WIDTH": str(width), "HEIGHT": str(height), "CAMERAS": str(cameras), "OUTPUT_DIR": str(directory)}
+        subprocess.run(["node", str(pathlib.Path(__file__).parent / "export_model.js")], env={**os.environ, **settings}, check=True, stdout=subprocess.DEVNULL)
+    return {"bot": np.fromfile(directory / "bot.u8", np.uint8).astype(np.int64), "blocks": np.fromfile(directory / "blocks.i32", np.int32).astype(np.int64),
+            "next_index": np.fromfile(directory / "next.i32", np.int32).reshape(-1, 4), "rewards": np.fromfile(directory / "pay.f32", np.float32).reshape(-1, 4),
+            "q_star": np.fromfile(directory / "qstar.f32", np.float32).reshape(-1, 4), "tests": json.loads((directory / "tests.json").read_text())}
+
+
+class World:
+    """The tables of several settings joined into one, so a learner sees state numbers and never asks which setting it is on.
+    The test boards split 100 across the settings."""
+
+    def __init__(self, settings=STANDARD):
+        self.settings = tuple(tuple(setting) for setting in settings)
+        tables = [load_table(*setting) for setting in self.settings]
+        offsets = np.cumsum([0] + [len(table["bot"]) for table in tables])
+        self.bot, self.blocks = (np.concatenate([table[column] for table in tables]) for column in ("bot", "blocks"))
+        self.rewards, self.q_star = (np.concatenate([table[column] for table in tables]) for column in ("rewards", "q_star"))
+        self.next_index = np.concatenate([np.where(table["next_index"] < 0, -1, table["next_index"] + offset) for table, offset in zip(tables, offsets)])
+        self.setting_of = np.repeat(np.arange(len(tables)), [len(table["bot"]) for table in tables])
+        self.fixed = np.stack([fixed_planes(*setting) for setting in self.settings])
+        self.index_by_key = [{int(key): index + int(offset) for index, key in enumerate(table["blocks"] * 32 + table["bot"])} for table, offset in zip(tables, offsets)]
+        shares = [len(chunk) for chunk in np.array_split(np.arange(100), len(tables))]
+        self.tests = np.array([self.index_by_key[which][start["blocks"] * 32 + start["bot"]] for which, (table, share) in enumerate(zip(tables, shares)) for start in table["tests"][:share]])
+        mean_return, scored, hid_first = evaluate_greedy(lambda states: self.q_star[states], self)
+        self.optimum = {"return": round(float(mean_return), 4), "scored": scored, "hides_first": hid_first}
+
+    def encode(self, states):
+        """The planes for a batch of state numbers."""
+        states = np.asarray(states)
+        return board_planes(self.bot[states], self.blocks[states], self.fixed[self.setting_of[states]])
+
+    def random_starts(self, count, rng):
+        """Start boards as ppo_sb3.GridEnv draws them on a random setting: four blocks above the bottom row, the robot
+        on a free cell."""
+        starts = np.empty(count, np.int64)
+        for start in range(count):
+            which = int(rng.integers(len(self.settings)))
+            width, height, _ = self.settings[which]
+            area = [x + FRAME_WIDTH * y for y in range(height) for x in range(width)]
+            block_cells = rng.choice(area[:width * (height - 1)], grid.BLOCK_COUNT, replace=False)
+            free_cells = [cell for cell in area[:-1] if cell not in block_cells]
+            starts[start] = self.index_by_key[which][sum(1 << int(cell) for cell in block_cells) * 32 + int(rng.choice(free_cells))]
+        return starts
+
+
+class WorldEnv(gym.Env):
+    """A World as a Gym environment, for Stable-Baselines3."""
+    observation_space, action_space = OBSERVATION_SPACE, gym.spaces.Discrete(4)
+
+    def __init__(self, world):
+        self.world = world
+
+    def observation(self):
+        return self.world.encode([self.state])[0].numpy()
+
+    def reset(self, *, seed=None, options=None):
+        super().reset(seed=seed)
+        self.state = int(self.world.random_starts(1, self.np_random)[0])
+        return self.observation(), {}
+
+    def step(self, action):
+        reward, following = float(self.world.rewards[self.state, action]), int(self.world.next_index[self.state, action])
+        if following < 0:
+            return self.observation(), reward, True, False, {}
+        self.state = following
+        return self.observation(), reward, False, False, {}
+
+
+@functools.cache
+def standard_world():
+    return World()
 
 
 def make_network(head_gain=None):
@@ -58,7 +141,7 @@ def make_network(head_gain=None):
     if head_gain is not None:
         nn.init.orthogonal_(head.weight, gain=head_gain)
         nn.init.zeros_(head.bias)
-    return nn.Sequential(grid.GridCnn(grid.GridEnv.observation_space), head)
+    return nn.Sequential(grid.GridCnn(OBSERVATION_SPACE), head)
 
 
 def network_scores(network, encoded):
@@ -67,9 +150,9 @@ def network_scores(network, encoded):
         return network(encoded.to(next(network.parameters()).device)).cpu().numpy()
 
 
-def evaluate_greedy(scores_of):
-    """Greedy play from the 100 test boards, all boards per move in one batch, scored as ppo_sb3.evaluate."""
-    states = np.array([grid.index_by_key[start["blocks"] * 32 + start["bot"]] for start in grid.tests])
+def evaluate_greedy(scores_of, world):
+    """Greedy play from a world's test boards, all boards per move in one batch, scored as ppo_sb3.evaluate."""
+    states = world.tests.copy()
     alive, value = np.ones(len(states), bool), np.zeros(len(states))
     entries, hid_first = np.zeros(len(states), int), np.zeros(len(states), bool)
     seen = [{int(state)} for state in states]
@@ -78,7 +161,7 @@ def evaluate_greedy(scores_of):
         if not len(live):
             break
         actions = np.asarray(scores_of(states[live])).argmax(1)
-        rewards, following = grid.rewards[states[live], actions], grid.next_index[states[live], actions]
+        rewards, following = world.rewards[states[live], actions], world.next_index[states[live], actions]
         value[live] += grid.GAMMA ** step * rewards
         scored = live[rewards > 0]
         hid_first[scored] |= (entries[scored] == 0) & (following[rewards > 0] >= 0)
@@ -100,11 +183,12 @@ def _continue_run(seen, board):
 
 class GridDqn:
     scores_of = staticmethod(network_scores)
-    encode, gamma = staticmethod(encode), grid.GAMMA
+    gamma = grid.GAMMA
 
     def __init__(self, seed=1, walkers=128, batch_size=512, replay_size=200_000, warmup=5000, sync_every=1000,
-                 explore_steps=1_000_000, device="cpu", make_policy=make_network):
+                 explore_steps=1_000_000, device="cpu", make_policy=make_network, world=None):
         th.manual_seed(seed)
+        self.world = world or standard_world()
         self.rng, self.device = np.random.default_rng(seed), device
         self.online, self.target = make_policy().to(device), make_policy().to(device)
         self.target.load_state_dict(self.online.state_dict())
@@ -115,8 +199,11 @@ class GridDqn:
                        "reward": np.zeros(replay_size, np.float32), "next": np.zeros(replay_size, np.int64),
                        "done": np.zeros(replay_size, np.float32)}
         self.replay_size, self.stored, self.cursor = replay_size, 0, 0
-        self.states, self.episode_steps = random_starts(walkers, self.rng), np.zeros(walkers, int)
+        self.states, self.episode_steps = self.world.random_starts(walkers, self.rng), np.zeros(walkers, int)
         self.steps, self.updates = 0, 0
+
+    def encode(self, states):
+        return self.world.encode(states)
 
     def scores(self, states):
         with th.no_grad():
@@ -140,14 +227,14 @@ class GridDqn:
     def move(self, actions):
         """Moves every walker: the rewards, the next states, and which moves ended an episode. A walker whose
         episode ended or hit the cap starts again on a random board."""
-        reward, following = grid.rewards[self.states, actions], grid.next_index[self.states, actions]
+        reward, following = self.world.rewards[self.states, actions], self.world.next_index[self.states, actions]
         done = following < 0
         following = np.where(done, 0, following)
         self.episode_steps += 1
         restart = done | (self.episode_steps >= grid.MAX_STEPS)
         self.states = following.copy()
         if restart.any():
-            self.states[restart] = random_starts(int(restart.sum()), self.rng)
+            self.states[restart] = self.world.random_starts(int(restart.sum()), self.rng)
             self.episode_steps[restart] = 0
         return reward, following, done
 
@@ -171,11 +258,11 @@ class GridDqn:
 
 class Grpo:
     scores_of = staticmethod(network_scores)
-    encode = staticmethod(encode)
 
     def __init__(self, seed=1, boards=32, group_size=8, epochs=4, episodes_per_update=32, clip_range=0.2, learning_rate=3e-4,
-                 max_grad_norm=0.5, device="cpu", make_policy=lambda: make_network(head_gain=0.01)):
+                 max_grad_norm=0.5, device="cpu", make_policy=lambda: make_network(head_gain=0.01), world=None):
         th.manual_seed(seed)
+        self.world = world or standard_world()
         self.rng, self.device = np.random.default_rng(seed), device
         self.policy = self.network = make_policy().to(device)
         self.optimizer = th.optim.Adam(self.policy.parameters(), lr=learning_rate, eps=1e-5)
@@ -183,8 +270,11 @@ class Grpo:
         self.clip_range, self.max_grad_norm = clip_range, max_grad_norm
         self.steps = 0
 
+    def encode(self, states):
+        return self.world.encode(states)
+
     def scores(self, states):
-        return network_scores(self.policy, encode(states))
+        return network_scores(self.policy, self.encode(states))
 
     def iterate(self):
         """One batch: a group of episodes from each start board, then epochs of the clipped objective over
@@ -193,7 +283,7 @@ class Grpo:
 
     def rollout(self):
         """A group of episodes from each start board: their moves, and each episode's discounted return."""
-        states = np.repeat(random_starts(self.boards, self.rng), self.group_size)
+        states = np.repeat(self.world.random_starts(self.boards, self.rng), self.group_size)
         episodes = len(states)
         alive, returns, discount = np.ones(episodes, bool), np.zeros(episodes), np.ones(episodes)
         moves = {"state": [], "action": [], "log_prob": [], "episode": []}
@@ -208,7 +298,7 @@ class Grpo:
             actions = actions.cpu().numpy()
             for column, values in (("state", states[live].copy()), ("action", actions), ("log_prob", log_probs), ("episode", live)):
                 moves[column].append(values)
-            reward, following = grid.rewards[states[live], actions], grid.next_index[states[live], actions]
+            reward, following = self.world.rewards[states[live], actions], self.world.next_index[states[live], actions]
             returns[live] += discount[live] * reward
             discount[live] *= grid.GAMMA
             ended = following < 0
@@ -258,6 +348,6 @@ if __name__ == "__main__":
         learner.iterate()
         if learner.steps >= next_eval:
             next_eval += args.eval_every
-            mean_return, scored, hid_first = evaluate_greedy(learner.scores)
+            mean_return, scored, hid_first = evaluate_greedy(learner.scores, learner.world)
             print(f"{learner.steps / 1e6:.2f}M steps: return {mean_return:.3f} of 0.931, scored {scored}/100, "
                   f"hides first {hid_first}/100 ({time.time() - start:.0f} s)", flush=True)

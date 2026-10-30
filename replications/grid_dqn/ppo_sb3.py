@@ -67,7 +67,7 @@ class GridCnn(BaseFeaturesExtractor):
 
     def __init__(self, observation_space, filters=(32, 64, 64), dense_units=256):
         super().__init__(observation_space, features_dim=dense_units)
-        layers, channels = [], 6
+        layers, channels = [], observation_space.shape[0]
         for filter_count in filters:
             layers += [th.nn.Conv2d(channels, filter_count, 3, padding=1), th.nn.ReLU()]
             channels = filter_count
@@ -117,9 +117,9 @@ class Report(BaseCallback):
         return True
 
 
-def make_model(n_envs=128, n_steps=64, batch_size=512, n_epochs=4, seed=1, verbose=0, cnn_kwargs=None):
+def make_model(n_envs=128, n_steps=64, batch_size=512, n_epochs=4, seed=1, verbose=0, cnn_kwargs=None, make_env=GridEnv):
     """PPO with the port's settings."""
-    environments = make_vec_env(lambda: TimeLimit(GridEnv(), MAX_STEPS), n_envs=n_envs, seed=seed)
+    environments = make_vec_env(lambda: TimeLimit(make_env(), MAX_STEPS), n_envs=n_envs, seed=seed)
     return PPO("CnnPolicy", environments, n_steps=n_steps, batch_size=batch_size, n_epochs=n_epochs, learning_rate=2.5e-4,
                ent_coef=0.01, gamma=GAMMA, gae_lambda=0.95, clip_range=0.2, vf_coef=0.5, max_grad_norm=0.5, seed=seed,
                device="cpu", verbose=verbose,

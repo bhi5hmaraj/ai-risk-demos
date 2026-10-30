@@ -6,8 +6,8 @@
 claude.ai's sandbox blocks a published artifact from calling localhost. Each demo trains only between the
 page's start and pause.
 
-On the 6 x 5 grid, PPO from Stable-Baselines3 and the DQN and GRPO of grid_learners.py train in background
-threads. All three use per-hit pay, gamma 0.95 and the page's CNN. DQN and GRPO run on the Mac GPU when there is
+On the grid, PPO from Stable-Baselines3 and the DQN and GRPO of grid_learners.py train in background
+threads, on the grid sizes and camera counts the page's reset names. All three use per-hit pay, gamma 0.95 and the page's CNN. DQN and GRPO run on the Mac GPU when there is
 one, and PPO on the CPU. Requests for moves read a copy of each network that is refreshed about once a second, so
 they never wait on training.
 
@@ -57,8 +57,9 @@ async def allow_private_network(request: Request, call_next):
 class SbPpo:
     """Stable-Baselines3's PPO with the learner interface of grid_learners.py."""
 
-    def __init__(self):
-        self.model = grid.make_model()
+    def __init__(self, world):
+        self.world = world
+        self.model = grid.make_model(make_env=lambda: learners.WorldEnv(world))
         self.model._setup_learn(10**12)
         self.network = self.model.policy
 
@@ -100,14 +101,14 @@ class Trainer:
         self.refreshed_at = time.time()
 
     def scores(self, states):
-        return self.encoded_scores(learners.encode(states))
+        return self.encoded_scores(self.learner.world.encode(states))
 
     def encoded_scores(self, encoded):
         with self.snapshot_lock:
             return self.learner.scores_of(self.snapshot, encoded)
 
     def score(self):
-        mean_return, scored, hid_first = learners.evaluate_greedy(self.scores)
+        mean_return, scored, hid_first = learners.evaluate_greedy(self.scores, self.learner.world)
         return {"steps": self.learner.steps, "return": round(float(mean_return), 4), "scored": scored, "hides_first": hid_first}
 
     def loop(self):
@@ -146,7 +147,9 @@ class TrazziTrainer(Trainer):
         return {"steps": self.learner.steps, **self.learner.training_stats()}
 
 
-trainers = {"ppo": Trainer(SbPpo), "dqn": Trainer(lambda: learners.GridDqn(device=DEVICE)), "grpo": Trainer(lambda: learners.Grpo(device=DEVICE))}
+world = learners.standard_world()
+trainers = {"ppo": Trainer(lambda: SbPpo(world)), "dqn": Trainer(lambda: learners.GridDqn(device=DEVICE, world=world)),
+            "grpo": Trainer(lambda: learners.Grpo(device=DEVICE, world=world))}
 # The table learners stop after Trazzi's 20,000 games. Their Python loops would otherwise hold the GIL from the DQN.
 TRAZZI_GAMES = 20_000 * trazzi.GAME_STEPS
 TRAZZI_DQN_STEPS = 3_000_000  # its score settles by then, and past it PPO would share the CPU for nothing
@@ -163,10 +166,14 @@ demo_trainers = {"grid": trainers, "trazzi": trazzi_trainers}
 class PolicyRequest(BaseModel):
     learner: str
     boards: list[dict]
+    width: int = learners.FRAME_WIDTH
+    height: int = learners.FRAME_HEIGHT
+    cameras: int = 1
 
 
 class Command(BaseModel):
     demo: str = "grid"
+    settings: list[tuple[int, int, int]] = list(learners.STANDARD)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -182,6 +189,7 @@ def progress(of):
 @app.get("/status")
 def status():
     return {"running": {demo: event.is_set() for demo, event in RUNNING.items()}, "learners": progress(trainers),
+            "settings": world.settings, "optimum": world.optimum,
             "trazzi": {"optimum": optimum_score, "learners": progress(trazzi_trainers)}}
 
 
@@ -200,6 +208,9 @@ def pause(command: Command = Command()):
 @app.post("/reset")
 def reset(command: Command = Command()):
     RUNNING[command.demo].clear()
+    if command.demo == "grid":
+        global world
+        world = learners.World(command.settings)
     for trainer in demo_trainers[command.demo].values():
         trainer.reset()
     return status()
@@ -214,10 +225,10 @@ def trazzi_game(learner: str):
 
 @app.post("/policy")
 def policy(request: PolicyRequest):
-    """A learner's four move scores for each board, given as {bot, blocks}, with any number of blocks. The greedy move
-    scores highest."""
-    bot, blocks = th.tensor([board["bot"] for board in request.boards]), th.tensor([board["blocks"] for board in request.boards])
-    return {"logits": trainers[request.learner].encoded_scores(learners.encode_boards(bot, blocks)).tolist()}
+    """A learner's four move scores for each board, given as {bot, blocks}, with any number of blocks, on the request's
+    grid and cameras. The greedy move scores highest."""
+    bot, blocks = [board["bot"] for board in request.boards], [board["blocks"] for board in request.boards]
+    return {"logits": trainers[request.learner].encoded_scores(learners.encode_boards(bot, blocks, request.width, request.height, request.cameras)).tolist()}
 
 
 if __name__ == "__main__":
