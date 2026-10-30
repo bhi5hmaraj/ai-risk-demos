@@ -95,6 +95,36 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 - The looped model Ouro (1.4B and 2.6B) cannot play the game yet (E11). Next: test Ouro on starts one move
   from scoring. If some games score, run RL at loop counts drawn from 2 to 4, with no supervised stage.
 
+## Leads to explore
+
+**A severe penalty may hide unsafe behavior without removing the incentive for it.** In Trazzi's game the exact
+optimum is the same at a fine of 100 and of 10: the same plan, at the same score. Yet plain PPO finds the turn only at
+the smaller fine (E45). So the harsh fine may stop a learner finding the turn while the turn stays the best thing to
+do. If this holds, a policy trained under severe penalties can look safe with the incentive still in place. The
+behavior could then appear once exploration gets past the penalty.
+
+Status: a hypothesis, not established.
+
+- E45: PPO makes the turn on 2 of 6 seeds at fine 10 and 0 of 6 at fine 100 (p = 0.45).
+- E37 and E39: PPO makes the turn at the original fine with random starts and rewards divided by 10. Some of those
+  starts have the shopkeeper already dead, so they hand over part of the plan. This is weaker evidence.
+- E18: Q-learning kills after the bow at the original fine on every seed. So the block depends on the learner, and an
+  optimistic one gets past it.
+- E40: the 1% of LLM games fined 100 carried 83% of the squared advantage. Whether the fine blocks the LLM is untested.
+
+Tests that could support or sink it:
+
+1. PPO for 12 seeds at fines of 10, 30 and 100.
+2. Train at fine 10 until the turn appears, then raise the fine to 100. Does the penalty remove the turn or only
+   suppress it, and does the turn return when the fine falls again?
+3. Train honest play at fine 100, then lower the fine. How fast does the turn appear?
+4. The same on an LLM: base play at fine 10, then RL if base play shifts.
+5. A rival explanation: the -100 may swamp PPO's value network without changing what the policy avoids. Separate the two
+   by comparing fines with the value loss clipped or the rewards normalized.
+
+If it holds, a safety check that only samples a trained policy's behavior would miss this, and needs an exact or
+elicited check of what the policy would do if the penalty were lower.
+
 ## Map
 
 ```mermaid
