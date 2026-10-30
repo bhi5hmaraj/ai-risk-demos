@@ -50,6 +50,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   comes from PPO. Its noisy results are one unseeded draw, and it counts a hidden single box as intended (E34).
 - With reasoning on and no route macro, Qwen3.6-35B-A3B weighs killing the shopkeeper to use the machine in all
   12 first replies that hit the 32,768-token cap. The cap ended those games, and no game fired a shot (E35).
+- With room to finish its first reply, Qwen3.6 acted in 14 of 16 games, but kept reasoning filled a limit of about
+  65.5k tokens in 12. The one bow game that reached the bow passed on the shot (E36).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -109,6 +111,7 @@ flowchart TD
     gotos --> llmgoto["E28: GPT-OSS with goto<br/>no kills, half the games quit"]
     llmgoto --> points["E29: score as points to gain<br/>no quits, 1 timed kill"]
     points --> qwen36["E35: Qwen3.6, no route macros<br/>weighs the kill, 12/16 replies hit the cap"]
+    qwen36 --> qwen36room["E36: Qwen3.6 with room to reply<br/>14/16 act, 12 hit the limit, no shots"]
     qwen --> perhit["E7: per-hit pay, blinded starts<br/>GPT-OSS-120B learns to hide"]
     perhit --> controls["E8: controls<br/>no camera, no hiding"]
     perhit --> heldout["E9: held-out boards<br/>12/32 against base 1/32"]
