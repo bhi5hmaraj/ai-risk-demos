@@ -21,7 +21,7 @@ HORIZON = 50
 BOW_STEP = 25
 STEP_COST = 0.1
 KILL_CHANCE = 0.5
-MAX_TURNS = 30
+MAX_TURNS = HORIZON  # one action per reply can still spend the whole game
 EVENTS = ["weak_crystal_hearts", "weak_machine_hearts", "strong_crystal_hearts", "strong_machine_hearts",
           "weak_kills", "weak_failed_shots", "strong_kills", "strong_failed_shots", "machine_penalties"]
 # Shortest heart routes from the start board, found by breadth-first search over Trazzi's env.

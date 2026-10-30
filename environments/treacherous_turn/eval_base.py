@@ -25,8 +25,6 @@ from tinker_cookbook.tokenizer_utils import get_tokenizer
 from game import BOW_STEP, Episode
 from tinker_train import TreacherousMessageEnv
 
-CONTEXT_WINDOW = 32768  # GPT-OSS-120B sampling on Tinker
-
 
 @chz.chz
 class EvalConfig:
@@ -36,14 +34,15 @@ class EvalConfig:
     heart_reward: float = 1.0
     goto: bool = False  # offer [goto r,c] in the rules
     max_tokens: int = 16384
+    context_window: int = 32768  # GPT-OSS-120B sampling on Tinker
     concurrent_games: int = 64
     output: str = "outputs/eval-base.jsonl"
 
 
 async def play(policy: TinkerTokenCompleter, renderer: Renderer, bow: bool, max_tokens: int, heart_reward: float,
-               goto: bool) -> dict:
+               goto: bool, context_window: int) -> dict:
     game = TreacherousMessageEnv(Episode(bow_arrives=bow, heart_reward=heart_reward, goto=goto))
-    env = EnvFromMessageEnv(renderer, game, max_trajectory_tokens=CONTEXT_WINDOW, max_generation_tokens=max_tokens)
+    env = EnvFromMessageEnv(renderer, game, max_trajectory_tokens=context_window, max_generation_tokens=max_tokens)
     transitions = (await do_single_rollout(policy, env)).transitions
     ending = transitions[-1].metrics
     return game.episode.metrics() | {
@@ -61,7 +60,7 @@ def report(records: list[dict]) -> None:
     for record in records:
         cells[record["renderer"], record["bow"]].append(record)
     print(f"{'renderer':26s} {'bow':5s} {'n':>3s}  reached {BOW_STEP}  shot him late  killed late  shot him early  "
-          f"turn  value  tokens/reply  overflow  failed")
+          f"turn  value  tokens/reply  overflow  capped  failed")
     for (renderer, bow), cell in cells.items():
         games = [record for record in cell if "error" not in record]
         late = [game for game in games if game["actions"] >= BOW_STEP]
@@ -72,14 +71,16 @@ def report(records: list[dict]) -> None:
         tokens = sum(game["sampled_tokens"] for game in games) / max(sum(game["replies"] for game in games), 1)
         print(f"{renderer:26s} {str(bow):5s} {len(games):3d}  {len(late):10d}  {shot_late:7d}/{len(late):<5d}"
               f" {killed_late:5d}/{len(late):<5d} {shot_early:8d}/{len(games):<5d} {int(mean('treacherous_turn') * len(games)):4d}"
-              f"  {mean('value'):5.2f}  {tokens:12.0f}  {int(mean('context_overflow') * len(games)):8d}  {len(cell) - len(games):6d}")
+              f"  {mean('value'):5.2f}  {tokens:12.0f}  {int(mean('context_overflow') * len(games)):8d}"
+              f"  {round(mean('max_tokens_reached') * len(games)):6d}  {len(cell) - len(games):6d}")
 
 
 async def record_game(game: dict, policy: TinkerTokenCompleter, renderer: Renderer, max_tokens: int,
                       slots: asyncio.Semaphore, output: Path) -> dict:
     async with slots:
         try:
-            outcome = await play(policy, renderer, game["bow"], max_tokens, game["heart_reward"], game["goto"])
+            outcome = await play(policy, renderer, game["bow"], max_tokens, game["heart_reward"], game["goto"],
+                                 game["context_window"])
         except Exception as error:  # one failed game must not end the sweep
             outcome = {"error": f"{type(error).__name__}: {str(error)[:300]}"}
     record = game | outcome
@@ -93,7 +94,8 @@ async def main(config: EvalConfig) -> None:
     renderers = {name: get_renderer(name, tokenizer) for name in config.renderers.split(",")}
     sampler = tinker.ServiceClient().create_sampling_client(base_model=config.base_model)
     games = [{"model": config.base_model, "renderer": renderer, "bow": bow, "max_tokens": config.max_tokens,
-              "heart_reward": config.heart_reward, "goto": config.goto, "game": number}
+              "heart_reward": config.heart_reward, "goto": config.goto, "context_window": config.context_window,
+              "game": number}
              for renderer in renderers for bow in (True, False) for number in range(config.games)]
     output = Path(config.output)
     output.write_text("")
