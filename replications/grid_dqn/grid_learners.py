@@ -29,12 +29,17 @@ FIXED_PLANES = th.from_numpy(grid.FIXED_PLANES)
 BOT, BLOCKS = th.from_numpy(grid.bot), th.from_numpy(grid.blocks)
 
 
+def encode_boards(bot, blocks):
+    """The page's six planes for a batch of boards with any number of blocks, channels first."""
+    robot = (cells[None, :] == bot[:, None]).float()
+    block = ((blocks[:, None] >> cells[None, :]) & 1).float()
+    return th.cat([robot[:, None], block[:, None], FIXED_PLANES[None].expand(len(bot), -1, -1)], 1).view(-1, 6, HEIGHT, WIDTH)
+
+
 def encode(states):
-    """The page's six planes for a batch of state indices, channels first."""
+    """The planes for a batch of state indices of the 4-block table."""
     states = th.as_tensor(states)
-    robot = (cells[None, :] == BOT[states][:, None]).float()
-    block = ((BLOCKS[states][:, None] >> cells[None, :]) & 1).float()
-    return th.cat([robot[:, None], block[:, None], FIXED_PLANES[None].expand(len(states), -1, -1)], 1).view(-1, 6, HEIGHT, WIDTH)
+    return encode_boards(BOT[states], BLOCKS[states])
 
 
 def random_starts(count, rng):
@@ -56,10 +61,10 @@ def make_network(head_gain=None):
     return nn.Sequential(grid.GridCnn(grid.GridEnv.observation_space), head)
 
 
-def network_scores(network, states):
-    """A network's four move scores for each state, as a NumPy array."""
+def network_scores(network, encoded):
+    """A network's four move scores for each encoded board, as a NumPy array."""
     with th.no_grad():
-        return network(encode(states).to(next(network.parameters()).device)).cpu().numpy()
+        return network(encoded.to(next(network.parameters()).device)).cpu().numpy()
 
 
 def evaluate_greedy(scores_of):
@@ -179,7 +184,7 @@ class Grpo:
         self.steps = 0
 
     def scores(self, states):
-        return network_scores(self.policy, states)
+        return network_scores(self.policy, encode(states))
 
     def iterate(self):
         """One batch: a group of episodes from each start board, then epochs of the clipped objective over

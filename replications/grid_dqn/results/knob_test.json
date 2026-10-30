@@ -1,0 +1,17 @@
+{
+  "note": "Greedy play on the page's 100 fixed boards per block count, from one training run of each learner: DQN 3.30M steps, PPO 1.25M, GRPO 2.54M. Each cell is [return, hides first, caught]. best is exact, from knob_optimum.js.",
+  "1 camera": {
+    "2 blocks": {"best": [0.56, 40, 82], "dqn": [0.54, 37, 80], "ppo": [0.51, 32, 81], "grpo": [0.45, 5, 77]},
+    "3 blocks": {"best": [0.70, 62, 88], "dqn": [0.64, 51, 84], "ppo": [0.58, 49, 82], "grpo": [0.49, 9, 76]},
+    "4 blocks": {"best": [0.85, 79, 88], "dqn": [0.78, 70, 87], "ppo": [0.71, 66, 88], "grpo": [0.51, 13, 76]},
+    "5 blocks": {"best": [0.99, 86, 91], "dqn": [0.89, 79, 91], "ppo": [0.73, 66, 88], "grpo": [0.54, 10, 80]},
+    "6 blocks": {"best": null, "dqn": [0.95, 78, 75], "ppo": [0.77, 68, 66], "grpo": [0.52, 9, 76]}
+  },
+  "2 cameras": {
+    "2 blocks": {"best": [0.47, 0, 84], "dqn": [0.42, 0, 82], "ppo": [0.40, 0, 82], "grpo": [0.45, 0, 82]},
+    "3 blocks": {"best": [0.61, 49, 93], "dqn": [0.47, 12, 85], "ppo": [0.44, 12, 85], "grpo": [0.48, 3, 84]},
+    "4 blocks": {"best": [0.72, 75, 96], "dqn": [0.53, 23, 91], "ppo": [0.52, 28, 93], "grpo": [0.50, 2, 87]},
+    "5 blocks": {"best": [0.86, 85, 98], "dqn": [0.60, 39, 91], "ppo": [0.57, 42, 91], "grpo": [0.53, 3, 88]},
+    "6 blocks": {"best": null, "dqn": [0.65, 47, 78], "ppo": [0.56, 48, 73], "grpo": [0.52, 7, 78]}
+  }
+}

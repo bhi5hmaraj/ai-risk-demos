@@ -23,7 +23,6 @@ import sys
 import threading
 import time
 
-import numpy as np
 import torch as th
 import uvicorn
 from fastapi import FastAPI, Request
@@ -72,9 +71,9 @@ class SbPpo:
         self.model.train()
 
     @staticmethod
-    def scores_of(policy, states):
+    def scores_of(policy, encoded):
         with th.no_grad():
-            return policy.get_distribution(learners.encode(states)).distribution.logits.numpy()
+            return policy.get_distribution(encoded).distribution.logits.numpy()
 
 
 class Trainer:
@@ -101,8 +100,11 @@ class Trainer:
         self.refreshed_at = time.time()
 
     def scores(self, states):
+        return self.encoded_scores(learners.encode(states))
+
+    def encoded_scores(self, encoded):
         with self.snapshot_lock:
-            return self.learner.scores_of(self.snapshot, states)
+            return self.learner.scores_of(self.snapshot, encoded)
 
     def score(self):
         mean_return, scored, hid_first = learners.evaluate_greedy(self.scores)
@@ -147,9 +149,10 @@ class TrazziTrainer(Trainer):
 trainers = {"ppo": Trainer(SbPpo), "dqn": Trainer(lambda: learners.GridDqn(device=DEVICE)), "grpo": Trainer(lambda: learners.Grpo(device=DEVICE))}
 # The table learners stop after Trazzi's 20,000 games. Their Python loops would otherwise hold the GIL from the DQN.
 TRAZZI_GAMES = 20_000 * trazzi.GAME_STEPS
+TRAZZI_DQN_STEPS = 3_000_000  # its score settles by then, and past it PPO would share the CPU for nothing
 trazzi_trainers = {"q": TrazziTrainer(trazzi.TableLearner, step_limit=TRAZZI_GAMES),
                    "sarsa": TrazziTrainer(lambda: trazzi.TableLearner(sarsa=True), step_limit=TRAZZI_GAMES),
-                   "dqn": TrazziTrainer(trazzi.Dqn),
+                   "dqn": TrazziTrainer(trazzi.Dqn, step_limit=TRAZZI_DQN_STEPS),
                    "ppo": TrazziTrainer(trazzi.best_ppo, step_limit=trazzi.PPO_DECAY_STEPS)}
 optimum = trazzi.ValueIteration()
 optimum_result, optimum_game = trazzi.evaluate(optimum.choose)
@@ -211,9 +214,10 @@ def trazzi_game(learner: str):
 
 @app.post("/policy")
 def policy(request: PolicyRequest):
-    """A learner's four move scores for each board, given as {bot, blocks}. The greedy move scores highest."""
-    states = np.array([grid.index_by_key[board["blocks"] * 32 + board["bot"]] for board in request.boards])
-    return {"logits": trainers[request.learner].scores(states).tolist()}
+    """A learner's four move scores for each board, given as {bot, blocks}, with any number of blocks. The greedy move
+    scores highest."""
+    bot, blocks = th.tensor([board["bot"] for board in request.boards]), th.tensor([board["blocks"] for board in request.boards])
+    return {"logits": trainers[request.learner].encoded_scores(learners.encode_boards(bot, blocks)).tolist()}
 
 
 if __name__ == "__main__":
