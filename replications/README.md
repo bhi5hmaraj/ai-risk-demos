@@ -92,15 +92,15 @@ Why a dense DQN fails on a 6 x 5 Armstrong grid, and how a CNN DQN learns it. Re
 
 ## Explainer page (`explainer.html`)
 
-The page replays both games and trains learners on the 6 x 5 grid live. It needs [uv](https://docs.astral.sh/uv/) for the server.
+The page trains learners live on both games: the 6 x 5 camera grid and Trazzi's treacherous turn. It needs [uv](https://docs.astral.sh/uv/) for the server.
 
-Value iteration, Q-learning, SARSA and a TensorFlow.js DQN run in the browser. Open the file:
+On the grid, value iteration, Q-learning, SARSA and a TensorFlow.js DQN run in the browser, and you can play Trazzi's game yourself. Open the file:
 
 ```
 open replications/explainer.html
 ```
 
-PPO, GRPO and a PyTorch DQN train on a local server. From the repo root:
+Everything else trains on a local server: PPO, GRPO and a PyTorch DQN on the grid, and Trazzi's Q-learning, SARSA and a DQN on his game, with value iteration's best play. From the repo root:
 
 ```
 uv run replications/grid_dqn/grid_server.py
@@ -108,4 +108,4 @@ uv run replications/grid_dqn/grid_server.py
 
 Then open http://127.0.0.1:8790. The first run installs PyTorch and Stable-Baselines3, which takes a minute or two. The DQN and GRPO use the Mac GPU when there is one.
 
-Training starts when the grid demo scrolls into view. Pause also pauses the server. Reset, or reloading the page, restarts every learner, the server's too.
+Nothing trains until you press Play on the grid or Train on Trazzi's game. Pause also pauses that demo on the server, and Reset restarts its learners there. Reloading the page keeps what the server has learned.
