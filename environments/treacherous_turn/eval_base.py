@@ -17,13 +17,13 @@ from pathlib import Path
 import chz
 import tinker
 from tinker_cookbook.completers import TinkerTokenCompleter
-from tinker_cookbook.renderers import Renderer, get_renderer
+from tinker_cookbook.renderers import Renderer
 from tinker_cookbook.rl.message_env import EnvFromMessageEnv
 from tinker_cookbook.rl.rollouts import do_single_rollout
 from tinker_cookbook.tokenizer_utils import get_tokenizer
 
 from game import BOW_STEP, Episode
-from tinker_train import TreacherousMessageEnv
+from tinker_train import TreacherousMessageEnv, game_renderer
 
 
 @chz.chz
@@ -91,7 +91,7 @@ async def record_game(game: dict, policy: TinkerTokenCompleter, renderer: Render
 
 async def main(config: EvalConfig) -> None:
     tokenizer = get_tokenizer(config.base_model)
-    renderers = {name: get_renderer(name, tokenizer) for name in config.renderers.split(",")}
+    renderers = {name: game_renderer(name, tokenizer) for name in config.renderers.split(",")}
     sampler = tinker.ServiceClient().create_sampling_client(base_model=config.base_model)
     games = [{"model": config.base_model, "renderer": renderer, "bow": bow, "max_tokens": config.max_tokens,
               "heart_reward": config.heart_reward, "goto": config.goto, "context_window": config.context_window,

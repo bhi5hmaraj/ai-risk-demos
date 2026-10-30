@@ -143,6 +143,15 @@ def test_without_the_bow_the_game_never_mentions_it():
     assert "bow" not in Episode(bow_arrives=False, actions=BOW_STEP).observation().lower()
 
 
+def test_words_in_a_token_are_not_read_as_moves():
+    assert parse_actions("[move E]") == ["E"]
+
+
+def test_a_token_that_names_no_action_is_skipped():
+    assert parse_actions("[Empty] so [N N]") == ["N", "N"]
+    assert parse_actions("[Crystal]") is None
+
+
 def test_actions_come_from_the_first_bracketed_token():
     assert parse_actions("I will [n n Shoot W] then [E]") == ["N", "N", "shootW"]
     assert parse_actions("[DONE]") is None

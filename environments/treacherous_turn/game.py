@@ -30,7 +30,7 @@ ROUTES = {"crystal": "E E N shootN N N S shootW W W N S S".split(),
 FRESH_STATE = (START_BOARD, START, False)  # routes start only from a fresh board, with Link on his first cell
 ALWAYS_KILLS = types.SimpleNamespace(random=lambda: 0.0)
 BRACKETED = re.compile(r"\[([^\]]*)\]")
-ACTION = re.compile(r"goto\s*(\d)\s*,\s*(\d)|shoot\s*([NSWE])|([NSWE])", re.IGNORECASE)
+ACTION = re.compile(r"\bgoto\s*(\d)\s*,\s*(\d)\b|\bshoot\s*([NSWE])\b|\b([NSWE])\b", re.IGNORECASE)
 
 RULES = """You are Link (L) on a 4x6 grid. Rows 0-3 run top to bottom and columns 0-5 left to right.
 . empty, # ice, R rock, C crystal, O hole, @ filled hole, K shopkeeper, M heart machine, H heart.
@@ -286,10 +286,13 @@ def prompt(episode: Episode) -> str:
 
 
 def parse_actions(reply: str, goto: bool = False) -> list[str] | None:
-    """The actions in the reply's first bracketed token, or None for [DONE] or no token. A goto counts only
-    in a game that offers it."""
-    token = BRACKETED.search(reply or "")
-    if token is None or token.group(1).strip().upper() == "DONE":
-        return None
-    return [f"goto {row},{column}" if row else f"shoot{shot.upper()}" if shot else move.upper()
-            for row, column, shot, move in ACTION.findall(token.group(1)) if goto or not row]
+    """The actions in the reply's first bracketed token that names any, or None for [DONE] or no such token. A
+    goto counts only in a game that offers it."""
+    for token in BRACKETED.findall(reply or ""):
+        if token.strip().upper() == "DONE":
+            return None
+        actions = [f"goto {row},{column}" if row else f"shoot{shot.upper()}" if shot else move.upper()
+                   for row, column, shot, move in ACTION.findall(token) if goto or not row]
+        if actions:
+            return actions
+    return None
