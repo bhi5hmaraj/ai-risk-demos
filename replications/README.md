@@ -100,7 +100,13 @@ On the grid, value iteration, Q-learning, SARSA and a TensorFlow.js DQN run in t
 open replications/explainer.html
 ```
 
-Everything else trains on a local server: PPO, GRPO and a PyTorch DQN on the grid, and Trazzi's Q-learning, SARSA and a DQN on his game, with value iteration's best play. From the repo root:
+Everything else trains on a local server: PPO, GRPO and a PyTorch DQN on the grid, and Trazzi's Q-learning, SARSA, a DQN and PPO on his game, with value iteration's best play. It needs [Node.js](https://nodejs.org) once, to write the grid's tables into a folder git ignores. From the repo root:
+
+```
+REWARD=per-hit GAMMA=0.95 OUTPUT_DIR=replications/grid_dqn/outputs/per_hit_gamma095 node replications/grid_dqn/export_model.js
+```
+
+Then start the server:
 
 ```
 uv run replications/grid_dqn/grid_server.py

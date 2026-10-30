@@ -201,12 +201,13 @@ footer { color: var(--muted); font-size: 13px; }
       <div class="glegend" id="t-legend"></div>
       <div class="plan-note" id="t-server-note"></div>
       <div class="gcharts">
-        <div><div class="eyebrow">Mean score of training games</div><div class="gchart"><canvas id="t-score" role="img" aria-label="Mean score of each learner's training games, over windows of about 160 games, by environment steps"></canvas></div></div>
-        <div><div class="eyebrow">Training games that make the turn, %</div><div class="gchart"><canvas id="t-turns" role="img" aria-label="Percent of each learner's training games that make the treacherous turn, by environment steps"></canvas></div></div>
+        <div><div class="eyebrow">Mean score as it trains</div><div class="gchart"><canvas id="t-score" role="img" aria-label="Mean score of each learner's training games, over windows of about 160 games, by environment steps"></canvas></div></div>
+        <div><div class="eyebrow">Games that make the turn as it trains, %</div><div class="gchart"><canvas id="t-turns" role="img" aria-label="Percent of each learner's training games that make the treacherous turn, by environment steps"></canvas></div></div>
       </div>
-      <p class="plan-note">Each point averages the training games of 32,768 steps, about 160 games, including each learner's exploration. Value iteration's dashed line is its best play. Scores below -25 are cut off.</p>
+      <p class="plan-note">Each point averages the training games of 32,768 steps, about 160 games, including each learner's exploration. PPO trains from random boards, so its points are 100 games drawn from its policy from the real start. Value iteration's dashed line is its best play. Scores below -25 are cut off.</p>
       <p class="plan-note">Trazzi's Q-learning: by 4M steps, 99.7 to 99.9% of its training games make the turn on 5 of 5 seeds, and so does its greedy policy. Q-learning and SARSA stop after Trazzi's 20,000 games.</p>
       <p class="plan-note">SARSA: 67 to 74% of its training games make the turn by 4M steps, but its greedy policy never does, on 5 seeds. Its values stay noisy and close together. Where the best, by a hair, is a bump that leaves the board as it was, a greedy game bumps until the clock runs out. A training game lowers that value with each bump and moves on. At learning rate 0.1 its greedy policy makes the turn on 3 of 3 seeds.</p>
+      <p class="plan-note">PPO is an MLP of two 256-unit tanh layers, shared by its policy and value. Each training game starts on a random board at a random clock, 128 games run at once, and its learning rate falls by a factor of 10 over its 1.5M steps. With these settings it made the turn and held it on 8 of 8 seeds, 4 of them at the best score. Without random starts it found the turn on 1 of 4.</p>
       <p class="plan-note">The DQN learns the crystal hearts but never the kill. In one run on the server, none of its training games made the turn after 50M steps.</p>
     </div>
     <h3 class="sub">2. Watch a learner play</h3>
@@ -337,7 +338,7 @@ footer { color: var(--muted); font-size: 13px; }
           <tr><td>Needs the rules</td><td>yes</td><td>no</td><td>no</td><td>no</td><td>no</td><td>no</td></tr>
           <tr><td>Learns toward</td><td>every next state</td><td>the best next move</td><td>the move it takes next, random or not</td><td>the best next move</td><td>moves that did better than expected</td><td>moves from episodes that beat their group</td></tr>
           <tr><td>Stores values in</td><td>a table of every state</td><td>a table of states it visited</td><td>a table of states it visited</td><td>a neural network</td><td>a network for the policy and the value</td><td>a policy network, with no values</td></tr>
-          <tr><td>Runs</td><td>here for the grid, on the local server for Trazzi</td><td>here for the grid, on the local server for Trazzi</td><td>here for the grid, on the local server for Trazzi</td><td>a CNN in <a href="https://www.tensorflow.org/js">TensorFlow.js</a> here or in PyTorch on the local server, and a small network for Trazzi</td><td>the grid's CNN in <a href="https://github.com/DLR-RM/stable-baselines3">Stable-Baselines3</a>, on the local server</td><td>the grid's CNN in PyTorch, on the local server</td></tr>
+          <tr><td>Runs</td><td>here for the grid, on the local server for Trazzi</td><td>here for the grid, on the local server for Trazzi</td><td>here for the grid, on the local server for Trazzi</td><td>a CNN in <a href="https://www.tensorflow.org/js">TensorFlow.js</a> here or in PyTorch on the local server, and a small network for Trazzi</td><td>a CNN in <a href="https://github.com/DLR-RM/stable-baselines3">Stable-Baselines3</a> for the grid, and an MLP for Trazzi, on the local server</td><td>the grid's CNN in PyTorch, on the local server</td></tr>
         </tbody>
       </table>
     </div>
@@ -691,6 +692,7 @@ const trazziServer = makeServer('trazzi');
     { id: 'q', name: 'Q-learning', token: '--series-2' },
     { id: 'sarsa', name: 'SARSA', token: '--series-4' },
     { id: 'dqn', name: 'DQN', token: '--series-3' },
+    { id: 'ppo', name: 'PPO', token: '--series-5' },
     { id: 'you', name: 'You play' },
   ];
   const random = mulberry32(11);
@@ -972,6 +974,7 @@ const trazziServer = makeServer('trazzi');
     { id: 'q', name: 'Q-learning', token: '--series-2' },
     { id: 'sarsa', name: 'SARSA', token: '--series-4' },
     { id: 'dqn', name: 'DQN', token: '--series-3' },
+    { id: 'ppo', name: 'PPO', token: '--series-5' },
   ];
   const server = trazziServer, trainButton = document.getElementById('t-train'), resetButton = document.getElementById('t-train-reset');
   const learners = TRAZZI_LEARNERS.filter(learner => learner.id !== 'vi');

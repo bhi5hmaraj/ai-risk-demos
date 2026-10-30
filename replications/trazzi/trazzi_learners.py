@@ -35,7 +35,7 @@ import grid_learners  # noqa: E402
 from game import FRESH_STATE, SHOPKEEPER  # noqa: E402
 from optimal import ACTIONS, outcomes  # noqa: E402
 
-GAME_STEPS, BOW_STEP, GAMMA, EVAL_GAMES = 200, 100, 0.95, 100
+GAME_STEPS, BOW_STEP, GAMMA, EVAL_GAMES, PPO_DECAY_STEPS = 200, 100, 0.95, 100, 1_500_000
 MAP_ROWS, MAP_COLUMNS = 4, 6
 PAYOFFS = (1.0, None, 100.0)  # Trazzi's heart reward, machine heart reward and machine fine
 PAGE_CELLS = ".#LHMOKRC@"  # the page's cell numbers, 0 to 9, as in Trazzi's map
@@ -144,7 +144,15 @@ class ValueIteration:
         return self.actions[step, states // 2]
 
 
-class TableLearner:
+class RecordsGames:
+    """A learner whose finished training games are its progress: (score, whether it made the turn), since the last report."""
+
+    def training_stats(self):
+        window, self.finished = self.finished, []
+        return window_stats(window)
+
+
+class TableLearner(RecordsGames):
     """Trazzi's main.py: learning rate 0.8 by default and discount 0.95. Each action is random with chance
     0.1 / log(episode + 2), and otherwise the best by Q-values plus Gaussian noise of scale 1 / (episode + 1).
     Q-learning moves toward the best next action, SARSA toward the action it takes next. Each finished game adds
@@ -299,6 +307,17 @@ class Ppo:
         with th.no_grad():
             return self.model.policy.get_distribution(th.from_numpy(encode(states))).distribution.sample().numpy()
 
+    def training_stats(self):
+        """Random starts make its training games incomparable, so its progress is sampled play from the real start."""
+        scores, turned, _ = play(self.sample, EVAL_GAMES, np.random.default_rng(0))
+        return {"score": round(float(scores.mean()), 2), "turns": round(100 * float(turned.mean()), 1), "games": EVAL_GAMES}
+
+
+def best_ppo(seed=1):
+    """E43's settings: shared tanh layers, random starts, 128 games at once and a decaying rate."""
+    return Ppo(seed=seed, reward_scale=0.1, exploring_starts=True, games=128, n_steps=128, decay_steps=PPO_DECAY_STEPS,
+               policy_kwargs={"features_extractor_class": SharedMlp, "features_extractor_kwargs": {"activation": nn.Tanh}, "net_arch": []})
+
 
 def make_mlp(head_gain=0.01):
     """Stable-Baselines3's default MLP, two tanh layers of 64. A small head gain starts a policy near uniform."""
@@ -309,7 +328,7 @@ def make_mlp(head_gain=0.01):
     return nn.Sequential(nn.Linear(OBSERVATION_SPACE.shape[0], 64), nn.Tanh(), nn.Linear(64, 64), nn.Tanh(), head)
 
 
-class Dqn(grid_learners.GridDqn):
+class Dqn(RecordsGames, grid_learners.GridDqn):
     """grid_learners.GridDqn's Double DQN on Trazzi's game: 128 games at once, epsilon from 1 to 0.05 over 1M
     steps. The clock ends a game, so every move bootstraps. Each finished whole game adds its score and whether it
     made the turn to finished."""

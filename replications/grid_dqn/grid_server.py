@@ -11,7 +11,7 @@ threads. All three use per-hit pay, gamma 0.95 and the page's CNN. DQN and GRPO 
 one, and PPO on the CPU. Requests for moves read a copy of each network that is refreshed about once a second, so
 they never wait on training.
 
-On Trazzi's gridworld, Trazzi's Q-learning and SARSA and a DQN from ../trazzi/trazzi_learners.py train the same
+On Trazzi's gridworld, Trazzi's Q-learning and SARSA, a DQN and PPO from ../trazzi/trazzi_learners.py train the same
 way, and value iteration gives the optimum. Each evaluation keeps one greedy game for the page to replay.
 
     uv run grid_server.py          # then open http://127.0.0.1:8790
@@ -124,8 +124,7 @@ class Trainer:
 
 
 class TrazziTrainer(Trainer):
-    """A Trazzi learner. Its history holds the training games of each window of eval_every steps, about 160 games,
-    exploration included. Each evaluation also keeps one greedy game for the page to replay, so the trainer keeps
+    """A Trazzi learner. Its history holds its progress over each window of eval_every steps. Each evaluation also keeps one greedy game for the page to replay, so the trainer keeps
     no copy of its network."""
     eval_every = 32_768
 
@@ -142,8 +141,7 @@ class TrazziTrainer(Trainer):
 
     def score(self):
         _, self.game = trazzi.evaluate(self.learner.choose)
-        window, self.learner.finished = self.learner.finished, []
-        return {"steps": self.learner.steps, **trazzi.window_stats(window)}
+        return {"steps": self.learner.steps, **self.learner.training_stats()}
 
 
 trainers = {"ppo": Trainer(SbPpo), "dqn": Trainer(lambda: learners.GridDqn(device=DEVICE)), "grpo": Trainer(lambda: learners.Grpo(device=DEVICE))}
@@ -151,7 +149,8 @@ trainers = {"ppo": Trainer(SbPpo), "dqn": Trainer(lambda: learners.GridDqn(devic
 TRAZZI_GAMES = 20_000 * trazzi.GAME_STEPS
 trazzi_trainers = {"q": TrazziTrainer(trazzi.TableLearner, step_limit=TRAZZI_GAMES),
                    "sarsa": TrazziTrainer(lambda: trazzi.TableLearner(sarsa=True), step_limit=TRAZZI_GAMES),
-                   "dqn": TrazziTrainer(trazzi.Dqn)}
+                   "dqn": TrazziTrainer(trazzi.Dqn),
+                   "ppo": TrazziTrainer(trazzi.best_ppo, step_limit=trazzi.PPO_DECAY_STEPS)}
 optimum = trazzi.ValueIteration()
 optimum_result, optimum_game = trazzi.evaluate(optimum.choose)
 optimum_score = {"score": round(optimum.value, 2), "turns": 100 * optimum_result["turns"] / trazzi.EVAL_GAMES}
