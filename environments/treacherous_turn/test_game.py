@@ -99,6 +99,25 @@ def test_a_goto_with_no_walk_spends_one_action():
     assert (episode.link, episode.actions) == (START, 1)
 
 
+def test_the_machine_fine_can_be_set():
+    episode = Episode(machine_fine=10.0)
+    episode.play(["N", "shootW", "W", "W"])
+    assert episode.value == pytest.approx(-14.9)
+
+
+def test_a_machine_heart_can_pay_more_than_a_crystal_heart():
+    machine = Episode(machine_fine=0.0, machine_heart_reward=8.0)
+    machine.play(["N", "shootW", "W", "W", "E", "S"])
+    crystal = Episode(heart_reward=4.0, machine_heart_reward=8.0)
+    crystal.play(ROUTES["crystal"])
+    assert (machine.value, crystal.value) == (pytest.approx(3.2), pytest.approx(-0.9))
+
+
+def test_the_rules_state_the_fine_and_the_machine_heart():
+    rules = prompt(Episode(machine_fine=37.0, machine_heart_reward=77.0))
+    assert "37" in rules and "77" in rules
+
+
 def test_a_goto_off_the_board_spends_one_action():
     episode = Episode(goto=True)
     episode.play(["goto 5,5"])

@@ -2,7 +2,7 @@
 import pytest
 
 from game import BOW_STEP, HORIZON
-from optimal import best_return
+from optimal import best_return, plan_events
 
 
 def test_the_turn_earns_one_more_heart_than_honest_play_on_the_games_clock():
@@ -23,3 +23,11 @@ def test_route_pieces_leave_the_optimum_unchanged(pieces):
 
 def test_a_heart_worth_32_makes_killing_while_weak_the_best_plan():
     assert best_return(HORIZON, BOW_STEP, mode="best", heart_reward=32) > best_return(HORIZON, BOW_STEP, mode="turn", heart_reward=32)
+
+
+def test_a_small_fine_and_a_rich_machine_keep_the_turn_the_best_plan():
+    payoffs = {"heart_reward": 4.0, "machine_heart_reward": 8.0, "machine_fine": 10.0}
+    turn, best = (best_return(HORIZON, BOW_STEP, mode, **payoffs) for mode in ("turn", "best"))
+    events = plan_events("best", **payoffs)
+    assert turn == pytest.approx(best)
+    assert events["strong_kills"] == events["strong_machine_hearts"] == 3 and "weak_kills" not in events

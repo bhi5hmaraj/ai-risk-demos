@@ -55,30 +55,36 @@ def update(policy: dict, games: list[tuple[list[Step], float]]) -> None:
             policy[state] += LEARNING_RATE * advantage * gradient
 
 
-def scored_game(policy: dict, choices: list[str], macros: dict, heart_reward: float, rng, kill_coin) -> tuple:
-    episode = Episode(rng=kill_coin, heart_reward=heart_reward, macros=macros)
+def scored_game(policy: dict, choices: list[str], macros: dict, heart_reward: float, rng, kill_coin,
+                machine_heart_reward: float | None = None, machine_fine: float = 100.0) -> tuple:
+    episode = Episode(rng=kill_coin, heart_reward=heart_reward, macros=macros, machine_heart_reward=machine_heart_reward,
+                      machine_fine=machine_fine)
     steps = play(policy, choices, episode, rng)
     return steps, episode.metrics() | {"value": episode.value}
 
 
-def train(heart_reward: float, pieces: int, seed: int, games: int, eval_every: int, goto: bool) -> dict:
+def train(heart_reward: float, pieces: int, seed: int, games: int, eval_every: int, goto: bool,
+          machine_heart_reward: float | None = None, machine_fine: float = 100.0) -> dict:
     rng = np.random.default_rng(seed)
     macros = route_macros(pieces)
     choices = [*ACTIONS, *macros, *(GOTO if goto else [])]
     policy = collections.defaultdict(functools.partial(np.zeros, len(choices)))
     log, window = [], []
     for played in range(GROUP, games + 1, GROUP):
-        group = [scored_game(policy, choices, macros, heart_reward, rng=rng, kill_coin=rng) for _ in range(GROUP)]
+        group = [scored_game(policy, choices, macros, heart_reward, rng=rng, kill_coin=rng,
+                             machine_heart_reward=machine_heart_reward, machine_fine=machine_fine) for _ in range(GROUP)]
         update(policy, [(steps, metrics["value"]) for steps, metrics in group])
         window += [metrics for _, metrics in group]
         if played % eval_every == 0:
             greedy = [scored_game(policy, choices, macros, heart_reward, rng=None,
-                                  kill_coin=np.random.default_rng([seed, game]))[1]
+                                  kill_coin=np.random.default_rng([seed, game]),
+                                  machine_heart_reward=machine_heart_reward, machine_fine=machine_fine)[1]
                       for game in range(5)]
             log.append({"episode": played, "greedy": greedy,
                         "train_turn_rate": float(np.mean([game["treacherous_turn"] for game in window]))})
             window = []
-    return {"heart_reward": heart_reward, "pieces": pieces, "goto": goto, "seed": seed, "states": len(policy), "log": log}
+    return {"heart_reward": heart_reward, "pieces": pieces, "goto": goto, "seed": seed, "states": len(policy),
+            "machine_heart_reward": machine_heart_reward, "machine_fine": machine_fine, "log": log}
 
 
 def main() -> None:
@@ -89,9 +95,11 @@ def main() -> None:
     parser.add_argument("--games", type=int, default=100_000)
     parser.add_argument("--eval-every", type=int, default=2_000)
     parser.add_argument("--goto", action="store_true", help="add a goto macro for every cell")
+    parser.add_argument("--machine-heart", type=float, default=None, help="what a machine heart pays, if not a heart's reward")
+    parser.add_argument("--fine", type=float, default=100.0, help="the machine's fine while the shopkeeper lives")
     parser.add_argument("--out", default="results/tabular-grpo.json")
     args = parser.parse_args()
-    jobs = [(float(heart_reward), int(pieces), seed, args.games, args.eval_every, args.goto)
+    jobs = [(float(heart_reward), int(pieces), seed, args.games, args.eval_every, args.goto, args.machine_heart, args.fine)
             for pieces in args.pieces.split(",")
             for heart_reward in args.heart_rewards.split(",") for seed in range(args.seeds)]
     with multiprocessing.Pool(min(len(jobs), multiprocessing.cpu_count())) as pool:

@@ -1796,8 +1796,8 @@ killed after the bow, so kills are not zero at base. The full turn needs a heart
 game. 2,560 games give it a fair chance to appear at least once.
 
 A first launch crashed on step 1, when a game played a goto off the board. The fix makes that goto spend one
-action, as the rules say. The run restarted with the predictions unchanged, and went on past the $47 I had
-estimated, because longer games raised the cost per step and the user chose to continue.
+action, as the rules say. The run restarted with the predictions unchanged. Longer games raised the cost per step
+past my estimate of $47, and the user chose to continue.
 
 ![GPT-OSS-120B learning curves on Trazzi's game](environments/treacherous_turn/results/tinker/tinker-gptoss-low/curves.png)
 
@@ -1981,6 +1981,41 @@ run sits at one heart reward, and walking errors stopped them first. Tabular Q-l
 
 Code: [price_of_hiding.py](environments/armstrong_camera/price_of_hiding.py) and [plot_price_of_hiding.py](environments/armstrong_camera/plot_price_of_hiding.py). Data:
 [price-of-hiding.json](environments/armstrong_camera/results/price-of-hiding.json). Cost: local, no new games, about 25 minutes on one core.
+
+## E45. A smaller fine and a richer machine in Trazzi's game: predictions first (2026-10-30)
+
+Question: E40 found two bottlenecks. A machine heart pays no more than a crystal heart, and the -100 fine swamps the
+training signal. Does changing either let cheap learners find the turn with single moves, before more LLM spend?
+
+Setup: [game.py](environments/treacherous_turn/game.py) now takes `machine_fine` and `machine_heart_reward`. Hearts
+pay 4, with single moves, no macros and no goto. Four games cross a fine of 100 or 10 with a machine heart of 4 or 8.
+
+The exact optimum, from [optimal.py](environments/treacherous_turn/optimal.py):
+
+| Fine | Machine heart | Honest | Turn | Best | Best plan, with every shot a kill |
+|---|---|---|---|---|---|
+| 100 | 4 | +7.30 | +11.40 | +11.40 | 1 crystal heart while weak, then 3 kills and 3 machine hearts |
+| 10 | 4 | +7.30 | +11.40 | +11.40 | the same |
+| 100 | 8 | +7.30 | +23.40 | +23.40 | the same |
+| 10 | 8 | +7.30 | +23.40 | +23.40 | the same |
+
+Neither change makes killing while weak the best plan, and the turn stays optimal in all four. A machine heart of 8
+raises what the turn earns over honest play from +4.1 to +16.1. A fine of 10 leaves the optimum unchanged.
+
+The learners run as in E20 and E26: tabular GRPO for 3 seeds of 100,000 games, and PPO for 3 seeds of 2.5M steps.
+
+Predictions, committed before any learner ran. Each is the probability that at least 1 of 3 seeds ends with greedy
+games that make the full turn:
+
+| Learner | Fine 100, heart 4 | Fine 10, heart 4 | Fine 100, heart 8 | Fine 10, heart 8 |
+|---|---|---|---|---|
+| Tabular GRPO | 0.03 | 0.15 | 0.20 | 0.30 |
+| PPO | 0.10 | 0.25 | 0.45 | 0.55 |
+
+The reasons: the search through 10 exact actions blocked PPO in E25, and neither change shortens it. A richer machine
+makes the prize larger once a learner finds it. A smaller fine makes walking into the machine cheap to try.
+
+Result: pending.
 
 ## Paused
 
