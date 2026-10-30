@@ -43,6 +43,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   hearts (E32).
 - With random starts in training, PPO makes the turn with single actions on 3 of 4 seeds by 0.5M steps, but it does
   not hold it on every seed. With defaults it finds the turn on 1 of 4 seeds (E37).
+- With 128 games at once and random starts, PPO finds the turn on 4 of 4 seeds and reaches the exact optimum on 2.
+  A decaying learning rate holds the turn on the 3 of 4 seeds that find it. A 256 x 256 network shows no clear gain (E39).
 - MONA, solved exactly on the 6 x 5 grid, stops the hiding while its window stays under 7 moves and its
   overseer is exact. Hiding returns at longer windows, and with a noisy overseer no window is both safe and
   useful (E33).
@@ -106,6 +108,7 @@ flowchart TD
     qlearn --> ppo["E20: PPO<br/>honest optimum, no turn"]
     qlearn --> original["E32: Trazzi's original game<br/>Q 5/5, SARSA 0/5, DQN no turn"]
     original --> pposearch["E37: PPO with random starts<br/>turn on 3/4 seeds, not stable"]
+    pposearch --> ppobatched["E39: 128 games at once<br/>turn on 4/4, a decaying rate holds it"]
     ppo --> routes["E22: PPO with route macros<br/>full turn on 12/12 seeds"]
     routes --> pieces["E25: routes cut into pieces<br/>turn at 1 or 2 decisions, none at 5"]
     pieces --> tabular["E26: tabular GRPO<br/>tracks PPO from below, 20x faster"]
@@ -1698,6 +1701,53 @@ $0.015, a step of 128 games about $2 and 20 steps about $39. Tinker's billing ha
 
 Data: [eval-gptoss-low.jsonl](environments/treacherous_turn/results/eval-gptoss-low.jsonl). Cost: about $0.26, the
 smoke included.
+
+## E39. PPO on Trazzi's game with batched stepping (2026-10-30)
+
+Question: E37's PPO makes the turn but does not hold it. Do a batched game, a decaying learning rate or a wider
+network make it faster or steadier?
+
+Setup: `BatchedGames` in [trazzi_learners.py](replications/trazzi/trazzi_learners.py) steps all games at once by table
+lookups, as a Stable-Baselines3 `VecEnv`, and [test_trazzi_learners.py](replications/trazzi/test_trazzi_learners.py)
+checks that it replays the exact optimum. Every run below uses E37's random starts and rewards divided by 10.
+[ppo_search.py](replications/trazzi/ppo_search.py) ran 4 seeds of each setting, on 4 cores, and scored them as in E37.
+The rate falls in a line to a tenth of its start over 1.5M steps, or over 5M in the run with fewer updates.
+
+Time per update is what limits PPO here. On one core, training took 5.1 s of 6 s with E37's settings:
+
+| Games at once, minibatch, epochs | Steps per second | Share of time training |
+|---|---|---|
+| 8, 64, 10 | 11,000 | 85% |
+| 128, 64, 10 | 12,300 | 98% |
+| 128, 512, 4 | 108,000 | 83% |
+
+![PPO with batched stepping](replications/trazzi/results/ppo_batched.png)
+
+| Setting | Seeds with a greedy turn at any check | Greedy turn at the end | Seeds that lose it after finding it | Best greedy score |
+|---|---|---|---|---|
+| 8 games, E37's updates | 3/4 | 3/4 | 2 | -2.4 |
+| 128 games | 4/4 | 3/4 | 3 | -1.3 on 2 seeds |
+| 128 games, 20x fewer updates, 5M steps | 0/4 | 0/4 | 0 | -3.5 |
+| The same with a decaying rate | 0/4 | 0/4 | 0 | -3.5 |
+| 128 games, decaying rate | 3/4 | 3/4 | 0 | -1.3 on 1 seed |
+| 128 games, 256 x 256 | 4/4 | 4/4 | 2 | -1.3 on 2 seeds |
+
+Result:
+
+- The batched game is sound. With E37's updates it reproduces E37's 3 of 4 seeds.
+- Batching alone gains little, because training takes most of the time. The 10 times faster setting does 20 times
+  fewer updates and never finds the turn. All 8 of its seeds settle on honest play at -3.5, with entropy near 0.1.
+- 128 games find the turn on 4 of 4 seeds by 0.5M to 1M steps, and PPO reaches the exact optimum of -1.3 for the first time.
+- The decaying rate is the steadiest. Its 3 seeds that find the turn keep it at every check from 0.5M steps on, but the rate
+  ends low, so this does not show the policy would hold at a high rate. Seed 0 never finds the turn.
+- The 64 x 64 network can hold the optimum, and 256 x 256 shows no clear gain over it.
+
+The differences between 128-game settings rest on 4 seeds each, so they are weak. Deeper networks and a CNN did not run,
+since width showed no clear gain. Why fewer updates lose the turn is not tested.
+
+Code: [trazzi_learners.py](replications/trazzi/trazzi_learners.py), [ppo_search.py](replications/trazzi/ppo_search.py)
+and [plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/ppo_search/](replications/trazzi/results/ppo_search/).
+Cost: local, about 25 minutes on 4 cores.
 
 ## Paused
 

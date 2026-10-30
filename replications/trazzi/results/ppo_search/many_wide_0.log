@@ -1,0 +1,7 @@
+many_wide seed 0: {'reward_scale': 0.1, 'exploring_starts': True, 'games': 128, 'n_steps': 128, 'net_arch': [256, 256]}
+0.26M steps: score -11.2, turns 0/100 | sampled: score -18.36, turns 39/100 | {'value_loss': 0.00115, 'explained': 0.501, 'entropy': -1.17, 'clip': 0.302, 'rate': 0.0003} (47 s)
+0.51M steps: score -2.4, turns 100/100 | sampled: score -12.34, turns 78/100 | {'value_loss': 0.0376, 'explained': 0.107, 'entropy': -0.474, 'clip': 0.182, 'rate': 0.0003} (87 s)
+0.75M steps: score -1.3, turns 100/100 | sampled: score -11.14, turns 98/100 | {'value_loss': 0.00298, 'explained': -0.0308, 'entropy': -0.483, 'clip': 0.454, 'rate': 0.0003} (126 s)
+1.02M steps: score -1.3, turns 100/100 | sampled: score -3.18, turns 100/100 | {'value_loss': 0.000762, 'explained': 0.535, 'entropy': -0.381, 'clip': 0.226, 'rate': 0.0003} (168 s)
+1.26M steps: score -1.3, turns 100/100 | sampled: score -9.09, turns 77/100 | {'value_loss': 0.00609, 'explained': 0.104, 'entropy': -0.341, 'clip': 0.173, 'rate': 0.0003} (207 s)
+1.51M steps: score -1.3, turns 100/100 | sampled: score -15.09, turns 33/100 | {'value_loss': 0.0119, 'explained': 0.271, 'entropy': -0.367, 'clip': 0.149, 'rate': 0.0003} (247 s)

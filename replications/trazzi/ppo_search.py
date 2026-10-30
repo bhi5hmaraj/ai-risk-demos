@@ -17,6 +17,9 @@ import torch as th
 
 import trazzi_learners as trazzi
 
+# 128 games at once and large minibatches: about 10 times the steps per second of the defaults, with 20 times fewer updates.
+FAST_STARTS = {"reward_scale": 0.1, "exploring_starts": True, "games": 128, "n_steps": 128, "batch_size": 512, "n_epochs": 4}
+MANY_GAMES_STARTS = {"reward_scale": 0.1, "exploring_starts": True, "games": 128, "n_steps": 128}
 SETTINGS = {
     "baseline": {},
     "scaled": {"reward_scale": 0.1},
@@ -25,8 +28,19 @@ SETTINGS = {
     "scaled_count": {"reward_scale": 0.1, "count_bonus": 0.1},
     "scaled_starts": {"reward_scale": 0.1, "exploring_starts": True},
     "scaled_count_starts": {"reward_scale": 0.1, "count_bonus": 0.1, "exploring_starts": True},
+    "batched_starts": {"reward_scale": 0.1, "exploring_starts": True},
+    "many_games_starts": MANY_GAMES_STARTS,
+    "many_decay": MANY_GAMES_STARTS | {"decay_steps": 1_500_000},
+    "many_wide": MANY_GAMES_STARTS | {"net_arch": [256, 256]},
+    "many_deep": MANY_GAMES_STARTS | {"net_arch": [256, 256, 256]},
+    "many_cnn": MANY_GAMES_STARTS | {"cnn": True},
+    "fast_starts": FAST_STARTS,
+    "fast_decay": FAST_STARTS | {"decay_steps": 5_000_000},
+    "fast_wide": FAST_STARTS | {"net_arch": [256, 256]},
+    "fast_deep": FAST_STARTS | {"net_arch": [256, 256, 256]},
+    "fast_cnn": FAST_STARTS | {"cnn": True},
 }
-TRAINING_STATS = {"value_loss": "train/value_loss", "explained": "train/explained_variance", "entropy": "train/entropy_loss", "clip": "train/clip_fraction"}
+TRAINING_STATS = {"value_loss": "train/value_loss", "explained": "train/explained_variance", "entropy": "train/entropy_loss", "clip": "train/clip_fraction", "rate": "train/learning_rate"}
 
 
 def run(name, seed, steps, eval_every, out_dir):
@@ -41,7 +55,7 @@ def run(name, seed, steps, eval_every, out_dir):
             next_eval += eval_every
             greedy, _ = trazzi.evaluate(learner.choose)
             scores, turned, _ = trazzi.play(learner.sample, trazzi.EVAL_GAMES, np.random.default_rng(0))
-            stats = {label: round(float(learner.model.logger.name_to_value.get(key, 0)), 3) for label, key in TRAINING_STATS.items()}
+            stats = {label: float(f"{learner.model.logger.name_to_value.get(key, 0):.3g}") for label, key in TRAINING_STATS.items()}
             print(f"{learner.steps / 1e6:.2f}M steps: score {greedy['score']}, turns {greedy['turns']}/{trazzi.EVAL_GAMES} | "
                   f"sampled: score {scores.mean():.2f}, turns {int(turned.sum())}/{trazzi.EVAL_GAMES} | {stats} ({time.time() - start:.0f} s)", file=log, flush=True)
 

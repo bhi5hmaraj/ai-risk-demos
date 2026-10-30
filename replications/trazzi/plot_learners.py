@@ -18,6 +18,8 @@ LEARNERS = [("q_[0-9]", "Q-learning, 5 seeds", "#eb6834"), ("sarsa_[0-9]", "SARS
             ("sarsa_rate0.1", "SARSA at learning rate 0.1, 3 seeds", "#6250d6"), ("dqn", "DQN", "#1baf7a"),
             ("ppo", "PPO", "#c98a00"), ("grpo", "GRPO", "#c2417a")]
 OPTIMUM_SCORE = -1.3
+PPO_BATCHED_SETTINGS = {"batched_starts": "8 games", "many_games_starts": "128 games", "fast_starts": "128 games, 20x fewer updates",
+                        "many_decay": "128 games, decaying rate", "many_wide": "128 games, 256 x 256"}
 PPO_SETTINGS = {"baseline": "defaults", "scaled": "rewards divided by 10", "scaled_count": "plus a count bonus", "scaled_starts": "plus random starts"}
 
 
@@ -56,20 +58,26 @@ def sampled_turns(log):
     return [(float(steps), float(turns)) for steps, turns in re.findall(r"([\d.]+)M steps: .*?sampled: score [-\d.]+, turns (\d+)/", log.read_text())]
 
 
-figure, axes = plt.subplots(1, len(PPO_SETTINGS), figsize=(11, 2.9), sharey=True)
-for axis, (setting, title) in zip(axes, PPO_SETTINGS.items()):
-    axis.set_facecolor(SURFACE)
-    axis.set_title(title, loc="left", fontsize=9, color=INK)
-    axis.grid(color=GRID, linewidth=0.8)
-    axis.set_axisbelow(True)
-    axis.tick_params(colors=MUTED, labelsize=8)
-    for side in ("top", "right"):
-        axis.spines[side].set_visible(False)
-    for log in sorted((LOGS.parent / "ppo_search").glob(f"{setting}_[0-9].log")):
-        rows = sampled_turns(log)
-        axis.plot([row[0] for row in rows], [row[1] for row in rows], color="#c98a00", linewidth=1.6, alpha=0.85)
-    axis.set_xlabel("environment steps (millions)", fontsize=8, color=MUTED)
-axes[0].set_ylabel("sampled games that make the turn, %", fontsize=8, color=MUTED)
-figure.patch.set_facecolor(SURFACE)
-figure.tight_layout()
-figure.savefig(LOGS.parent / "ppo_search.png", dpi=120, facecolor=SURFACE)
+def plot_ppo_settings(settings, name):
+    """One panel per setting, one line per seed: the sampled policy's turn rate."""
+    figure, axes = plt.subplots(1, len(settings), figsize=(11, 2.9), sharey=True)
+    for axis, (setting, title) in zip(axes, settings.items()):
+        axis.set_facecolor(SURFACE)
+        axis.set_title(title, loc="left", fontsize=9, color=INK)
+        axis.grid(color=GRID, linewidth=0.8)
+        axis.set_axisbelow(True)
+        axis.tick_params(colors=MUTED, labelsize=8)
+        for side in ("top", "right"):
+            axis.spines[side].set_visible(False)
+        for log in sorted((LOGS.parent / "ppo_search").glob(f"{setting}_[0-9].log")):
+            rows = sampled_turns(log)
+            axis.plot([row[0] for row in rows], [row[1] for row in rows], color="#c98a00", linewidth=1.6, alpha=0.85)
+        axis.set_xlabel("environment steps (millions)", fontsize=8, color=MUTED)
+    axes[0].set_ylabel("sampled games that make the turn, %", fontsize=8, color=MUTED)
+    figure.patch.set_facecolor(SURFACE)
+    figure.tight_layout()
+    figure.savefig(LOGS.parent / name, dpi=120, facecolor=SURFACE)
+
+
+plot_ppo_settings(PPO_SETTINGS, "ppo_search.png")
+plot_ppo_settings(PPO_BATCHED_SETTINGS, "ppo_batched.png")

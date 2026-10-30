@@ -25,7 +25,8 @@ import gymnasium as gym
 import numpy as np
 import torch as th
 from stable_baselines3 import PPO
-from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from stable_baselines3.common.vec_env import VecEnv
 from torch import nn
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -35,6 +36,7 @@ from game import FRESH_STATE, SHOPKEEPER  # noqa: E402
 from optimal import ACTIONS, outcomes  # noqa: E402
 
 GAME_STEPS, BOW_STEP, GAMMA, EVAL_GAMES = 200, 100, 0.95, 100
+MAP_ROWS, MAP_COLUMNS = 4, 6
 PAGE_CELLS = ".#LHMOKRC@"  # the page's cell numbers, 0 to 9, as in Trazzi's map
 NOTHING, CRYSTAL_HEART, MACHINE_HEART, KILL, MISS = range(5)
 
@@ -75,6 +77,7 @@ def _build_table():
 # Indexed by board, bow and action, then the outcome: a kill and a miss when Link shoots the shopkeeper weak.
 CHANCE, NEXT, REWARD, EVENT, CELLS, CARRYING = _build_table()
 BOARD_FEATURES = np.concatenate([np.eye(len(PAGE_CELLS), dtype=np.uint8)[CELLS].reshape(len(CELLS), -1), CARRYING[:, None]], 1)
+OBSERVATION_SPACE = gym.spaces.Box(0, 1, (BOARD_FEATURES.shape[1] + 1,), np.float32)
 
 
 def encode(states):
@@ -180,41 +183,90 @@ class TableLearner:
         return self.q[states].argmax(1)
 
 
-class TrazziEnv(gym.Env):
-    """Trazzi's game, one action per step. Rewards are multiplied by reward_scale. A count bonus adds
-    count_bonus / sqrt(visits) for the state reached, with visits shared across games. Exploring starts begin each
-    game on a random board at a random clock."""
-    observation_space = gym.spaces.Box(0, 1, (BOARD_FEATURES.shape[1] + 1,), np.float32)
-    action_space = gym.spaces.Discrete(len(ACTIONS))
+class BatchedGames(VecEnv):
+    """Trazzi's games for Stable-Baselines3, all stepped at once by table lookups. Rewards are multiplied by
+    reward_scale. A count bonus adds count_bonus / sqrt(visits) for the state reached, with visits shared across
+    games. Exploring starts begin each game on a random board at a random clock."""
 
-    def __init__(self, reward_scale=1.0, count_bonus=0.0, exploring_starts=False, visits=None):
-        self.reward_scale, self.count_bonus, self.exploring_starts, self.visits = reward_scale, count_bonus, exploring_starts, visits
+    def __init__(self, games, seed=0, reward_scale=1.0, count_bonus=0.0, exploring_starts=False):
+        super().__init__(games, OBSERVATION_SPACE, gym.spaces.Discrete(len(ACTIONS)))
+        self.rng, self.reward_scale, self.count_bonus, self.exploring_starts = np.random.default_rng(seed), reward_scale, count_bonus, exploring_starts
+        self.visits, self.boards, self.clock = np.zeros(2 * len(CELLS)), np.zeros(games, np.int64), np.zeros(games, np.int64)
 
-    def reset(self, *, seed=None, options=None):
-        super().reset(seed=seed)
-        self.board = int(self.np_random.integers(len(CELLS))) if self.exploring_starts else 0
-        self.step_count = int(self.np_random.integers(GAME_STEPS)) if self.exploring_starts else 0
-        return encode([self.board * 2 + int(self.step_count >= BOW_STEP)])[0], {}
+    def _states(self):
+        return self.boards * 2 + (self.clock >= BOW_STEP)
 
-    def step(self, action):
-        bow = int(self.step_count >= BOW_STEP)
-        key = (self.board, bow, int(action), int(self.np_random.random() >= CHANCE[self.board, bow, action]))
-        self.board, self.step_count = int(NEXT[key]), self.step_count + 1
-        state = self.board * 2 + int(self.step_count >= BOW_STEP)
-        reward = float(REWARD[key]) * self.reward_scale
+    def _start(self, games):
+        count = int(games.sum())
+        self.boards[games] = self.rng.integers(len(CELLS), size=count) if self.exploring_starts else 0
+        self.clock[games] = self.rng.integers(GAME_STEPS, size=count) if self.exploring_starts else 0
+
+    def reset(self):
+        self._start(np.ones(self.num_envs, bool))
+        return encode(self._states())
+
+    def step_async(self, actions):
+        self.actions = actions
+
+    def step_wait(self):
+        bow = (self.clock >= BOW_STEP).astype(np.int64)
+        outcome = (self.rng.random(self.num_envs) >= CHANCE[self.boards, bow, self.actions]).astype(np.int64)
+        key = (self.boards, bow, self.actions, outcome)
+        self.boards, rewards = NEXT[key], REWARD[key] * self.reward_scale
+        self.clock += 1
+        states = self._states()
         if self.count_bonus:
-            self.visits[state] += 1
-            reward += self.count_bonus / math.sqrt(self.visits[state])
-        return encode([state])[0], reward, False, self.step_count == GAME_STEPS, {}
+            np.add.at(self.visits, states, 1)
+            rewards = rewards + self.count_bonus / np.sqrt(self.visits[states])
+        observations, ended = encode(states), self.clock == GAME_STEPS
+        infos = [{} for _ in range(self.num_envs)]
+        for game in np.flatnonzero(ended):
+            infos[game] = {"terminal_observation": observations[game].copy(), "TimeLimit.truncated": True}
+        if ended.any():
+            self._start(ended)
+            observations[ended] = encode(self._states()[ended])
+        return observations, rewards.astype(np.float32), ended, infos
+
+    def close(self):
+        pass
+
+    def get_attr(self, attr_name, indices=None):
+        return [getattr(self, attr_name, None)] * self.num_envs
+
+    def set_attr(self, attr_name, value, indices=None):
+        setattr(self, attr_name, value)
+
+    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
+        raise NotImplementedError(method_name)
+
+    def env_is_wrapped(self, wrapper_class, indices=None):
+        return [False] * self.num_envs
+
+
+class BoardCnn(BaseFeaturesExtractor):
+    """Two 3 x 3 convolutions over the map's cell planes, then 256 units, with the crystal and the bow joining there."""
+
+    def __init__(self, observation_space):
+        super().__init__(observation_space, features_dim=256)
+        self.convolutions = nn.Sequential(nn.Conv2d(len(PAGE_CELLS), 32, 3, padding=1), nn.ReLU(), nn.Conv2d(32, 64, 3, padding=1), nn.ReLU(), nn.Flatten())
+        self.dense = nn.Sequential(nn.Linear(64 * CELLS.shape[1] + 2, 256), nn.ReLU())
+
+    def forward(self, observations):
+        planes = observations[:, :-2].view(-1, CELLS.shape[1], len(PAGE_CELLS)).transpose(1, 2).view(-1, len(PAGE_CELLS), MAP_ROWS, MAP_COLUMNS)
+        return self.dense(th.cat([self.convolutions(planes), observations[:, -2:]], 1))
 
 
 class Ppo:
-    """Stable-Baselines3's PPO with its defaults, 8 games at once, discount 0.95 and entropy bonus 0.01 unless set."""
+    """Stable-Baselines3's PPO with its defaults, 8 games at once, discount 0.95 and entropy bonus 0.01 unless set.
+    With decay_steps, the learning rate falls in a line to a tenth of its start over that many steps."""
 
-    def __init__(self, seed=0, gamma=GAMMA, ent_coef=0.01, reward_scale=1.0, count_bonus=0.0, exploring_starts=False):
-        env_kwargs = {"reward_scale": reward_scale, "count_bonus": count_bonus, "exploring_starts": exploring_starts, "visits": np.zeros(2 * len(CELLS))}
-        environments = make_vec_env(TrazziEnv, n_envs=8, seed=seed, env_kwargs=env_kwargs)
-        self.model = PPO("MlpPolicy", environments, gamma=gamma, ent_coef=ent_coef, seed=seed, device="cpu")
+    def __init__(self, seed=0, gamma=GAMMA, ent_coef=0.01, reward_scale=1.0, count_bonus=0.0, exploring_starts=False, net_arch=None, cnn=False, decay_steps=None,
+                 games=8, n_steps=2048, batch_size=64, n_epochs=10):
+        environments = BatchedGames(games, seed=seed, reward_scale=reward_scale, count_bonus=count_bonus, exploring_starts=exploring_starts)
+        policy_kwargs = {"features_extractor_class": BoardCnn, "net_arch": []} if cnn else {"net_arch": net_arch} if net_arch else {}
+        self.decay_steps = decay_steps
+        self.model = PPO("MlpPolicy", environments, learning_rate=lambda remaining: 3e-4 * max(0.1, remaining), n_steps=n_steps, batch_size=batch_size, n_epochs=n_epochs,
+                         gamma=gamma, ent_coef=ent_coef, seed=seed, device="cpu", policy_kwargs=policy_kwargs)
         self.model._setup_learn(10**12)
 
     @property
@@ -223,6 +275,8 @@ class Ppo:
 
     def iterate(self):
         self.model.collect_rollouts(self.model.env, self.model._init_callback(None), self.model.rollout_buffer, n_rollout_steps=self.model.n_steps)
+        if self.decay_steps:
+            self.model._current_progress_remaining = 1 - self.steps / self.decay_steps
         self.model.train()
 
     def choose(self, states, step):
@@ -241,7 +295,7 @@ def make_mlp(head_gain=0.01):
     if head_gain is not None:
         nn.init.orthogonal_(head.weight, gain=head_gain)
         nn.init.zeros_(head.bias)
-    return nn.Sequential(nn.Linear(TrazziEnv.observation_space.shape[0], 64), nn.Tanh(), nn.Linear(64, 64), nn.Tanh(), head)
+    return nn.Sequential(nn.Linear(OBSERVATION_SPACE.shape[0], 64), nn.Tanh(), nn.Linear(64, 64), nn.Tanh(), head)
 
 
 class Dqn(grid_learners.GridDqn):
