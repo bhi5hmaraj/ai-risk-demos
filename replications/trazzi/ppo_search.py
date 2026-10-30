@@ -19,6 +19,7 @@ import trazzi_learners as trazzi
 
 # 128 games at once and large minibatches: about 10 times the steps per second of the defaults, with 20 times fewer updates.
 FAST_STARTS = {"reward_scale": 0.1, "exploring_starts": True, "games": 128, "n_steps": 128, "batch_size": 512, "n_epochs": 4}
+CNN = {"features_extractor_class": trazzi.BoardCnn, "net_arch": []}
 MANY_GAMES_STARTS = {"reward_scale": 0.1, "exploring_starts": True, "games": 128, "n_steps": 128}
 SETTINGS = {
     "baseline": {},
@@ -31,14 +32,16 @@ SETTINGS = {
     "batched_starts": {"reward_scale": 0.1, "exploring_starts": True},
     "many_games_starts": MANY_GAMES_STARTS,
     "many_decay": MANY_GAMES_STARTS | {"decay_steps": 1_500_000},
-    "many_wide": MANY_GAMES_STARTS | {"net_arch": [256, 256]},
-    "many_deep": MANY_GAMES_STARTS | {"net_arch": [256, 256, 256]},
-    "many_cnn": MANY_GAMES_STARTS | {"cnn": True},
+    "many_wide": MANY_GAMES_STARTS | {"policy_kwargs": {"net_arch": [256, 256]}},
+    "many_deep": MANY_GAMES_STARTS | {"policy_kwargs": {"net_arch": [256, 256, 256]}},
+    "many_cnn": MANY_GAMES_STARTS | {"policy_kwargs": CNN},
+    "many_shared_tanh": MANY_GAMES_STARTS | {"policy_kwargs": {"features_extractor_class": trazzi.SharedMlp, "features_extractor_kwargs": {"activation": th.nn.Tanh}, "net_arch": []}},
+    "many_shared_relu": MANY_GAMES_STARTS | {"policy_kwargs": {"features_extractor_class": trazzi.SharedMlp, "features_extractor_kwargs": {"activation": th.nn.ReLU}, "net_arch": []}},
     "fast_starts": FAST_STARTS,
     "fast_decay": FAST_STARTS | {"decay_steps": 5_000_000},
-    "fast_wide": FAST_STARTS | {"net_arch": [256, 256]},
-    "fast_deep": FAST_STARTS | {"net_arch": [256, 256, 256]},
-    "fast_cnn": FAST_STARTS | {"cnn": True},
+    "fast_wide": FAST_STARTS | {"policy_kwargs": {"net_arch": [256, 256]}},
+    "fast_deep": FAST_STARTS | {"policy_kwargs": {"net_arch": [256, 256, 256]}},
+    "fast_cnn": FAST_STARTS | {"policy_kwargs": CNN},
 }
 TRAINING_STATS = {"value_loss": "train/value_loss", "explained": "train/explained_variance", "entropy": "train/entropy_loss", "clip": "train/clip_fraction", "rate": "train/learning_rate"}
 

@@ -47,6 +47,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   A decaying learning rate holds the turn on the 3 of 4 seeds that find it. A 256 x 256 network shows no clear gain (E39).
 - A CNN policy does best on that setup: all 4 seeds reach the exact optimum at 1.26M steps and 3 keep it to the end, at 7 times
   the run time. Its gain is not separated from its other differences from the MLPs (E41).
+- An MLP with layers shared between policy and value, using tanh, matches the CNN's 3 of 4 seeds at the optimum at about a fifth
+  of the run time, though one seed never finds the turn. Shared layers with ReLU are the least steady (E42).
 - MONA, solved exactly on the 6 x 5 grid, stops the hiding while its window stays under 7 moves and its
   overseer is exact. Hiding returns at longer windows, and with a noisy overseer no window is both safe and
   useful (E33).
@@ -112,6 +114,7 @@ flowchart TD
     original --> pposearch["E37: PPO with random starts<br/>turn on 3/4 seeds, not stable"]
     pposearch --> ppobatched["E39: 128 games at once<br/>turn on 4/4, a decaying rate holds it"]
     ppobatched --> pponetworks["E41: PPO's network<br/>a CNN reaches the optimum on 4/4"]
+    pponetworks --> pposhared["E42: shared layers<br/>3/4 at the optimum, a fifth of the time"]
     ppo --> routes["E22: PPO with route macros<br/>full turn on 12/12 seeds"]
     routes --> pieces["E25: routes cut into pieces<br/>turn at 1 or 2 decisions, none at 5"]
     pieces --> tabular["E26: tabular GRPO<br/>tracks PPO from below, 20x faster"]
@@ -1818,6 +1821,38 @@ not show that convolutions are the cause. It ran without E39's decaying learning
 Code: `BoardCnn` in [trazzi_learners.py](replications/trazzi/trazzi_learners.py), [ppo_search.py](replications/trazzi/ppo_search.py)
 and [plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/ppo_search/](replications/trazzi/results/ppo_search/).
 Cost: local, about 23 minutes on 4 cores.
+
+## E42. Does sharing layers explain the CNN's gain? (2026-10-30)
+
+Question: the CNN of E41 also shares its layers between the policy and the value, and uses ReLU. Does an MLP with those
+traits match it at a fraction of the run time?
+
+Setup: `SharedMlp` in [trazzi_learners.py](replications/trazzi/trazzi_learners.py) is two layers of 256 units that the policy and
+the value share, with a linear head for each. [ppo_search.py](replications/trazzi/ppo_search.py) ran it with tanh and with ReLU,
+with the setting and seeds of E41: random starts, 128 games at once, 1.5M steps, 4 cores. A check on the built policy confirmed
+that the two networks share all hidden layers and that E39's 256 x 256 does not.
+
+![PPO with shared layers](replications/trazzi/results/ppo_shared.png)
+
+| Network | Greedy turn at any check | Greedy turn at the end | Seeds that lose it after finding it | Seeds at the optimum at the end | Sampled turn at the end, of 100 | Minutes per run |
+|---|---|---|---|---|---|---|
+| 256 x 256, separate, tanh (E39) | 4/4 | 4/4 | 2 | 2/4 | 33, 89, 87, 99 | 4 |
+| 256 x 256, shared, tanh | 3/4 | 3/4 | 2 | 3/4 | 100, 91, 100, 0 | 3 |
+| 256 x 256, shared, ReLU | 3/4 | 1/4 | 3 | 1/4 | 99, 98, 100, 50 | 3 |
+| CNN, shared, ReLU (E41) | 4/4 | 3/4 | 1 | 3/4 | 100, 96, 97, 77 | 16 |
+
+Result:
+
+- Shared layers with tanh match the CNN's 3 of 4 seeds at the exact optimum at the end, at about a fifth of the run time.
+- They do not match it everywhere. Seed 3 never makes a greedy turn and samples none at the end, and 2 seeds lose the turn at some check,
+  against 1 for the CNN.
+- ReLU is not the cause of the CNN's gain. Shared layers with ReLU are the least steady network here, with 1 of 4 seeds turning at the end.
+
+Every gap rests on 4 seeds, so sharing is a likely cause, not a shown one. Shared tanh has not run with E39's decaying learning rate.
+
+Code: `SharedMlp` in [trazzi_learners.py](replications/trazzi/trazzi_learners.py), [ppo_search.py](replications/trazzi/ppo_search.py) and
+[plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/ppo_search/](replications/trazzi/results/ppo_search/).
+Cost: local, about 6 minutes on 4 cores.
 
 ## Paused
 

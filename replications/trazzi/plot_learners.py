@@ -19,6 +19,7 @@ LEARNERS = [("q_[0-9]", "Q-learning, 5 seeds", "#eb6834"), ("sarsa_[0-9]", "SARS
             ("ppo", "PPO", "#c98a00"), ("grpo", "GRPO", "#c2417a")]
 OPTIMUM_SCORE = -1.3
 PPO_NETWORKS = {"many_games_starts": "64 x 64", "many_wide": "256 x 256", "many_deep": "256 x 256 x 256", "many_cnn": "CNN"}
+PPO_SHARED = {"many_wide": "256 x 256, separate", "many_shared_tanh": "256 x 256, shared, tanh", "many_shared_relu": "256 x 256, shared, ReLU", "many_cnn": "CNN, shared, ReLU"}
 PPO_BATCHED_SETTINGS = {"batched_starts": "8 games", "many_games_starts": "128 games", "fast_starts": "128 games, 20x fewer updates",
                         "many_decay": "128 games, decaying rate", "many_wide": "128 games, 256 x 256"}
 PPO_SETTINGS = {"baseline": "defaults", "scaled": "rewards divided by 10", "scaled_count": "plus a count bonus", "scaled_starts": "plus random starts"}
@@ -84,10 +85,10 @@ plot_ppo_settings(PPO_SETTINGS, "ppo_search.png")
 plot_ppo_settings(PPO_BATCHED_SETTINGS, "ppo_batched.png")
 
 
-def plot_ppo_networks(name):
+def plot_ppo_networks(networks, name):
     """One column per network, one line per seed: the sampled policy's turn rate above the greedy score."""
-    figure, axes = plt.subplots(2, len(PPO_NETWORKS), figsize=(11, 5), sharex=True, sharey="row")
-    for column, (setting, title) in enumerate(PPO_NETWORKS.items()):
+    figure, axes = plt.subplots(2, len(networks), figsize=(11, 5), sharex=True, sharey="row")
+    for column, (setting, title) in enumerate(networks.items()):
         for log in sorted((LOGS.parent / "ppo_search").glob(f"{setting}_[0-9].log")):
             steps, scores, _ = zip(*points(log))
             axes[0, column].plot(steps, [row[1] for row in sampled_turns(log)], color="#c98a00", linewidth=1.6, alpha=0.85, marker="o", markersize=3)
@@ -110,4 +111,5 @@ def plot_ppo_networks(name):
     figure.savefig(LOGS.parent / name, dpi=120, facecolor=SURFACE)
 
 
-plot_ppo_networks("ppo_networks.png")
+plot_ppo_networks(PPO_NETWORKS, "ppo_networks.png")
+plot_ppo_networks(PPO_SHARED, "ppo_shared.png")

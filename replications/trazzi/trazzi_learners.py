@@ -256,14 +256,24 @@ class BoardCnn(BaseFeaturesExtractor):
         return self.dense(th.cat([self.convolutions(planes), observations[:, -2:]], 1))
 
 
+class SharedMlp(BaseFeaturesExtractor):
+    """Two layers of 256 units that the policy and the value share."""
+
+    def __init__(self, observation_space, activation=nn.ReLU):
+        super().__init__(observation_space, features_dim=256)
+        self.layers = nn.Sequential(nn.Linear(observation_space.shape[0], 256), activation(), nn.Linear(256, 256), activation())
+
+    def forward(self, observations):
+        return self.layers(observations)
+
+
 class Ppo:
     """Stable-Baselines3's PPO with its defaults, 8 games at once, discount 0.95 and entropy bonus 0.01 unless set.
     With decay_steps, the learning rate falls in a line to a tenth of its start over that many steps."""
 
-    def __init__(self, seed=0, gamma=GAMMA, ent_coef=0.01, reward_scale=1.0, count_bonus=0.0, exploring_starts=False, net_arch=None, cnn=False, decay_steps=None,
+    def __init__(self, seed=0, gamma=GAMMA, ent_coef=0.01, reward_scale=1.0, count_bonus=0.0, exploring_starts=False, policy_kwargs=None, decay_steps=None,
                  games=8, n_steps=2048, batch_size=64, n_epochs=10):
         environments = BatchedGames(games, seed=seed, reward_scale=reward_scale, count_bonus=count_bonus, exploring_starts=exploring_starts)
-        policy_kwargs = {"features_extractor_class": BoardCnn, "net_arch": []} if cnn else {"net_arch": net_arch} if net_arch else {}
         self.decay_steps = decay_steps
         self.model = PPO("MlpPolicy", environments, learning_rate=lambda remaining: 3e-4 * max(0.1, remaining), n_steps=n_steps, batch_size=batch_size, n_epochs=n_epochs,
                          gamma=gamma, ent_coef=ent_coef, seed=seed, device="cpu", policy_kwargs=policy_kwargs)

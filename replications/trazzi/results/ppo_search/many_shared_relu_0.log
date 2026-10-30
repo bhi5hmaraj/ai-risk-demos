@@ -1,0 +1,7 @@
+many_shared_relu seed 0: {'reward_scale': 0.1, 'exploring_starts': True, 'games': 128, 'n_steps': 128, 'policy_kwargs': {'features_extractor_class': <class 'trazzi_learners.SharedMlp'>, 'features_extractor_kwargs': {'activation': <class 'torch.nn.modules.activation.ReLU'>}, 'net_arch': []}}
+0.26M steps: score -20.0, turns 0/100 | sampled: score -17.08, turns 57/100 | {'value_loss': 0.00423, 'explained': -0.416, 'entropy': -1.24, 'clip': 0.246, 'rate': 0.0003} (34 s)
+0.51M steps: score -1.3, turns 100/100 | sampled: score -8.79, turns 96/100 | {'value_loss': 0.00201, 'explained': 0.333, 'entropy': -0.338, 'clip': 0.244, 'rate': 0.0003} (65 s)
+0.75M steps: score -20.0, turns 0/100 | sampled: score -13.21, turns 76/100 | {'value_loss': 0.269, 'explained': 0.109, 'entropy': -0.46, 'clip': 0.154, 'rate': 0.0003} (88 s)
+1.02M steps: score -1.3, turns 100/100 | sampled: score -9.32, turns 65/100 | {'value_loss': 0.00474, 'explained': 0.204, 'entropy': -0.507, 'clip': 0.319, 'rate': 0.0003} (113 s)
+1.26M steps: score -3.5, turns 100/100 | sampled: score -4.54, turns 99/100 | {'value_loss': 0.0177, 'explained': 0.0402, 'entropy': -0.413, 'clip': 0.242, 'rate': 0.0003} (136 s)
+1.51M steps: score -1.3, turns 100/100 | sampled: score -9.08, turns 99/100 | {'value_loss': 0.221, 'explained': 0.00143, 'entropy': -0.372, 'clip': 0.168, 'rate': 0.0003} (162 s)
