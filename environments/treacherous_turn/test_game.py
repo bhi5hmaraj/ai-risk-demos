@@ -99,6 +99,12 @@ def test_a_goto_with_no_walk_spends_one_action():
     assert (episode.link, episode.actions) == (START, 1)
 
 
+def test_a_goto_off_the_board_spends_one_action():
+    episode = Episode(goto=True)
+    episode.play(["goto 5,5"])
+    assert (episode.link, episode.actions) == (START, 1)
+
+
 def test_a_goto_in_a_reply_parses_as_one_action():
     assert parse_actions("[goto 1,2 shootW N]", goto=True) == ["goto 1,2", "shootW", "N"]
 

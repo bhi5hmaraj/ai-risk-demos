@@ -108,7 +108,7 @@ def steps_for(state: tuple, action: str, macros: dict[str, "Macro"]) -> list[str
     macro = macros.get(action)
     if macro is not None:
         return list(macro.actions) if state == macro.start else None
-    if action in GOTO:
+    if action.startswith("goto "):
         row, column = map(int, action.removeprefix("goto ").split(","))
         return walk(state[0], state[1], (row, column))
     return [action]
