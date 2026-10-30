@@ -49,6 +49,7 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   the run time. Its gain is not separated from its other differences from the MLPs (E41).
 - An MLP with layers shared between policy and value, using tanh, matches the CNN's 3 of 4 seeds at the optimum at about a fifth
   of the run time, though one seed never finds the turn. Shared layers with ReLU are the least steady (E42).
+- With shared tanh layers and a decaying rate, PPO makes the turn on 8 of 8 seeds and holds it, with 4 at the exact optimum (E43).
 - MONA, solved exactly on the 6 x 5 grid, stops the hiding while its window stays under 7 moves and its
   overseer is exact. Hiding returns at longer windows, and with a noisy overseer no window is both safe and
   useful (E33).
@@ -115,6 +116,7 @@ flowchart TD
     pposearch --> ppobatched["E39: 128 games at once<br/>turn on 4/4, a decaying rate holds it"]
     ppobatched --> pponetworks["E41: PPO's network<br/>a CNN reaches the optimum on 4/4"]
     pponetworks --> pposhared["E42: shared layers<br/>3/4 at the optimum, a fifth of the time"]
+    pposhared --> ppoholds["E43: shared layers, decaying rate<br/>turn held on 8/8 seeds"]
     ppo --> routes["E22: PPO with route macros<br/>full turn on 12/12 seeds"]
     routes --> pieces["E25: routes cut into pieces<br/>turn at 1 or 2 decisions, none at 5"]
     pieces --> tabular["E26: tabular GRPO<br/>tracks PPO from below, 20x faster"]
@@ -1853,6 +1855,34 @@ Every gap rests on 4 seeds, so sharing is a likely cause, not a shown one. Share
 Code: `SharedMlp` in [trazzi_learners.py](replications/trazzi/trazzi_learners.py), [ppo_search.py](replications/trazzi/ppo_search.py) and
 [plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/ppo_search/](replications/trazzi/results/ppo_search/).
 Cost: local, about 6 minutes on 4 cores.
+
+## E43. PPO with shared layers and a decaying rate, 8 seeds (2026-10-30)
+
+Question: E39's decaying rate held the turn, and E42's shared tanh layers reached the optimum. Together, how often do they find
+and hold it?
+
+Setup: [ppo_search.py](replications/trazzi/ppo_search.py) ran `many_shared_tanh_decay`: `SharedMlp` with tanh, random starts, 128 games at
+once and rewards divided by 10. The learning rate falls in a line from 3e-4 to 3e-5 over 1.5M steps. It ran 8 seeds on 4 cores, scored as in E37.
+
+![Shared layers with a fixed and a decaying rate](replications/trazzi/results/ppo_shared_decay.png)
+
+| Setting | Seeds with a greedy turn at the end | Seeds that lose it after finding it | Seeds at the optimum at the end | Sampled turn at the end, of 100 |
+|---|---|---|---|---|
+| Shared tanh, fixed rate, 4 seeds (E42) | 3/4 | 2 | 3/4 | 100, 91, 100, 0 |
+| Shared tanh, decaying rate, 8 seeds | 8/8 | 0 | 4/8 | 100, 100, 100, 100, 100, 100, 100, 96 |
+
+Result:
+
+- This is the first PPO setting to make the turn on every seed and hold it. Five seeds find it by 0.5M steps, then one each at 0.75M, 1M and 1.5M.
+- At the end 4 seeds score the exact optimum of -1.3 and 4 score -2.4. Sampled play matches greedy play, with entropy at 0.04 to 0.14.
+- A run takes about 3 minutes on one core, against 16 for the CNN of E41.
+
+The rate ends at a tenth of its start, so holding the turn partly reflects smaller steps. The latest seed finds the turn only at the last check, so
+it has no later checks to show it holds. Runs past 1.5M at the low rate are not tested, and the 8 seeds include no separate test set of settings.
+
+Code: [ppo_search.py](replications/trazzi/ppo_search.py), `SharedMlp` and `Ppo` in [trazzi_learners.py](replications/trazzi/trazzi_learners.py) and
+[plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/ppo_search/](replications/trazzi/results/ppo_search/).
+Cost: local, about 7 minutes on 4 cores.
 
 ## Paused
 

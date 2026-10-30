@@ -1,0 +1,7 @@
+many_shared_tanh_decay seed 2: {'reward_scale': 0.1, 'exploring_starts': True, 'games': 128, 'n_steps': 128, 'decay_steps': 1500000, 'policy_kwargs': {'features_extractor_class': <class 'trazzi_learners.SharedMlp'>, 'features_extractor_kwargs': {'activation': <class 'torch.nn.modules.activation.Tanh'>}, 'net_arch': []}}
+0.26M steps: score -199.1, turns 0/100 | sampled: score -55.58, turns 8/100 | {'value_loss': 0.00214, 'explained': -1.47, 'entropy': -1.31, 'clip': 0.35, 'rate': 0.000248} (34 s)
+0.51M steps: score -1.3, turns 100/100 | sampled: score -5.67, turns 93/100 | {'value_loss': 0.000881, 'explained': 0.676, 'entropy': -0.442, 'clip': 0.196, 'rate': 0.000198} (67 s)
+0.75M steps: score -1.3, turns 100/100 | sampled: score -4.97, turns 93/100 | {'value_loss': 0.000741, 'explained': 0.668, 'entropy': -0.301, 'clip': 0.107, 'rate': 0.000149} (97 s)
+1.02M steps: score -1.3, turns 100/100 | sampled: score -2.74, turns 100/100 | {'value_loss': 0.000842, 'explained': 0.47, 'entropy': -0.329, 'clip': 0.181, 'rate': 9.68e-05} (125 s)
+1.26M steps: score -1.3, turns 100/100 | sampled: score -1.53, turns 98/100 | {'value_loss': 0.000807, 'explained': 0.604, 'entropy': -0.158, 'clip': 0.036, 'rate': 4.77e-05} (153 s)
+1.51M steps: score -1.3, turns 100/100 | sampled: score -1.31, turns 100/100 | {'value_loss': 7.7e-05, 'explained': 0.911, 'entropy': -0.108, 'clip': 0.0146, 'rate': 3e-05} (184 s)

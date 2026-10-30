@@ -36,6 +36,7 @@ SETTINGS = {
     "many_deep": MANY_GAMES_STARTS | {"policy_kwargs": {"net_arch": [256, 256, 256]}},
     "many_cnn": MANY_GAMES_STARTS | {"policy_kwargs": CNN},
     "many_shared_tanh": MANY_GAMES_STARTS | {"policy_kwargs": {"features_extractor_class": trazzi.SharedMlp, "features_extractor_kwargs": {"activation": th.nn.Tanh}, "net_arch": []}},
+    "many_shared_tanh_decay": MANY_GAMES_STARTS | {"decay_steps": 1_500_000, "policy_kwargs": {"features_extractor_class": trazzi.SharedMlp, "features_extractor_kwargs": {"activation": th.nn.Tanh}, "net_arch": []}},
     "many_shared_relu": MANY_GAMES_STARTS | {"policy_kwargs": {"features_extractor_class": trazzi.SharedMlp, "features_extractor_kwargs": {"activation": th.nn.ReLU}, "net_arch": []}},
     "fast_starts": FAST_STARTS,
     "fast_decay": FAST_STARTS | {"decay_steps": 5_000_000},

@@ -20,6 +20,7 @@ LEARNERS = [("q_[0-9]", "Q-learning, 5 seeds", "#eb6834"), ("sarsa_[0-9]", "SARS
 OPTIMUM_SCORE = -1.3
 PPO_NETWORKS = {"many_games_starts": "64 x 64", "many_wide": "256 x 256", "many_deep": "256 x 256 x 256", "many_cnn": "CNN"}
 PPO_SHARED = {"many_wide": "256 x 256, separate", "many_shared_tanh": "256 x 256, shared, tanh", "many_shared_relu": "256 x 256, shared, ReLU", "many_cnn": "CNN, shared, ReLU"}
+PPO_DECAY = {"many_shared_tanh": "shared tanh, fixed rate, 4 seeds", "many_shared_tanh_decay": "shared tanh, decaying rate, 8 seeds"}
 PPO_BATCHED_SETTINGS = {"batched_starts": "8 games", "many_games_starts": "128 games", "fast_starts": "128 games, 20x fewer updates",
                         "many_decay": "128 games, decaying rate", "many_wide": "128 games, 256 x 256"}
 PPO_SETTINGS = {"baseline": "defaults", "scaled": "rewards divided by 10", "scaled_count": "plus a count bonus", "scaled_starts": "plus random starts"}
@@ -113,3 +114,4 @@ def plot_ppo_networks(networks, name):
 
 plot_ppo_networks(PPO_NETWORKS, "ppo_networks.png")
 plot_ppo_networks(PPO_SHARED, "ppo_shared.png")
+plot_ppo_networks(PPO_DECAY, "ppo_shared_decay.png")
