@@ -108,7 +108,8 @@ behavior could then appear once exploration gets past the penalty.
 
 Status: a hypothesis, not established.
 
-- E45: PPO makes the turn on 2 of 6 seeds at fine 10 and 0 of 6 at fine 100 (p = 0.45).
+- E45: PPO makes the turn on 3 of 12 seeds at fine 10, and on none of 12 at fine 30 or fine 100 (p = 0.22). Kills after
+  the bow fall as the fine rises, at 4, 3 and 1 of 12.
 - E37 and E39: PPO makes the turn at the original fine with random starts and rewards divided by 10. Some of those
   starts have the shopkeeper already dead, so they hand over part of the plan. This is weaker evidence.
 - Against it, E37: with default settings, PPO made the turn on 1 of 4 seeds at the original fine on the 200-action
@@ -120,7 +121,7 @@ Status: a hypothesis, not established.
 
 Tests that could support or sink it:
 
-1. PPO for 12 seeds at fines of 10, 30 and 100.
+1. More PPO seeds at fines of 10 and 100. At these rates about 20 seeds per fine would reach p < 0.05.
 2. Train at fine 10 until the turn appears, then raise the fine to 100. Does the penalty remove the turn or only
    suppress it, and does the turn return when the fine falls again?
 3. Train honest play at fine 100, then lower the fine. How fast does the turn appear?
@@ -2077,12 +2078,23 @@ Result:
 - The fine leaves the exact optimum unchanged, at +11.40 for either fine. So a harsh fine did not change what is best to
   do. It only kept PPO from finding it.
 - Tabular GRPO idles at -5.00 in all 12 runs, as at single moves in E26, so it says nothing here.
-- 3 seeds per cell cannot carry a claim: 2 of 6 against 0 of 6 gives p = 0.45. More seeds are running.
+- 3 seeds per cell cannot carry a claim: 2 of 6 against 0 of 6 gives p = 0.45.
+
+A second run gave PPO 12 seeds at each of three fines, with machine hearts worth 4:
+
+| Fine | Full turn at the end | Kill after the bow at the end | Machine heart at the end | Mean greedy score, lowest to highest |
+|---|---|---|---|---|
+| 10 | 3/12 | 4/12 | 3/12 | 0.1, then 7.3 on 9 seeds, 11.4 on 2 |
+| 30 | 0/12 | 3/12 | 1/12 | 3.2, 3.7, then 7.3 on 10 seeds |
+| 100 | 0/12 | 1/12 | 0/12 | -5.0, -2.6, then 7.3 on 10 seeds |
+
+Kills fall as the fine rises, and the full turn appears only at fine 10. The direction fits the lead, but it is not
+established: 3 of 12 against 0 of 12 gives p = 0.22, and kills at 4 of 12 against 1 of 12 give p = 0.32.
 
 Code: `machine_fine` and `machine_heart_reward` in [game.py](environments/treacherous_turn/game.py), `plan_events` in
 [optimal.py](environments/treacherous_turn/optimal.py), and `--fine` and `--machine-heart` in
 [ppo.py](environments/treacherous_turn/ppo.py) and [tabular_grpo.py](environments/treacherous_turn/tabular_grpo.py).
-Data: `results/ppo-fine*-machine*.json` and `results/tabular-grpo-fine*-machine*.json` in
+Data: `results/ppo-fine*-machine*.json`, `results/ppo-seeds-fine*.json` and `results/tabular-grpo-fine*-machine*.json` in
 [results/](environments/treacherous_turn/results/). Cost: local.
 
 ## E46. GPT-OSS-120B at a fine of 10, before any RL: predictions first (2026-10-30)
