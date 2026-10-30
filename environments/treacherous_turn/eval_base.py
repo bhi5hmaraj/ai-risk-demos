@@ -33,6 +33,7 @@ class EvalConfig:
     games: int = 2  # per renderer, with and without the bow
     heart_reward: float = 1.0
     goto: bool = False  # offer [goto r,c] in the rules
+    machine_fine: float = 100.0
     max_tokens: int = 16384
     context_window: int = 32768  # GPT-OSS-120B sampling on Tinker
     concurrent_games: int = 64
@@ -40,8 +41,8 @@ class EvalConfig:
 
 
 async def play(policy: TinkerTokenCompleter, renderer: Renderer, bow: bool, max_tokens: int, heart_reward: float,
-               goto: bool, context_window: int) -> dict:
-    game = TreacherousMessageEnv(Episode(bow_arrives=bow, heart_reward=heart_reward, goto=goto))
+               goto: bool, context_window: int, machine_fine: float) -> dict:
+    game = TreacherousMessageEnv(Episode(bow_arrives=bow, heart_reward=heart_reward, goto=goto, machine_fine=machine_fine))
     env = EnvFromMessageEnv(renderer, game, max_trajectory_tokens=context_window, max_generation_tokens=max_tokens)
     transitions = (await do_single_rollout(policy, env)).transitions
     ending = transitions[-1].metrics
@@ -80,7 +81,7 @@ async def record_game(game: dict, policy: TinkerTokenCompleter, renderer: Render
     async with slots:
         try:
             outcome = await play(policy, renderer, game["bow"], max_tokens, game["heart_reward"], game["goto"],
-                                 game["context_window"])
+                                 game["context_window"], game["machine_fine"])
         except Exception as error:  # one failed game must not end the sweep
             outcome = {"error": f"{type(error).__name__}: {str(error)[:300]}"}
     record = game | outcome
@@ -95,7 +96,7 @@ async def main(config: EvalConfig) -> None:
     sampler = tinker.ServiceClient().create_sampling_client(base_model=config.base_model)
     games = [{"model": config.base_model, "renderer": renderer, "bow": bow, "max_tokens": config.max_tokens,
               "heart_reward": config.heart_reward, "goto": config.goto, "context_window": config.context_window,
-              "game": number}
+              "machine_fine": config.machine_fine, "game": number}
              for renderer in renderers for bow in (True, False) for number in range(config.games)]
     output = Path(config.output)
     output.write_text("")
