@@ -79,6 +79,7 @@ class SbPpo:
 
 class Trainer:
     """One learner, training in its own thread while its demo runs."""
+    eval_every = EVAL_EVERY
 
     def __init__(self, make_learner, demo="grid", step_limit=float("inf")):
         self.make_learner, self.running, self.step_limit = make_learner, RUNNING[demo], step_limit
@@ -91,7 +92,7 @@ class Trainer:
             self.learner = self.make_learner()
             with self.snapshot_lock:
                 self.snapshot = copy.deepcopy(self.learner.network)
-            self.history, self.next_eval, self.refreshed_at = [self.score()], EVAL_EVERY, time.time()
+            self.history, self.next_eval, self.refreshed_at = [self.score()], self.eval_every, time.time()
 
     def refresh_snapshot(self):
         """Copies the trained weights into the network that answers requests."""
@@ -118,12 +119,15 @@ class Trainer:
                 if evaluation_due or time.time() - self.refreshed_at > REFRESH_SECONDS:
                     self.refresh_snapshot()
                 if evaluation_due:
-                    self.next_eval += EVAL_EVERY
+                    self.next_eval += self.eval_every
                     self.history.append(self.score())
 
 
 class TrazziTrainer(Trainer):
-    """A Trazzi learner. It answers requests from its last evaluation, so it keeps no copy of its network."""
+    """A Trazzi learner. Its history holds the training games of each window of eval_every steps, about 160 games,
+    exploration included. Each evaluation also keeps one greedy game for the page to replay, so the trainer keeps
+    no copy of its network."""
+    eval_every = 32_768
 
     def __init__(self, make_learner, step_limit=float("inf")):
         super().__init__(make_learner, "trazzi", step_limit)
@@ -131,14 +135,15 @@ class TrazziTrainer(Trainer):
     def reset(self):
         with self.lock:
             self.learner = self.make_learner()
-            self.history, self.next_eval, self.refreshed_at = [self.score()], EVAL_EVERY, time.time()
+            self.history, self.next_eval, self.refreshed_at = [self.score()], self.eval_every, time.time()
 
     def refresh_snapshot(self):
         self.refreshed_at = time.time()
 
     def score(self):
-        result, self.game = trazzi.evaluate(self.learner.choose)
-        return {"steps": self.learner.steps, **result}
+        _, self.game = trazzi.evaluate(self.learner.choose)
+        window, self.learner.finished = self.learner.finished, []
+        return {"steps": self.learner.steps, **trazzi.window_stats(window)}
 
 
 trainers = {"ppo": Trainer(SbPpo), "dqn": Trainer(lambda: learners.GridDqn(device=DEVICE)), "grpo": Trainer(lambda: learners.Grpo(device=DEVICE))}
@@ -148,7 +153,8 @@ trazzi_trainers = {"q": TrazziTrainer(trazzi.TableLearner, step_limit=TRAZZI_GAM
                    "sarsa": TrazziTrainer(lambda: trazzi.TableLearner(sarsa=True), step_limit=TRAZZI_GAMES),
                    "dqn": TrazziTrainer(trazzi.Dqn)}
 optimum = trazzi.ValueIteration()
-optimum_score, optimum_game = trazzi.evaluate(optimum.choose)
+optimum_result, optimum_game = trazzi.evaluate(optimum.choose)
+optimum_score = {"score": round(optimum.value, 2), "turns": 100 * optimum_result["turns"] / trazzi.EVAL_GAMES}
 demo_trainers = {"grid": trainers, "trazzi": trazzi_trainers}
 
 
@@ -174,7 +180,7 @@ def progress(of):
 @app.get("/status")
 def status():
     return {"running": {demo: event.is_set() for demo, event in RUNNING.items()}, "learners": progress(trainers),
-            "trazzi": {"optimum": optimum_score | {"expected": round(optimum.value, 2)}, "learners": progress(trazzi_trainers)}}
+            "trazzi": {"optimum": optimum_score, "learners": progress(trazzi_trainers)}}
 
 
 @app.post("/start")

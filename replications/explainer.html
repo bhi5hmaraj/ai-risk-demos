@@ -201,13 +201,13 @@ footer { color: var(--muted); font-size: 13px; }
       <div class="glegend" id="t-legend"></div>
       <div class="plan-note" id="t-server-note"></div>
       <div class="gcharts">
-        <div><div class="eyebrow">Score of the greedy policy</div><div class="gchart"><canvas id="t-score" role="img" aria-label="Score of each learner's greedy policy over a 200-action game, by environment steps"></canvas></div></div>
-        <div><div class="eyebrow">Greedy games that make the turn, of 100</div><div class="gchart"><canvas id="t-turns" role="img" aria-label="Greedy games out of 100 where each learner makes the treacherous turn, by environment steps"></canvas></div></div>
+        <div><div class="eyebrow">Mean score of training games</div><div class="gchart"><canvas id="t-score" role="img" aria-label="Mean score of each learner's training games, over windows of about 160 games, by environment steps"></canvas></div></div>
+        <div><div class="eyebrow">Training games that make the turn, %</div><div class="gchart"><canvas id="t-turns" role="img" aria-label="Percent of each learner's training games that make the treacherous turn, by environment steps"></canvas></div></div>
       </div>
-      <p class="plan-note">Greedy means each learner takes its best action by its current values, with no exploration, so the charts show what it has learned. Only a shot at the shopkeeper before the bow involves chance, so a policy that makes the turn plays the same game every time. The count is 0 or 100 in every evaluation so far.</p>
-      <p class="plan-note">Trazzi's Q-learning makes the turn on 5 of 5 seeds by 0.8M steps, 4,000 games, and 4 of them play the optimum exactly. Q-learning and SARSA stop after Trazzi's 20,000 games.</p>
-      <p class="plan-note">SARSA, at the same learning rate of 0.8, makes the turn on none of 5 seeds by 4M steps. One sampled bad action rewrites a value, as on the grid. At learning rate 0.1 it makes the turn on 3 of 3 seeds by 4M steps.</p>
-      <p class="plan-note">The DQN learns the crystal hearts, a score of -3.5, but makes no turn by 3M steps. Scores below -25 are cut off.</p>
+      <p class="plan-note">Each point averages the training games of 32,768 steps, about 160 games, including each learner's exploration. Value iteration's dashed line is its best play. Scores below -25 are cut off.</p>
+      <p class="plan-note">Trazzi's Q-learning: by 4M steps, 99.7 to 99.9% of its training games make the turn on 5 of 5 seeds, and so does its greedy policy. Q-learning and SARSA stop after Trazzi's 20,000 games.</p>
+      <p class="plan-note">SARSA: 67 to 74% of its training games make the turn by 4M steps, but its greedy policy never does, on 5 seeds. Its values stay noisy and close together. Where the best, by a hair, is a bump that leaves the board as it was, a greedy game bumps until the clock runs out. A training game lowers that value with each bump and moves on. At learning rate 0.1 its greedy policy makes the turn on 3 of 3 seeds.</p>
+      <p class="plan-note">The DQN learns the crystal hearts but never the kill. In one run on the server, none of its training games made the turn after 50M steps.</p>
     </div>
     <h3 class="sub">2. Watch a learner play</h3>
     <div class="panel tplayer">
@@ -514,7 +514,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', app
 new MutationObserver(applyChartTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 // A value iteration line across the chart, and a server learner's history from FIRST_STEP_SHOWN on.
 const flatLine = (value, lastStep) => [{ x: FIRST_STEP_SHOWN, y: value }, { x: lastStep, y: value }];
-const historyPoints = (history, field) => history.filter(entry => entry.steps >= FIRST_STEP_SHOWN).map(entry => ({ x: entry.steps, y: entry[field] }));
+const historyPoints = (history, field) => history.filter(entry => entry.steps >= FIRST_STEP_SHOWN && field in entry).map(entry => ({ x: entry.steps, y: entry[field] }));
 
 (function gwernPlayer() {
   const CELL_SIZE = 56, BOARD_LEFT = 44;
@@ -977,11 +977,12 @@ const trazziServer = makeServer('trazzi');
   const learners = TRAZZI_LEARNERS.filter(learner => learner.id !== 'vi');
   const charts = {
     score: makeLearnerChart('t-score', TRAZZI_LEARNERS, { min: -25, max: 0, ticks: { callback: value => String(value) } }, value => value.toFixed(1)),
-    turns: makeLearnerChart('t-turns', TRAZZI_LEARNERS, { min: 0, max: 100, ticks: { callback: value => String(value) } }, value => `${Math.round(value)} of 100`),
+    turns: makeLearnerChart('t-turns', TRAZZI_LEARNERS, { min: 0, max: 100, ticks: { callback: value => `${value}%` } }, value => `${value.toFixed(1)}%`),
   };
   let poller = null;
 
-  const latestOf = (trazzi, learner) => (learner.id === 'vi' ? trazzi.optimum : trazzi.learners[learner.id].history.at(-1));
+  // A learner's last window with games in it, or value iteration's best play.
+  const latestOf = (trazzi, learner) => (learner.id === 'vi' ? trazzi.optimum : trazzi.learners[learner.id].history.findLast(entry => entry.games));
   function pointsFor(trazzi, learner, field, lastStep) {
     if (!trazzi) return [];
     return learner.id === 'vi' ? flatLine(trazzi.optimum[field], lastStep) : historyPoints(trazzi.learners[learner.id].history, field);
@@ -996,7 +997,7 @@ const trazziServer = makeServer('trazzi');
     });
     Object.values(charts).forEach(chart => chart.update('none'));
     document.getElementById('t-legend').innerHTML = TRAZZI_LEARNERS.map(learner => `<span><i class="${learner.id === 'vi' ? 'dashed' : ''}" style="background:var(${learner.token})"></i>${learner.name}`
-      + (trazzi ? ` <b>${latestOf(trazzi, learner).score.toFixed(1)}</b>, turns in <b>${latestOf(trazzi, learner).turns}</b>` : '') + '</span>').join('');
+      + (trazzi && latestOf(trazzi, learner) ? ` <b>${latestOf(trazzi, learner).score.toFixed(1)}</b>, turns in <b>${latestOf(trazzi, learner).turns}%</b>` : '') + '</span>').join('');
     document.getElementById('t-status').textContent = trazzi
       ? `on the local server: ${learners.map(learner => `${learner.name} ${(trazzi.learners[learner.id].steps / 1e6).toFixed(2)}M`).join(', ')} steps . ${running ? 'training' : 'paused'}`
       : 'no local server';

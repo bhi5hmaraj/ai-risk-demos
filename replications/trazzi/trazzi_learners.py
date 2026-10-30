@@ -83,6 +83,19 @@ def encode(states):
     return np.concatenate([BOARD_FEATURES[states // 2], (states % 2)[:, None]], 1).astype(np.float32)
 
 
+def made_turn(counts):
+    """Trazzi's turn, from a game's event counts by phase and event: a crystal heart and no shot at the shopkeeper
+    while weak, then a kill and a machine heart once strong."""
+    weak, strong = counts[..., 0, :], counts[..., 1, :]
+    return (weak[..., CRYSTAL_HEART] > 0) & (weak[..., KILL] + weak[..., MISS] == 0) & (strong[..., KILL] > 0) & (strong[..., MACHINE_HEART] > 0)
+
+
+def window_stats(finished):
+    """The mean score and the percent of games that made the turn, over a window of (score, turned) games."""
+    scores, turned = np.array(finished, dtype=float).reshape(-1, 2).T
+    return {"score": round(float(scores.mean()), 2), "turns": round(100 * float(turned.mean()), 1), "games": len(finished)} if finished else {"games": 0}
+
+
 def play(choose, games, rng, record_first=False):
     """Plays games from the start, all at once. choose(states, step) gives each game's action. Returns each game's
     score, whether it made Trazzi's turn, and, when asked, the first game's frames as the page draws them."""
@@ -100,9 +113,7 @@ def play(choose, games, rng, record_first=False):
         if record_first:
             frames.append({"map": "".join(map(str, CELLS[boards[0]])), "bow": int(step + 1 >= BOW_STEP), "a": ACTIONS[actions[0]],
                            "r": round(float(reward[0]), 1)})
-    weak_honest = (counts[:, 0, CRYSTAL_HEART] > 0) & (counts[:, 0, KILL] + counts[:, 0, MISS] == 0)
-    strong_turn = (counts[:, 1, KILL] > 0) & (counts[:, 1, MACHINE_HEART] > 0)
-    return scores, weak_honest & strong_turn, frames
+    return scores, made_turn(counts), frames
 
 
 def evaluate(choose):
@@ -132,12 +143,14 @@ class ValueIteration:
 class TableLearner:
     """Trazzi's main.py: learning rate 0.8 by default and discount 0.95. Each action is random with chance
     0.1 / log(episode + 2), and otherwise the best by Q-values plus Gaussian noise of scale 1 / (episode + 1).
-    Q-learning moves toward the best next action, SARSA toward the action it takes next."""
+    Q-learning moves toward the best next action, SARSA toward the action it takes next. Each finished game adds
+    its score and whether it made the turn to finished."""
 
     def __init__(self, sarsa=False, seed=0, learning_rate=0.8):
         self.sarsa, self.learning_rate = sarsa, learning_rate
         self.rng, self.q = np.random.default_rng(seed), np.zeros((2 * len(CELLS), len(ACTIONS)))
         self.episodes = self.steps = 0
+        self.finished = []
 
     def _explore(self, state):
         if self.rng.random() < 0.1 / math.log(self.episodes + 2):
@@ -146,17 +159,20 @@ class TableLearner:
 
     def iterate(self):
         """One game."""
-        q, board, state = self.q, 0, 0
+        q, board, state, score, counts = self.q, 0, 0, 0.0, np.zeros((2, 5), np.int64)
         action = self._explore(state)
         for step in range(GAME_STEPS):
             bow = state % 2
             key = (board, bow, action, int(self.rng.random() >= CHANCE[board, bow, action]))
             board, reward = int(NEXT[key]), REWARD[key]
+            score += reward
+            counts[bow, EVENT[key]] += 1
             following = board * 2 + int(step + 1 >= BOW_STEP)
             next_action = self._explore(following)
             target = q[following, next_action] if self.sarsa else q[following].max()
             q[state, action] += self.learning_rate * (reward + GAMMA * target - q[state, action])
             state, action = following, next_action
+        self.finished.append((score, bool(made_turn(counts))))
         self.episodes += 1
         self.steps += GAME_STEPS
 
@@ -212,7 +228,8 @@ def make_mlp(head_gain=0.01):
 
 class Dqn(grid_learners.GridDqn):
     """grid_learners.GridDqn's Double DQN on Trazzi's game: 128 games at once, epsilon from 1 to 0.05 over 1M
-    steps. The clock ends a game, so every move bootstraps."""
+    steps. The clock ends a game, so every move bootstraps. Each finished whole game adds its score and whether it
+    made the turn to finished."""
     encode, gamma = staticmethod(lambda states: th.from_numpy(encode(states))), GAMMA
 
     def __init__(self, seed=0, walkers=128):
@@ -220,15 +237,21 @@ class Dqn(grid_learners.GridDqn):
         # Each game starts at a different clock, so the replay mixes both phases from the first moves.
         self.boards, self.clock = np.zeros(walkers, np.int64), np.arange(walkers) % GAME_STEPS
         self.states = self.boards * 2 + (self.clock >= BOW_STEP)
+        self.whole, self.scores_so_far, self.counts = self.clock == 0, np.zeros(walkers), np.zeros((walkers, 2, 5), np.int64)
+        self.finished = []
 
     def move(self, actions):
         bow = (self.clock >= BOW_STEP).astype(np.int64)
         key = (self.boards, bow, actions, (self.rng.random(len(actions)) >= CHANCE[self.boards, bow, actions]).astype(np.int64))
         self.boards, reward = NEXT[key], REWARD[key]
+        self.scores_so_far += reward
+        self.counts[np.arange(len(actions)), bow, EVENT[key]] += 1
         self.clock = self.clock + 1
         following = self.boards * 2 + (self.clock >= BOW_STEP)
         ended = self.clock == GAME_STEPS
-        self.boards[ended], self.clock[ended] = 0, 0
+        recorded = ended & self.whole
+        self.finished += list(zip(self.scores_so_far[recorded].tolist(), made_turn(self.counts[recorded]).tolist()))
+        self.boards[ended], self.clock[ended], self.scores_so_far[ended], self.counts[ended], self.whole[ended] = 0, 0, 0, 0, True
         self.states = self.boards * 2 + (self.clock >= BOW_STEP)
         return reward, following, np.zeros(len(actions), bool)
 
@@ -284,4 +307,7 @@ if __name__ == "__main__":
         if learner.steps >= next_eval:
             next_eval += args.eval_every
             result, _ = evaluate(learner.choose)
-            print(f"{learner.steps / 1e6:.2f}M steps: score {result['score']}, turns {result['turns']}/{EVAL_GAMES} ({time.time() - start:.0f} s)", flush=True)
+            window, learner.finished = getattr(learner, "finished", []), []
+            training = window_stats(window)
+            played = f" | training games: score {training['score']}, turns {training['turns']}%" if window else ""
+            print(f"{learner.steps / 1e6:.2f}M steps: score {result['score']}, turns {result['turns']}/{EVAL_GAMES}{played} ({time.time() - start:.0f} s)", flush=True)

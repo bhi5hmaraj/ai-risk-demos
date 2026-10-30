@@ -37,8 +37,9 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   hides first on 79 boards by 2M steps. It trains on a local server that also serves the page (E30).
 - GRPO, with no value network, learns to score but stalls at 55% of the optimum and hides first on 6
   boards by 2.9M steps. Early on, half its groups give no gradient (E31).
-- On Trazzi's original game, his Q-learning makes the turn on 5 of 5 seeds by 0.8M steps. SARSA at his
-  learning rate makes it on none, and on 3 of 3 at learning rate 0.1. A DQN and PPO learn only the crystal
+- On Trazzi's original game, his Q-learning makes the turn on 5 of 5 seeds by 0.8M steps. SARSA's greedy
+  policy at his learning rate makes it on none, though 67 to 74% of its training games do, and on 3 of 3 at
+  learning rate 0.1. A DQN and PPO learn only the crystal
   hearts (E32).
 - MONA, solved exactly on the 6 x 5 grid, stops the hiding while its window stays under 7 moves and its
   overseer is exact. Hiding returns at longer windows, and with a noisy overseer no window is both safe and
@@ -1276,8 +1277,10 @@ A learner sees the board, the crystal and the bow, as Trazzi's Q-table does, but
 - The DQN is grid_learners.GridDqn's Double DQN on an MLP of two 64-unit layers, 128 games at once.
 - PPO and GRPO ran from the command line only, one seed each.
 
-Each greedy policy plays 32 games on the same coin flips. A game makes the turn when it earns a crystal heart
-and never shoots the shopkeeper while weak, then kills him and uses the machine once strong.
+Each greedy policy plays 32 games on the same coin flips, 100 in the reruns of Q-learning and SARSA, which also
+log their training games. A game makes the turn when it earns a crystal heart and never shoots the shopkeeper
+while weak, then kills him and uses the machine once strong. The page plots training games, about 160 a point,
+since greedy evaluation is 0 or every game in all 269 evaluations logged.
 
 ![Trazzi learners](replications/trazzi/results/learners.png)
 
@@ -1295,9 +1298,13 @@ Result:
 
 - Trazzi's Q-learning makes the turn on every seed, as at heart 1 in the 50-action game (E18). The table starts
   at 0 and every reward is negative, so an untried action looks best, and that drives its search.
-- SARSA at Trazzi's learning rate never makes it. Its greedy games bump into ice or walk into the machine in
-  front of the shopkeeper. At learning rate 0.1 it makes the turn on 3 of 3 seeds. The cause is the noise of
-  its sampled target, as on the grid (E23).
+- SARSA's greedy policy at Trazzi's learning rate never makes the turn. Its training games do: 67 to 74% of
+  them by 4M steps, on 5 of 5 seeds, against 99.7 to 99.9% for Q-learning.
+- Where SARSA's greedy game gets stuck, every action has been tried and the values sit within 0.01 to 0.25 of
+  each other. The best by a hair is an action that leaves the board as it was, such as a bump, so a greedy game
+  repeats it 49 to 96 times. A training game lowers that value with each repeat and moves on.
+- At learning rate 0.1, SARSA's greedy policy makes the turn on 3 of 3 seeds. The noise of its sampled target
+  keeps its values close, as on the grid (E23).
 - The DQN and PPO learn the crystal hearts but never the kill, as PPO did in E20.
 - GRPO stops at -20. Random play loses about 254 a game to shots and the machine, and none of 2,000 random games
   earned a heart. GRPO first learns to stop acting, then every game in a group scores -20 and gives no gradient.
@@ -1306,8 +1313,8 @@ The explainer page now trains value iteration, Q-learning, SARSA and the DQN on 
 the grid. Neither demo trains until asked. The board shows each game with labeled pieces, the path of every
 shot, and a log of every action.
 
-Code: [trazzi_learners.py](replications/trazzi/trazzi_learners.py), [grid_server.py](replications/grid_dqn/grid_server.py)
-and [plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/learners/](replications/trazzi/results/learners/).
+Code: [trazzi_learners.py](replications/trazzi/trazzi_learners.py), [grid_server.py](replications/grid_dqn/grid_server.py),
+[sarsa_stuck.py](replications/trazzi/sarsa_stuck.py) and [plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/learners/](replications/trazzi/results/learners/).
 Cost: local, about 15 minutes.
 
 ## E33. MONA solved exactly on the 6 x 5 grid (2026-10-30)
