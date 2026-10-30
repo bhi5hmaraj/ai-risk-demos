@@ -1747,7 +1747,7 @@ since width showed no clear gain. Why fewer updates lose the turn is not tested.
 
 Code: [trazzi_learners.py](replications/trazzi/trazzi_learners.py), [ppo_search.py](replications/trazzi/ppo_search.py)
 and [plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/ppo_search/](replications/trazzi/results/ppo_search/).
-Cost: local, about 25 minutes on 4 cores.
+Cost: local, about 13 minutes on 4 cores.
 
 ## Paused
 
