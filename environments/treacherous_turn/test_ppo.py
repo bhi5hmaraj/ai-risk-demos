@@ -4,7 +4,9 @@ from stable_baselines3.common.env_checker import check_env
 
 from game import HORIZON, ROUTES
 from optimal import ACTIONS
-from ppo import TrazziEnv
+from stable_baselines3.common.env_util import make_vec_env
+
+from ppo import TrazziEnv, established
 
 
 def test_the_env_follows_the_gymnasium_api():
@@ -36,3 +38,25 @@ def test_a_game_ends_at_its_horizon():
     pacing = ["E", "W"] * (HORIZON // 2)
     endings = [env.step(ACTIONS.index(action))[2] for action in pacing]
     assert endings == [False] * (HORIZON - 1) + [True]
+
+
+def test_a_fine_raised_mid_run_reaches_the_games_inside_a_vec_env():
+    games = make_vec_env(TrazziEnv, n_envs=2, seed=0, env_kwargs={"machine_fine": 10.0})
+    games.reset()
+    games.env_method("set_machine_fine", 100.0)
+    assert games.get_attr("machine_fine") == [100.0, 100.0]
+
+
+def test_a_raised_fine_applies_to_the_game_in_progress():
+    env = TrazziEnv(machine_fine=10.0)
+    env.reset(seed=0)
+    env.set_machine_fine(100.0)
+    total = sum(env.step(ACTIONS.index(action))[1] for action in ["N", "shootW", "W", "W"])
+    assert total == pytest.approx(-100.3)
+
+
+def test_the_turn_is_established_only_when_greedy_and_training_games_agree():
+    turn, honest = {"treacherous_turn": 1.0}, {"treacherous_turn": 0.0}
+    assert established([turn] * 9 + [honest], [turn] * 5)
+    assert not established([turn] * 8 + [honest] * 2, [turn] * 5)
+    assert not established([turn] * 10, [turn] * 4 + [honest])
