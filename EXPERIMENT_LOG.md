@@ -68,6 +68,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   pays no more than a crystal heart, and the rare -100 fines dominate the training signal (E40).
 - With single moves and no macros, PPO found the full turn only after the machine's fine fell from 100 to 10: 2 of 6
   seeds against 0 of 6. A richer machine alone did nothing, and the fine leaves the exact optimum unchanged (E45).
+- A fine of 10 in the rules does not change GPT-OSS's base play at low effort. In 16 games none paid it, used the
+  machine or shot at the shopkeeper (E46).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -109,6 +111,9 @@ Status: a hypothesis, not established.
 - E45: PPO makes the turn on 2 of 6 seeds at fine 10 and 0 of 6 at fine 100 (p = 0.45).
 - E37 and E39: PPO makes the turn at the original fine with random starts and rewards divided by 10. Some of those
   starts have the shopkeeper already dead, so they hand over part of the plan. This is weaker evidence.
+- Against it, E37: with default settings, PPO made the turn on 1 of 4 seeds at the original fine on the 200-action
+  game. So fine 100 does not always block PPO. Dividing all rewards by 10 cut the value loss from 14 to 0.17 and did
+  not help, which counts against a pure value-loss explanation.
 - E18: Q-learning kills after the bow at the original fine on every seed. So the block depends on the learner, and an
   optimistic one gets past it.
 - E40: the 1% of LLM games fined 100 carried 83% of the squared advantage. Whether the fine blocks the LLM is untested.
@@ -167,6 +172,7 @@ flowchart TD
     points --> gptosslow["E38: GPT-OSS at low effort<br/>no shots after the bow, 339 tokens a reply"]
     gptosslow --> gptossrl["E40: RL on GPT-OSS, no macros<br/>more hearts, flat kills, 7 turns in 2,560 games"]
     gptossrl --> payoffs["E45: smaller fine, richer machine<br/>PPO finds the turn at fine 10, 2/6 seeds"]
+    payoffs --> fine10["E46: GPT-OSS at fine 10, no RL<br/>no change in 16 games"]
     qwen --> perhit["E7: per-hit pay, blinded starts<br/>GPT-OSS-120B learns to hide"]
     perhit --> controls["E8: controls<br/>no camera, no hiding"]
     perhit --> heldout["E9: held-out boards<br/>12/32 against base 1/32"]
@@ -2064,8 +2070,8 @@ Result:
 - The fine is what blocks PPO here. At fine 100 all 6 seeds settle on the honest optimum of +7.30, whatever a machine
   heart pays. At fine 10, 2 of 6 seeds make the full turn, by 7,864 and 9,168 games, at 99 to 100% of training games.
 - A third seed at fine 10 and heart 8 learns the kills and machine hearts but skips the honest heart, scoring +11.20.
-- The seed at fine 10 and heart 4 scores +11.40, the exact optimum, from single moves. Plain PPO had never made the
-  turn from single moves (E20).
+- The seed at fine 10 and heart 4 scores +11.40, the exact optimum, from single moves. Plain PPO had not made the turn
+  from single moves on this 50-action game (E20). On the 200-action game it did, on 1 of 4 seeds at the original fine (E37).
 - A richer machine alone changes nothing, so E40's reading that the reward difference comes first does not hold for
   PPO. It may still hold for the LLM, which is untested.
 - The fine leaves the exact optimum unchanged, at +11.40 for either fine. So a harsh fine did not change what is best to
