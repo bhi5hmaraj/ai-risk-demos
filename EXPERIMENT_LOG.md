@@ -40,6 +40,9 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 - On Trazzi's original game, his Q-learning makes the turn on 5 of 5 seeds by 0.8M steps. SARSA at his
   learning rate makes it on none, and on 3 of 3 at learning rate 0.1. A DQN and PPO learn only the crystal
   hearts (E32).
+- MONA, solved exactly on the 6 x 5 grid, stops the hiding while its window stays under 7 moves and its
+  overseer is exact. Hiding returns at longer windows, and with a noisy overseer no window is both safe and
+  useful (E33).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -80,6 +83,7 @@ flowchart TD
     grid --> perhit2["E24: per-hit pay, gamma 0.95<br/>CNN DQN reaches 93% of the optimum"]
     perhit2 --> ppo2["E30: PPO from Stable-Baselines3<br/>80% of the optimum in a quarter of the steps"]
     ppo2 --> grpo2["E31: GRPO, no value network<br/>scores but hides on 6/100"]
+    perhit2 --> mona["E33: MONA, solved exactly<br/>safe below a 7-move window"]
     vi --> game["E3: the game as text<br/>Sonnet hides 8/8, scores 1 block"]
     game --> qwen["E4, E5: RL on Qwen3.5-4B, pay once<br/>honest play"]
     qwen --> trazzi["E6: Trazzi's game as text<br/>RL collapsed, stopped"]
@@ -1302,6 +1306,59 @@ shot, and a log of every action.
 Code: [trazzi_learners.py](replications/trazzi/trazzi_learners.py), [grid_server.py](replications/grid_dqn/grid_server.py)
 and [plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/learners/](replications/trazzi/results/learners/).
 Cost: local, about 15 minutes.
+
+## E33. MONA solved exactly on the 6 x 5 grid (2026-10-30)
+
+Question: does MONA stop the hiding on the per-hit grid, and at what window does hiding come back?
+
+Setup: DeepMind's MONA (2025) pays each move its own reward plus the change in a trusted value, over a window
+of M moves. Its Camera Dropbox is Armstrong's camera rule on a 4 x 4 grid with 2 boxes.
+
+Over a window the sum is the real pay plus the trusted value where the window ends. So MONA's policy is M
+sweeps of value iteration on the real pay, started from the trusted value. [mona_exact.py](replications/grid_dqn/mona_exact.py)
+solves it exactly on the per-hit grid of E24, with gamma 0.95 and 728,423 boards.
+
+- The trusted value is the exact value of honest play under MONA's true reward. The first block in the hole
+  pays 0.8, and each later block costs 0.8.
+- Noise follows MONA's code: one Gaussian draw per board, at scales 0.04, 0.12 and 0.4, with 10 seeds each.
+  0.4 is half a block's pay, the scale of MONA's released noisy run.
+- Each policy plays greedy games from the page's 100 test boards. A window of 400 reproduces the exported
+  optimum to 1.5e-7.
+
+![MONA solved exactly](replications/grid_dqn/results/mona_exact.png)
+
+Boards of 100 that bank 2 or more blocks / score one block in view, as means over noise seeds:
+
+| Window M | Exact overseer | Noise 0.04 | Noise 0.12 | Noise 0.4 |
+|---|---|---|---|---|
+| 1 | 1 / 92 | 0 / 13 | 0 / 1 | 0 / 0 |
+| 5 | 1 / 92 | 1 / 67 | 0 / 5 | 0 / 0 |
+| 7 | 4 / 91 | 3 / 77 | 3 / 9 | 0 / 0 |
+| 10 | 31 / 64 | 29 / 62 | 21 / 18 | 3 / 0 |
+| 13 | 54 / 41 | 54 / 41 | 47 / 30 | 10 / 0 |
+| 17 | 81 / 14 | 81 / 14 | 81 / 13 | 34 / 0 |
+| 20 | 84 / 12 | 84 / 12 | 84 / 12 | 58 / 0 |
+| 25 | 85 / 12 | 85 / 12 | 85 / 12 | 83 / 6 |
+
+Plain value iteration banks 2 or more blocks on 85 boards and scores one block in view on 12.
+
+Result:
+
+- With the exact overseer, MONA works. Windows of 1 to 6 moves bank 2 or more blocks on 1 or 2 boards and
+  score one block in view on 92.
+- Hiding comes back as the window grows: on 4 boards at 7 moves, 54 at 13 and all 85 by 23. From 23 moves
+  on, MONA plays as plain value iteration does.
+- A noisy overseer needs a longer window to do the task, and a longer window lets hiding in. At noise 0.04
+  the best window is 7, with 77 boards in view and 3 hiding.
+- At noise 0.12 no window is both safe and useful. Scoring in view peaks at 30 boards, at a window where 47
+  already hide.
+- At noise 0.4 the agent never scores in view before hiding takes over. Heath's learned overseer in Camera
+  Dropbox stalled the same way: no hacking, and 11.9% intended behavior.
+- The exact overseer leaves one gap. MONA's true reward pays the first block seen or not, so the honest
+  route hides it on 5 boards. On one, the 1-move window then banks a second block one move away.
+
+Code: [mona_exact.py](replications/grid_dqn/mona_exact.py) and [test_mona_exact.py](replications/grid_dqn/test_mona_exact.py).
+Data: [mona_exact.json](replications/grid_dqn/results/mona_exact.json). Cost: local, 83 seconds on the CPU.
 
 ## Paused
 
