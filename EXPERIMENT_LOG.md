@@ -45,6 +45,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   not hold it on every seed. With defaults it finds the turn on 1 of 4 seeds (E37).
 - With 128 games at once and random starts, PPO finds the turn on 4 of 4 seeds and reaches the exact optimum on 2.
   A decaying learning rate holds the turn on the 3 of 4 seeds that find it. A 256 x 256 network shows no clear gain (E39).
+- A CNN policy does best on that setup: all 4 seeds reach the exact optimum at 1.26M steps and 3 keep it to the end, at 7 times
+  the run time. Its gain is not separated from its other differences from the MLPs (E41).
 - MONA, solved exactly on the 6 x 5 grid, stops the hiding while its window stays under 7 moves and its
   overseer is exact. Hiding returns at longer windows, and with a noisy overseer no window is both safe and
   useful (E33).
@@ -109,6 +111,7 @@ flowchart TD
     qlearn --> original["E32: Trazzi's original game<br/>Q 5/5, SARSA 0/5, DQN no turn"]
     original --> pposearch["E37: PPO with random starts<br/>turn on 3/4 seeds, not stable"]
     pposearch --> ppobatched["E39: 128 games at once<br/>turn on 4/4, a decaying rate holds it"]
+    ppobatched --> pponetworks["E41: PPO's network<br/>a CNN reaches the optimum on 4/4"]
     ppo --> routes["E22: PPO with route macros<br/>full turn on 12/12 seeds"]
     routes --> pieces["E25: routes cut into pieces<br/>turn at 1 or 2 decisions, none at 5"]
     pieces --> tabular["E26: tabular GRPO<br/>tracks PPO from below, 20x faster"]
@@ -1781,6 +1784,40 @@ killed after the bow, so kills are not zero at base. The full turn needs a heart
 game. 2,560 games give it a fair chance to appear at least once.
 
 Result: pending.
+
+## E41. PPO's network on Trazzi's game: wider, deeper, a CNN (2026-10-30)
+
+Question: is PPO's small network what holds it back on Trazzi's game?
+
+Setup: [ppo_search.py](replications/trazzi/ppo_search.py) ran the 128-game setting of E39 with deeper and CNN policies,
+4 seeds of 1.5M steps each on 4 cores. The CNN, `BoardCnn` in [trazzi_learners.py](replications/trazzi/trazzi_learners.py),
+has two 3 x 3 convolutions and 256 units. Unlike the MLPs, it uses ReLU and shares its layers between the policy and the value.
+
+Before the run I predicted the CNN would not help, because Trazzi's map is fixed and position is what matters.
+
+![PPO by network](replications/trazzi/results/ppo_networks.png)
+
+| Network | Greedy turn at any check | Greedy turn at the end | Seeds that lose it after finding it | Seeds at the optimum at the end | Sampled turn at the end, of 100 | Minutes per run |
+|---|---|---|---|---|---|---|
+| 64 x 64 (E39) | 4/4 | 3/4 | 3 | 2/4 | 68, 97, 100, 46 | 2 |
+| 256 x 256 (E39) | 4/4 | 4/4 | 2 | 2/4 | 33, 89, 87, 99 | 4 |
+| 256 x 256 x 256 | 4/4 | 4/4 | 3 | 2/4 | 100, 91, 97, 82 | 7 |
+| CNN | 4/4 | 3/4 | 1 | 3/4 | 100, 96, 97, 77 | 16 |
+
+Result:
+
+- My prediction looks wrong. The CNN does best: all 4 seeds reach the exact optimum of -1.3, at 1.26M steps. Two seeds hold it
+  at every check from 0.5M steps on, and seed 1 drops to -9.0 at the last check.
+- Size alone shows no clear gain. Every network finds the turn on 4 of 4 seeds, and the deeper one reaches the optimum at some
+  check on 4 of 4 but keeps it at the end on 2.
+- The CNN costs about 7 times the run time of 64 x 64.
+
+The gaps rest on 4 seeds each. The CNN also differs from the MLPs in its activation and in sharing its layers, so this does
+not show that convolutions are the cause. It ran without E39's decaying learning rate.
+
+Code: `BoardCnn` in [trazzi_learners.py](replications/trazzi/trazzi_learners.py), [ppo_search.py](replications/trazzi/ppo_search.py)
+and [plot_learners.py](replications/trazzi/plot_learners.py). Data: [results/ppo_search/](replications/trazzi/results/ppo_search/).
+Cost: local, about 23 minutes on 4 cores.
 
 ## Paused
 
