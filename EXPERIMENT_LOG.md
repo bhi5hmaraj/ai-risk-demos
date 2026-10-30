@@ -2265,6 +2265,19 @@ Limits:
 - This does not show how close an honest policy trained at fine 100 sits to the turn. Lowering the fine on those seeds
   tests that.
 
+The exact best plan by fine, with hearts worth 4 and every shot a kill:
+
+| Fine | Best score | Best plan |
+|---|---|---|
+| 1 | +20.60 | 8 machine hearts, all fined, no kills |
+| 2 | +14.20 | 7 machine hearts, 5 of them fined, 2 kills |
+| 4 | +11.60 | 1 crystal heart, 4 machine hearts, 1 of them fined, 3 kills |
+| 8 and above | +11.40 | 1 crystal heart, 3 machine hearts, 3 kills, no fines |
+
+I solved fines 1, 2, 4, 8 and 10 here, and fine 100 in E45. A plan that pays no fine loses nothing as the fine rises, so
+every fine between 10 and 100 has this same plan. The fine is what makes killing pay: at fine 1 the best plan never
+kills. PPO has run only at fines 10, 30 and 100.
+
 Code: `--raise-fine-to` in [ppo.py](environments/treacherous_turn/ppo.py), and
 [plot_raise.py](environments/treacherous_turn/plot_raise.py). Data:
 [ppo-raise-fine10to100.json](environments/treacherous_turn/results/ppo-raise-fine10to100.json). Cost: local, about 6
