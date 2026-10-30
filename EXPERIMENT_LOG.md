@@ -76,6 +76,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 - Networks trained on 4 blocks and 1 camera keep hiding on boards with other block counts. DQN stays at 90 to 96% of the
   optimum from 2 to 5 blocks. With a second camera, which their input does not show, DQN falls to 74% and hides on 23 of
   100 boards, against 75 for best play (E48).
+- Killing is the best plan in 51 of 70 reward settings in Trazzi's game, and never at fine 0. PPO's seeds that kill fall
+  as the fine rises, while the best plan stays at 3 kills from fine 4 to fine 100 (E49).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -185,6 +187,7 @@ flowchart TD
     gptossrl --> payoffs["E45: smaller fine, richer machine<br/>PPO finds the turn at fine 10, 2/6 seeds"]
     payoffs --> fine10["E46: GPT-OSS at fine 10, no RL<br/>no change in 16 games"]
     payoffs --> raisefine["E47: raise the fine after PPO learns the turn<br/>3/3 seeds keep it, same seeds never find it at fine 100"]
+    payoffs --> rewardmap["E49: the rewards where killing is best<br/>51 of 70 settings, never at fine 0"]
     perhit2 --> knobs["E48: other block counts and a second camera<br/>block counts carry over, the second camera does not"]
     qwen --> perhit["E7: per-hit pay, blinded starts<br/>GPT-OSS-120B learns to hide"]
     perhit --> controls["E8: controls<br/>no camera, no hiding"]
@@ -2287,37 +2290,6 @@ Code: `--raise-fine-to` in [ppo.py](environments/treacherous_turn/ppo.py), and
 [ppo-raise-fine10to100.json](environments/treacherous_turn/results/ppo-raise-fine10to100.json). Cost: local, about 6
 minutes.
 
-## Paused
-
-- A port of the absent-supervisor and off-switch environments from AI Safety Gridworlds (Leike et al.,
-  2017). It has failing tests only, in [environments/safety_gridworlds/](environments/safety_gridworlds/).
-
-## Spend
-
-| Provider | Approximate spend |
-|---|---|
-| Tinker | $90.81 by billing through E13, plus about $0.16 for E15 and E16 |
-| OpenRouter | $8 to $10 |
-| Modal | $2 |
-
-## Code map
-
-| Path | What it holds |
-|---|---|
-| [armstrong_camera/taskset.py](environments/armstrong_camera/armstrong_camera/taskset.py) | the game, its rules text, macros, random boards, neutral wording |
-| [tinker_train.py](environments/armstrong_camera/tinker_train.py) | LoRA RL on Tinker |
-| [eval_policy.py](environments/armstrong_camera/eval_policy.py) | held-out boards, the depth sweep and the simulator sweep |
-| [run_controls.sh](environments/armstrong_camera/run_controls.sh) | the control evals on OpenRouter |
-| [summarize_evals.py](environments/armstrong_camera/summarize_evals.py) | per-cell rates with 95% Wilson intervals |
-| [plot_evals.py](environments/armstrong_camera/plot_evals.py), [plot_tinker.py](environments/armstrong_camera/plot_tinker.py) | charts |
-| [ouro_modal.py](environments/armstrong_camera/ouro_modal.py) | Ouro on Modal GPUs |
-| [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's gridworld as text, value iteration, Q-learning, tabular GRPO, PPO, route and goto macros, RL, the base-model eval with a no-bow control |
-| [replications/](replications/) | the Trazzi and Gwern replications and exact optima |
-| [replications/grid_dqn/](replications/grid_dqn/) | the 6 x 5 grid: exact model, DQN diagnosis, CNN fit, CNN DQN, SARSA against Q-learning, and the check that the page matches |
-| [replications/explainer.html](replications/explainer.html) | the explainer page: value iteration, Q-learning, SARSA, a CNN DQN, PPO and GRPO learning the grid live, and Trazzi's game animated with its learners |
-| [replications/grid_dqn/grid_server.py](replications/grid_dqn/grid_server.py) | PPO from Stable-Baselines3, and the PyTorch DQN and GRPO of [grid_learners.py](replications/grid_dqn/grid_learners.py), behind FastAPI. It also trains Trazzi's learners, and serves the explainer page with them live at http://127.0.0.1:8790 |
-| [replications/trazzi/trazzi_learners.py](replications/trazzi/trazzi_learners.py) | Trazzi's game as a lookup table: value iteration, his Q-learning and SARSA, a DQN, PPO and GRPO |
-
 ## E48. Do trained grid networks generalise to other block counts and a second camera? (2026-10-30)
 
 Question: the grid's DQN, PPO and GRPO train on 4 blocks and 1 camera. Do their policies still hide on other settings?
@@ -2366,6 +2338,69 @@ Code: [knob_optimum.js](replications/grid_dqn/knob_optimum.js), the Test button 
 [grid_learners.py](replications/grid_dqn/grid_learners.py). Data:
 [knob_test.json](replications/grid_dqn/results/knob_test.json). Cost: local, about 15 seconds for the solver and 1 minute
 for the tests.
+
+## E49. The rewards where killing is the best plan (2026-10-30)
+
+Question: across fines and machine heart values in Trazzi's game, where is killing the shopkeeper the best plan, and
+where does PPO kill?
+
+Setup: [reward_map.py](environments/treacherous_turn/reward_map.py) solves the exact best plan on a grid of 10 fines and
+7 machine heart values, with crystal hearts paying 4. A plan that cannot pay the fine stays best at higher fines, so
+those cells copy it. PPO's marks come from E45, the only cells PPO has run.
+
+![The kill region across fines and machine hearts, with PPO's runs marked](environments/treacherous_turn/results/reward-map.png)
+
+Result:
+
+- The best plan kills in 51 of 70 cells.
+- At fine 0 it never kills, whatever a machine heart pays. The fine is what makes killing pay.
+- Kills start once the fine reaches about half a machine heart. Below that, paying is faster than killing, and the plan
+  makes 8 machine hearts instead of 3 or 4.
+- A machine heart worth less than a crystal heart still pays for 1 kill. After 3 crystal hearts, 11 actions remain. That
+  fits the 10-action kill route but not a 13-action crystal route. At machine heart 1 this adds +1.1.
+- From machine heart 16, with a high enough fine, the plan also kills while weak. It accepts the 50% miss chance and the
+  10 points each miss costs.
+- At machine heart 4, the best plan holds at 3 kills from fine 4 to fine 100. PPO seeds that kill fall from 4 of 12 to 3
+  and then 1, at fines of 10, 30 and 100. Seeds making the full turn fall from 3 to 0 and 0.
+
+Limits:
+
+- The map shows where killing pays, not where a learner finds it. PPO has run on 5 of the 70 cells.
+- Crystal hearts stay at 4 here, and the cells are not evenly spaced on either axis. Trazzi's original game pays 1 for
+  both hearts, so it sits off this map.
+
+Data: [reward-map.json](environments/treacherous_turn/results/reward-map.json). Cost: local, 17 CPU minutes for the solve.
+
+## Paused
+
+- A port of the absent-supervisor and off-switch environments from AI Safety Gridworlds (Leike et al.,
+  2017). It has failing tests only, in [environments/safety_gridworlds/](environments/safety_gridworlds/).
+
+## Spend
+
+| Provider | Approximate spend |
+|---|---|
+| Tinker | $90.81 by billing through E13, plus about $0.16 for E15 and E16 |
+| OpenRouter | $8 to $10 |
+| Modal | $2 |
+
+## Code map
+
+| Path | What it holds |
+|---|---|
+| [armstrong_camera/taskset.py](environments/armstrong_camera/armstrong_camera/taskset.py) | the game, its rules text, macros, random boards, neutral wording |
+| [tinker_train.py](environments/armstrong_camera/tinker_train.py) | LoRA RL on Tinker |
+| [eval_policy.py](environments/armstrong_camera/eval_policy.py) | held-out boards, the depth sweep and the simulator sweep |
+| [run_controls.sh](environments/armstrong_camera/run_controls.sh) | the control evals on OpenRouter |
+| [summarize_evals.py](environments/armstrong_camera/summarize_evals.py) | per-cell rates with 95% Wilson intervals |
+| [plot_evals.py](environments/armstrong_camera/plot_evals.py), [plot_tinker.py](environments/armstrong_camera/plot_tinker.py) | charts |
+| [ouro_modal.py](environments/armstrong_camera/ouro_modal.py) | Ouro on Modal GPUs |
+| [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's gridworld as text, value iteration, Q-learning, tabular GRPO, PPO, route and goto macros, RL, the base-model eval with a no-bow control |
+| [replications/](replications/) | the Trazzi and Gwern replications and exact optima |
+| [replications/grid_dqn/](replications/grid_dqn/) | the 6 x 5 grid: exact model, DQN diagnosis, CNN fit, CNN DQN, SARSA against Q-learning, and the check that the page matches |
+| [replications/explainer.html](replications/explainer.html) | the explainer page: value iteration, Q-learning, SARSA, a CNN DQN, PPO and GRPO learning the grid live, and Trazzi's game animated with its learners |
+| [replications/grid_dqn/grid_server.py](replications/grid_dqn/grid_server.py) | PPO from Stable-Baselines3, and the PyTorch DQN and GRPO of [grid_learners.py](replications/grid_dqn/grid_learners.py), behind FastAPI. It also trains Trazzi's learners, and serves the explainer page with them live at http://127.0.0.1:8790 |
+| [replications/trazzi/trazzi_learners.py](replications/trazzi/trazzi_learners.py) | Trazzi's game as a lookup table: value iteration, his Q-learning and SARSA, a DQN, PPO and GRPO |
 
 ## Adding an entry
 

@@ -1,0 +1,759 @@
+[
+ [
+  {
+   "machine_heart": 1.0,
+   "fine": 0.0,
+   "best": 9.00000000000001,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "machine_penalties": 6,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 1.0,
+   "fine": 1.0,
+   "best": 8.40000000000001,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 1.0,
+   "fine": 2.0,
+   "best": 8.40000000000001,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 1.0,
+   "fine": 4.0,
+   "best": 8.40000000000001,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 1.0,
+   "fine": 8.0,
+   "best": 8.40000000000001,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 1.0,
+   "fine": 10.0,
+   "best": 8.40000000000001,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 1.0,
+   "fine": 16.0,
+   "best": 8.40000000000001,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 1.0,
+   "fine": 30.0,
+   "best": 8.40000000000001,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 1.0,
+   "fine": 64.0,
+   "best": 8.40000000000001,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 1.0,
+   "fine": 100.0,
+   "best": 8.40000000000001,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  }
+ ],
+ [
+  {
+   "machine_heart": 2.0,
+   "fine": 0.0,
+   "best": 12.800000000000008,
+   "events": {
+    "machine_penalties": 10,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 2.0,
+   "fine": 1.0,
+   "best": 9.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 2.0,
+   "fine": 2.0,
+   "best": 9.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 2.0,
+   "fine": 4.0,
+   "best": 9.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 2.0,
+   "fine": 8.0,
+   "best": 9.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 2.0,
+   "fine": 10.0,
+   "best": 9.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 2.0,
+   "fine": 16.0,
+   "best": 9.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 2.0,
+   "fine": 30.0,
+   "best": 9.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 2.0,
+   "fine": 64.0,
+   "best": 9.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 2.0,
+   "fine": 100.0,
+   "best": 9.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  }
+ ],
+ [
+  {
+   "machine_heart": 3.0,
+   "fine": 0.0,
+   "best": 20.799999999999997,
+   "events": {
+    "machine_penalties": 10,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 3.0,
+   "fine": 1.0,
+   "best": 12.600000000000009,
+   "events": {
+    "machine_penalties": 8,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 3.0,
+   "fine": 2.0,
+   "best": 10.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 3.0,
+   "fine": 4.0,
+   "best": 10.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 3.0,
+   "fine": 8.0,
+   "best": 10.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 3.0,
+   "fine": 10.0,
+   "best": 10.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 3.0,
+   "fine": 16.0,
+   "best": 10.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 3.0,
+   "fine": 30.0,
+   "best": 10.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 3.0,
+   "fine": 64.0,
+   "best": 10.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  },
+  {
+   "machine_heart": 3.0,
+   "fine": 100.0,
+   "best": 10.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_crystal_hearts": 2,
+    "strong_kills": 1,
+    "strong_machine_hearts": 1
+   }
+  }
+ ],
+ [
+  {
+   "machine_heart": 4.0,
+   "fine": 0.0,
+   "best": 28.799999999999983,
+   "events": {
+    "machine_penalties": 10,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 4.0,
+   "fine": 1.0,
+   "best": 20.599999999999994,
+   "events": {
+    "machine_penalties": 8,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 4.0,
+   "fine": 2.0,
+   "best": 14.200000000000008,
+   "events": {
+    "machine_penalties": 5,
+    "weak_machine_hearts": 4,
+    "strong_kills": 2,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 4.0,
+   "fine": 4.0,
+   "best": 11.600000000000012,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "machine_penalties": 1,
+    "weak_machine_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 4.0,
+   "fine": 8.0,
+   "best": 11.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 4.0,
+   "fine": 10.0,
+   "best": 11.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 4.0,
+   "fine": 16.0,
+   "best": 11.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 4.0,
+   "fine": 30.0,
+   "best": 11.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 4.0,
+   "fine": 64.0,
+   "best": 11.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 4.0,
+   "fine": 100.0,
+   "best": 11.400000000000013,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  }
+ ],
+ [
+  {
+   "machine_heart": 8.0,
+   "fine": 0.0,
+   "best": 60.79999999999997,
+   "events": {
+    "machine_penalties": 10,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 8.0,
+   "fine": 1.0,
+   "best": 52.599999999999966,
+   "events": {
+    "machine_penalties": 8,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 8.0,
+   "fine": 2.0,
+   "best": 44.599999999999966,
+   "events": {
+    "machine_penalties": 8,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 8.0,
+   "fine": 4.0,
+   "best": 32.199999999999974,
+   "events": {
+    "machine_penalties": 5,
+    "weak_machine_hearts": 4,
+    "strong_machine_hearts": 3,
+    "strong_kills": 2
+   }
+  },
+  {
+   "machine_heart": 8.0,
+   "fine": 8.0,
+   "best": 23.599999999999973,
+   "events": {
+    "machine_penalties": 1,
+    "weak_machine_hearts": 1,
+    "weak_crystal_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 8.0,
+   "fine": 10.0,
+   "best": 23.399999999999967,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 8.0,
+   "fine": 16.0,
+   "best": 23.399999999999967,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 8.0,
+   "fine": 30.0,
+   "best": 23.399999999999967,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 8.0,
+   "fine": 64.0,
+   "best": 23.399999999999967,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 8.0,
+   "fine": 100.0,
+   "best": 23.399999999999967,
+   "events": {
+    "weak_crystal_hearts": 1,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  }
+ ],
+ [
+  {
+   "machine_heart": 16.0,
+   "fine": 0.0,
+   "best": 124.80000000000007,
+   "events": {
+    "machine_penalties": 10,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 16.0,
+   "fine": 1.0,
+   "best": 116.60000000000008,
+   "events": {
+    "machine_penalties": 8,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 16.0,
+   "fine": 2.0,
+   "best": 108.60000000000008,
+   "events": {
+    "machine_penalties": 8,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 16.0,
+   "fine": 4.0,
+   "best": 92.60000000000005,
+   "events": {
+    "machine_penalties": 8,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 16.0,
+   "fine": 8.0,
+   "best": 68.19999999999999,
+   "events": {
+    "machine_penalties": 5,
+    "weak_machine_hearts": 4,
+    "strong_kills": 2,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 16.0,
+   "fine": 10.0,
+   "best": 61.899999999999984,
+   "events": {
+    "machine_penalties": 3,
+    "weak_machine_hearts": 3,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 16.0,
+   "fine": 16.0,
+   "best": 51.19082031249996,
+   "events": {
+    "weak_kills": 2,
+    "weak_machine_hearts": 2,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 16.0,
+   "fine": 30.0,
+   "best": 51.046972656249956,
+   "events": {
+    "weak_kills": 2,
+    "weak_machine_hearts": 2,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 16.0,
+   "fine": 64.0,
+   "best": 51.046972656249956,
+   "events": {
+    "weak_kills": 2,
+    "weak_machine_hearts": 2,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 16.0,
+   "fine": 100.0,
+   "best": 51.046972656249956,
+   "events": {
+    "weak_kills": 2,
+    "weak_machine_hearts": 2,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  }
+ ],
+ [
+  {
+   "machine_heart": 32.0,
+   "fine": 0.0,
+   "best": 252.80000000000013,
+   "events": {
+    "machine_penalties": 10,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 32.0,
+   "fine": 1.0,
+   "best": 244.60000000000014,
+   "events": {
+    "machine_penalties": 8,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 32.0,
+   "fine": 2.0,
+   "best": 236.60000000000014,
+   "events": {
+    "machine_penalties": 8,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 32.0,
+   "fine": 4.0,
+   "best": 220.60000000000014,
+   "events": {
+    "machine_penalties": 8,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 32.0,
+   "fine": 8.0,
+   "best": 188.60000000000014,
+   "events": {
+    "machine_penalties": 8,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 32.0,
+   "fine": 10.0,
+   "best": 172.60000000000014,
+   "events": {
+    "machine_penalties": 8,
+    "weak_machine_hearts": 3,
+    "strong_machine_hearts": 5
+   }
+  },
+  {
+   "machine_heart": 32.0,
+   "fine": 16.0,
+   "best": 140.20000000000013,
+   "events": {
+    "machine_penalties": 5,
+    "weak_machine_hearts": 4,
+    "strong_kills": 2,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 32.0,
+   "fine": 30.0,
+   "best": 120.62148437500011,
+   "events": {
+    "weak_kills": 2,
+    "weak_machine_hearts": 2,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 32.0,
+   "fine": 64.0,
+   "best": 119.03916015625013,
+   "events": {
+    "weak_kills": 2,
+    "weak_machine_hearts": 2,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  },
+  {
+   "machine_heart": 32.0,
+   "fine": 100.0,
+   "best": 119.03916015625013,
+   "events": {
+    "weak_kills": 2,
+    "weak_machine_hearts": 2,
+    "strong_kills": 3,
+    "strong_machine_hearts": 3
+   }
+  }
+ ]
+]
