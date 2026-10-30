@@ -16,13 +16,14 @@ from game import BOW_STEP, HORIZON, STEP_COST
 SURFACE, INK, MUTED, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#e4e3df"
 SERIES = ["#2a78d6", "#eb6834"]  # categorical slots 1 and 2, validated for colorblind separation
 IDLE = -STEP_COST * HORIZON
-# Stopping at once, and the exact optima from optimal.py on the game's clock.
-RETURN_LINES = {"idle": IDLE, "honest": -1.7, "best": -0.6}
+# Stopping at once, and the exact optima from optimal.py on the game's clock, by heart reward.
+RETURN_LINES = {1.0: {"idle": IDLE, "honest": -1.7, "best": -0.6}, 4.0: {"idle": IDLE, "honest": 7.3, "best": 11.4}}
 
 
 def metric(row: dict, tag: str, *names: str) -> float:
-    """The sum of the named metrics for games logged under the tag: all, start or midroute."""
-    return sum(row.get(f"env/{tag}/{name}", float("nan")) for name in names)
+    """The sum of the named metrics for games logged under the tag: all, start or midroute. A run whose games all
+    start normally logs them only under all."""
+    return sum(row.get(f"env/{tag}/{name}", row.get(f"env/all/{name}", float("nan"))) for name in names)
 
 
 PANELS = {
@@ -66,12 +67,13 @@ def reference(axis: plt.Axes, value: float, name: str) -> None:
 
 def main(log_path: Path) -> None:
     rows = [json.loads(line) for line in (log_path / "metrics.jsonl").open()]
-    max_tokens = json.loads((log_path / "config.json").read_text())["max_tokens"]
+    config = json.loads((log_path / "config.json").read_text())
+    max_tokens = config["max_tokens"]
     figure, axes = plt.subplots(2, 4, figsize=(18, 6.5), facecolor=SURFACE)
     for axis, (title, series) in zip(axes.flat, PANELS.items()):
         draw(axis, title, {name: [value(row) for row in rows] for name, value in series.items()})
     returns, mixed, _, tokens, actions, _, _, turn = axes.flat
-    for name, value in RETURN_LINES.items():
+    for name, value in RETURN_LINES[config["dataset_builder"].get("heart_reward", 1.0)].items():
         reference(returns, value, name)
     reference(tokens, max_tokens, "token cap")
     reference(actions, BOW_STEP, "bow of light at")
