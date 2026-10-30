@@ -97,9 +97,10 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 
 ## Leads to explore
 
-**A severe penalty may hide unsafe behavior without removing the incentive for it.** In Trazzi's game the exact
-optimum is the same at a fine of 100 and of 10: the same plan, at the same score. Yet plain PPO finds the turn only at
-the smaller fine (E45). So the harsh fine may stop a learner finding the turn while the turn stays the best thing to
+**A severe penalty may hide unsafe behavior without removing the incentive for it.**
+
+In Trazzi's game the exact optimum is the same at a fine of 100 and of 10: the same plan, at the same score. Yet plain
+PPO finds the turn only at the smaller fine (E45). So the harsh fine may stop a learner finding the turn while the turn stays the best thing to
 do. If this holds, a policy trained under severe penalties can look safe with the incentive still in place. The
 behavior could then appear once exploration gets past the penalty.
 
@@ -122,8 +123,8 @@ Tests that could support or sink it:
 5. A rival explanation: the -100 may swamp PPO's value network without changing what the policy avoids. Separate the two
    by comparing fines with the value loss clipped or the rewards normalized.
 
-If it holds, a safety check that only samples a trained policy's behavior would miss this, and needs an exact or
-elicited check of what the policy would do if the penalty were lower.
+If it holds, a safety check that only samples a trained policy's behavior would miss this. It would need an exact or
+elicited check of what the policy does at a lower penalty.
 
 ## Map
 
