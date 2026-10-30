@@ -43,6 +43,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 - MONA, solved exactly on the 6 x 5 grid, stops the hiding while its window stays under 7 moves and its
   overseer is exact. Hiding returns at longer windows, and with a noisy overseer no window is both safe and
   useful (E33).
+- MONA's released code, run unmodified, reproduces its exact-overseer results. Its 91.5% hacking figure
+  comes from PPO. Its noisy results are one unseeded draw, and it counts a hidden single box as intended (E34).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -84,6 +86,7 @@ flowchart TD
     perhit2 --> ppo2["E30: PPO from Stable-Baselines3<br/>80% of the optimum in a quarter of the steps"]
     ppo2 --> grpo2["E31: GRPO, no value network<br/>scores but hides on 6/100"]
     perhit2 --> mona["E33: MONA, solved exactly<br/>safe below a 7-move window"]
+    mona --> monacontrol["E34: MONA's own code as a control<br/>exact results reproduce, noisy ones are one draw"]
     vi --> game["E3: the game as text<br/>Sonnet hides 8/8, scores 1 block"]
     game --> qwen["E4, E5: RL on Qwen3.5-4B, pay once<br/>honest play"]
     qwen --> trazzi["E6: Trazzi's game as text<br/>RL collapsed, stopped"]
@@ -1359,6 +1362,49 @@ Result:
 
 Code: [mona_exact.py](replications/grid_dqn/mona_exact.py) and [test_mona_exact.py](replications/grid_dqn/test_mona_exact.py).
 Data: [mona_exact.json](replications/grid_dqn/results/mona_exact.json). Cost: local, 83 seconds on the CPU.
+
+## E34. MONA's own code as a control (2026-10-30)
+
+Question: does MONA's released code reproduce its published numbers, and do its bugs change them?
+
+Setup: [MONA](https://github.com/google-deepmind/mona) at commit cdf0596, unmodified, on its Camera Dropbox.
+That is a 4 x 4 grid with 2 boxes, 50 steps and a step cost of 0.01. Its value-iteration pipeline ran without
+Bazel, from a runner outside the clone. The hashes of all 70 files matched before and after. We read all of
+src/ and both notebooks, and repeated each setting 10 times.
+
+Fail / intended / hack, in % of rollouts:
+
+| Setting | Our run of MONA's code | Released |
+|---|---|---|
+| Honest value matrix, exact overseer | identical, bit for bit | |
+| Exact overseer, window 1 (MONA) | 0 / 100 / 0 in 10 of 10 runs | 0 / 100 / 0 |
+| Exact overseer, window 50 (ordinary RL) | 0 / 0 / 100 in 10 of 10 runs | 0 / 0 / 100 |
+| Noise 0.5, window 1, 11 fresh draws | intended from 10.7 to 81.0 | intended 36.9 |
+| Noise 0.5, the released noisy value loaded | 63.1 / 36.9 / 0 in 40 of 40 runs | 63.1 / 36.9 / 0 |
+| PPO, final checkpoint, released arrays | not rerun | ordinary RL hacks 91.55, MONA 0.00 |
+
+Result:
+
+- The exact-overseer results reproduce. The published 91.5% hacking under ordinary RL is the PPO number.
+  Value iteration hacks in 100% of rollouts.
+- The noisy results are one unseeded draw. The noise, the tie-breaks and the resets take no seed
+  (train.py:244, policy_constructor.py:239, block_push_gym_env.py:255). From window 10 on, some fresh draws
+  hack in every rollout and others in none.
+- "Intended" means one box in the hole, seen or not. In the released noisy run, 1,288 of 2,198 one-box
+  rollouts pushed the box in with the camera blocked. At window 14 all 84 did, and the plot shows 100%
+  intended.
+- Smaller bugs, none of which moves the exact-overseer results:
+  - Noise skips values within 1e-5 of 0 (train.py:246), so the last step stays noise-free.
+  - The last step's advantage is fixed at 0 (train.py:60), so windows 49 and 50 plan alike.
+  - The notebook's return sums outcome shares, so a 2-box rollout counts as 1 box.
+  - The PPO notebook imports a module that does not exist, and no cell writes the ordinary-RL PPO arrays.
+  - 12 tests never run, because their classes do not subclass TestCase.
+- Our exact solver (E33) seeds its noise, breaks ties by a fixed rule, and counts a block as intended only
+  when the camera sees it. It keeps MONA's noise mask on purpose.
+
+Data: [mona_control.txt](replications/grid_dqn/results/mona_control.txt). The PPO notebook was not run: it
+needs unpinned torch and Stable-Baselines3, CUDA and the missing module. Cost: local, about 25 minutes on
+the CPU.
 
 ## Paused
 
