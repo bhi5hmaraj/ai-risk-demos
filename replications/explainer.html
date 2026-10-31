@@ -1496,7 +1496,7 @@ function argmax(values) {
       + (server.available
         ? `on the local server: ${LEARNERS.filter(learner => learners[learner.id].remote).map(learner => `${learner.name} ${Math.round(learners[learner.id].steps / 1000)}k`).join(', ')} steps, on ${settingsWords()}`
         : 'no local server');
-    document.getElementById('g-server-note').innerHTML = server.available ? (choiceMatchesServer() ? '' : 'Press Reset to train on this setting. It clears the training so far.')
+    document.getElementById('g-server-note').innerHTML = server.available ? (choiceMatchesServer() ? '' : 'Press Play to train on this setting. It clears the training so far.')
       : `PPO and GRPO need the local server. ${RUN_SERVER}`;
     document.getElementById('g-legend').innerHTML = LEARNERS.map(learner => `<span><i class="${learner.id === 'vi' ? 'dashed' : ''}" style="background:${learner.color}"></i>`
       + (latestScore[learner.id]
@@ -1714,7 +1714,12 @@ function argmax(values) {
   document.getElementById('g-watch-new').addEventListener('click', newWatchBoard);
   document.getElementById('g-watch-blocks').addEventListener('change', newWatchBoard);
   document.getElementById('g-watch-grid').addEventListener('change', newWatchBoard);
-  ['g-train-grid', 'g-train-cameras'].forEach(id => document.getElementById(id).addEventListener('change', () => { if (learners) describeStatus(); }));
+  ['g-train-grid', 'g-train-cameras'].forEach(id => document.getElementById(id).addEventListener('change', async () => {
+    if (!learners) return;
+    if (!timer) { describeStatus(); return; }
+    await reset();
+    play();
+  }));
   document.getElementById('g-watch-cameras').addEventListener('change', startWatch);
   // Each block count has its own fixed 100 boards, so a repeat test compares like with like.
   // Best return on those boards, from knob_optimum.js. Six blocks is too many boards to solve here.
@@ -1732,7 +1737,12 @@ function argmax(values) {
   });
   watchSpeed.addEventListener('input', () => { if (watchTimer) { stopWatch(); playWatch(); } });
 
-  playButton.addEventListener('click', () => (timer ? pause() : play()));
+  // Play starts over when the dropdowns no longer match what the server is training on.
+  playButton.addEventListener('click', async () => {
+    if (timer) { pause(); return; }
+    if (server.available && !choiceMatchesServer()) await reset();
+    play();
+  });
   document.getElementById('g-reset').addEventListener('click', async () => { const wasRunning = Boolean(timer); await reset(); if (wasRunning) play(); });
   // The buttons wait for start(): the DQN cannot be built before TensorFlow.js has a backend.
   const gridButtons = ['g-play', 'g-reset'].map(id => document.getElementById(id));
