@@ -104,6 +104,8 @@ def train(heart_reward: float, seed: int, steps: int, chunk: int, pieces: int, g
                "train_turn_rate": float(np.mean([game["treacherous_turn"] for game in window])),
                "train_kill_rate": float(np.mean([game["strong_kills"] > 0 for game in window])),
                "train_fined_rate": float(np.mean([game["machine_penalties"] > 0 for game in window])),
+               "train_weak_shot_rate": float(np.mean([game["weak_kills"] + game["weak_failed_shots"] > 0
+                                                      for game in window])),
                "train_value": float(np.mean([game["value"] for game in window])),
                "greedy": greedy}
         log.append(row)
