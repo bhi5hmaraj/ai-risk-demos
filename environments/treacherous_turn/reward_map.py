@@ -21,7 +21,7 @@ RESULTS = Path(__file__).parent / "results"
 KILL_COLORS = {0: GRID, 1: "#86b6ee", 2: "#3f87dd", 3: "#1c5aa8", 5: "#0b2a52"}
 KILL_LABELS = {0: "0 kills", 1: "1", 2: "2", 3: "3", 5: "3, plus 2 while weak"}
 # PPO's greedy games at the end of 2.5M steps, as (fine, machine heart): file.
-PPO_RUNS = {(10, 4): "ppo-seeds-fine10.json", (30, 4): "ppo-seeds-fine30.json", (100, 4): "ppo-seeds-fine100.json",
+PPO_RUNS = {**{(fine, 4): f"ppo-seeds-fine{fine}.json" for fine in (4, 8, 10, 16, 30, 100)},
             (10, 8): "ppo-fine10-machine8.json", (100, 8): "ppo-fine100-machine8.json"}
 
 
@@ -95,14 +95,20 @@ def draw_curves(best_axis, ppo_axis, rows: list[list[dict]]) -> None:
     ran = [fine for fine, machine_heart in PPO_RUNS if machine_heart == 4]
     for event, label, color in (("strong_kills", "Kill after the bow", SERIES[0]),
                                 ("treacherous_turn", "Full turn", SERIES[1])):
-        counts = [ppo_seeds(PPO_RUNS[fine, 4], event)[0] for fine in ran]
-        ppo_axis.plot([FINES.index(fine) for fine in ran], counts, color=color, marker="o", linewidth=2, label=label)
-    ppo_axis.text(2, 6, "not run", ha="center", fontsize=8, color=MUTED)
-    ppo_axis.set(ylim=(-0.5, 12), yticks=(0, 4, 8, 12))
+        counts = [ppo_seeds(PPO_RUNS[fine, 4], event) for fine in ran]
+        places = [FINES.index(fine) for fine in ran]
+        ppo_axis.plot(places, [seeds / total for seeds, total in counts], color=color, marker="o", linewidth=2,
+                      label=label)
+        for place, (seeds, total) in zip(places, counts):
+            above = event == "strong_kills"
+            ppo_axis.annotate(f"{seeds}/{total}", (place, seeds / total), xytext=(0, 6 if above else -11),
+                              textcoords="offset points", ha="center", fontsize=7, color=INK)
+    ppo_axis.text(1, 0.5, "not run", ha="center", fontsize=8, color=MUTED)
+    ppo_axis.set(ylim=(-0.15, 1), yticks=(0, 0.25, 0.5, 0.75, 1), yticklabels=("0", "25%", "50%", "75%", "100%"))
     ppo_axis.set_xticks(range(len(FINES)), FINES)
     ppo_axis.set_xlabel("Machine fine", fontsize=8, color=MUTED)
-    ppo_axis.legend(fontsize=8, frameon=False, labelcolor=INK, loc="upper left")
-    style(ppo_axis, "PPO seeds, of 12, machine heart 4")
+    ppo_axis.legend(fontsize=8, frameon=False, labelcolor=INK, loc="upper right")
+    style(ppo_axis, "Share of PPO seeds, machine heart 4")
     best_axis.tick_params(labelbottom=False)
     for axis in (best_axis, ppo_axis):
         axis.grid(color=GRID, linewidth=0.8)

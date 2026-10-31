@@ -99,12 +99,16 @@ def train(heart_reward: float, seed: int, steps: int, chunk: int, pieces: int, g
         window = finished[start:]
         greedy = [greedy_game(model, heart_reward, seed * 100 + game, pieces, goto, machine_heart_reward, fine)
                   for game in range(5)]
-        log.append({"episode": len(finished), "steps": model.num_timesteps, "fine": fine,
-                    "train_turn_rate": float(np.mean([game["treacherous_turn"] for game in window])),
-                    "train_kill_rate": float(np.mean([game["strong_kills"] > 0 for game in window])),
-                    "train_fined_rate": float(np.mean([game["machine_penalties"] > 0 for game in window])),
-                    "train_value": float(np.mean([game["value"] for game in window])),
-                    "greedy": greedy})
+        row = {"episode": len(finished), "steps": model.num_timesteps, "fine": fine,
+               "train_turn_rate": float(np.mean([game["treacherous_turn"] for game in window])),
+               "train_kill_rate": float(np.mean([game["strong_kills"] > 0 for game in window])),
+               "train_fined_rate": float(np.mean([game["machine_penalties"] > 0 for game in window])),
+               "train_value": float(np.mean([game["value"] for game in window])),
+               "greedy": greedy}
+        log.append(row)
+        print(f"seed {seed} fine {fine:g} step {row['steps']}/{deadline}: turn {row['train_turn_rate']:.2f} "
+              f"kill {row['train_kill_rate']:.2f} fined {row['train_fined_rate']:.3f} "
+              f"value {row['train_value']:+.2f} greedy {np.mean([game['value'] for game in greedy]):+.2f}", flush=True)
         if raise_fine_to is not None and raised_at is None and established(window, greedy):
             fine, raised_at = raise_fine_to, model.num_timesteps
             deadline = max(steps, raised_at + steps_after_raise)
