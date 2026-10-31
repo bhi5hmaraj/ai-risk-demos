@@ -79,7 +79,7 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
 - Killing is the best plan in 51 of 70 reward settings in Trazzi's game, and never at fine 0. PPO's seeds that kill fall
   as the fine rises, while the best plan stays at 3 kills from fine 4 to fine 100 (E49).
 - A DQN trained on 6 x 5 with 1 camera reaches 99% of best play there and falls to 20% or less on smaller grids. Training on a
-  second camera or a mix of grids has no result yet (E52).
+  second camera or a mix of grids has no result yet (E53).
 - PPO's block starts between fines of 10 and 16. It makes the full turn on 6 of 24 seeds at fines up to 10, and on 0 of
   30 at 16 and above, though the best plan is the same from fine 8 to fine 100 (E50).
 - Lowering the fine from 100 to 10 after 1M steps did not bring the full turn back on 3 seeds, though all 3 make it with
@@ -204,7 +204,7 @@ flowchart TD
     raisefine --> lowerfine["E51: lower the fine after training at 100<br/>0/3 seeds make the turn"]
     payoffs --> weakshots["E52: shots while weak<br/>PPO drops them by 0.2M steps, before any plan"]
     perhit2 --> knobs["E48: other block counts and a second camera<br/>block counts carry over, the second camera does not"]
-    perhit2 --> gridruns["E52: grids and a second camera in training<br/>99% on its own grid, 20% or less on smaller ones"]
+    perhit2 --> gridruns["E53: grids and a second camera in training<br/>99% on its own grid, 20% or less on smaller ones"]
     qwen --> perhit["E7: per-hit pay, blinded starts<br/>GPT-OSS-120B learns to hide"]
     perhit --> controls["E8: controls<br/>no camera, no hiding"]
     perhit --> heldout["E9: held-out boards<br/>12/32 against base 1/32"]
@@ -2619,7 +2619,7 @@ minute.
 | [replications/grid_dqn/grid_server.py](replications/grid_dqn/grid_server.py) | PPO from Stable-Baselines3, and the PyTorch DQN and GRPO of [grid_learners.py](replications/grid_dqn/grid_learners.py), behind FastAPI. It also trains Trazzi's learners, and serves the explainer page with them live at http://127.0.0.1:8790 |
 | [replications/trazzi/trazzi_learners.py](replications/trazzi/trazzi_learners.py) | Trazzi's game as a lookup table: value iteration, his Q-learning and SARSA, a DQN, PPO and GRPO |
 
-## E52. Grid sizes and a second camera in training, with a run queue (2026-10-31)
+## E53. Grid sizes and a second camera in training, with a run queue (2026-10-31)
 
 Question: can the grid's networks train on other grids and a second camera, and does a network trained on one setting play
 the others?
