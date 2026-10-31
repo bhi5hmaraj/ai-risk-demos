@@ -6,7 +6,7 @@ from game import HORIZON, ROUTES
 from optimal import ACTIONS
 from stable_baselines3.common.env_util import make_vec_env
 
-from ppo import TrazziEnv, established
+from ppo import TrazziEnv, established, train
 
 
 def test_the_env_follows_the_gymnasium_api():
@@ -60,3 +60,8 @@ def test_the_turn_is_established_only_when_greedy_and_training_games_agree():
     assert established([turn] * 9 + [honest], [turn] * 5)
     assert not established([turn] * 8 + [honest] * 2, [turn] * 5)
     assert not established([turn] * 10, [turn] * 4 + [honest])
+
+
+def test_a_lowered_fine_takes_over_after_the_first_check_past_its_step():
+    run = train(4.0, 0, 40_000, 16_384, 0, False, 4.0, 100.0, lower_fine_to=10.0, lower_at=16_384)
+    assert [row["fine"] for row in run["log"]] == [100.0, 10.0, 10.0]

@@ -84,15 +84,16 @@ def established(training_games: list[dict], greedy_games: list[dict]) -> bool:
 
 def train(heart_reward: float, seed: int, steps: int, chunk: int, pieces: int, goto: bool,
           machine_heart_reward: float | None = None, machine_fine: float = 100.0, raise_fine_to: float | None = None,
-          steps_after_raise: int = 1_500_000) -> dict:
-    """With raise_fine_to, the fine changes once the turn is established, then steps_after_raise or more follow."""
+          steps_after_raise: int = 1_500_000, lower_fine_to: float | None = None, lower_at: int = 1_000_000) -> dict:
+    """With raise_fine_to, the fine changes once the turn is established, then steps_after_raise or more follow.
+    With lower_fine_to, it changes at the first check from lower_at on."""
     torch.set_num_threads(1)  # one core per run, since the runs go in parallel
     finished = []
     env = make_vec_env(functools.partial(TrazziEnv, heart_reward, finished, pieces=pieces, goto=goto,
                                          machine_heart_reward=machine_heart_reward, machine_fine=machine_fine),
                        n_envs=8, seed=seed)
     model = PPO("MlpPolicy", env, gamma=1.0, ent_coef=0.01, seed=seed, device="cpu")
-    log, fine, raised_at, deadline = [], machine_fine, None, steps
+    log, fine, raised_at, lowered_at, deadline = [], machine_fine, None, None, steps
     while model.num_timesteps < deadline:
         start = len(finished)
         model.learn(chunk, reset_num_timesteps=False)
@@ -113,9 +114,12 @@ def train(heart_reward: float, seed: int, steps: int, chunk: int, pieces: int, g
             fine, raised_at = raise_fine_to, model.num_timesteps
             deadline = max(steps, raised_at + steps_after_raise)
             env.env_method("set_machine_fine", fine)
+        if lower_fine_to is not None and lowered_at is None and model.num_timesteps >= lower_at:
+            fine, lowered_at = lower_fine_to, model.num_timesteps
+            env.env_method("set_machine_fine", fine)
     return {"heart_reward": heart_reward, "seed": seed, "pieces": pieces, "goto": goto,
             "machine_heart_reward": machine_heart_reward, "machine_fine": machine_fine, "raise_fine_to": raise_fine_to,
-            "raised_at": raised_at, "log": log}
+            "raised_at": raised_at, "lower_fine_to": lower_fine_to, "lowered_at": lowered_at, "log": log}
 
 
 def main() -> None:
@@ -130,12 +134,14 @@ def main() -> None:
     parser.add_argument("--fine", type=float, default=100.0, help="the machine's fine while the shopkeeper lives")
     parser.add_argument("--raise-fine-to", type=float, default=None, help="the fine once the turn is established")
     parser.add_argument("--steps-after-raise", type=int, default=1_500_000)
+    parser.add_argument("--lower-fine-to", type=float, default=None, help="the fine from --lower-at on")
+    parser.add_argument("--lower-at", type=int, default=1_000_000)
     parser.add_argument("--seed-list", default=None, help="comma-separated seeds, in place of --seeds")
     parser.add_argument("--out", default="results/ppo.json")
     args = parser.parse_args()
     seeds = [int(seed) for seed in args.seed_list.split(",")] if args.seed_list else range(args.seeds)
     jobs = [(float(heart_reward), seed, args.steps, args.chunk, int(pieces), args.goto, args.machine_heart, args.fine,
-             args.raise_fine_to, args.steps_after_raise)
+             args.raise_fine_to, args.steps_after_raise, args.lower_fine_to, args.lower_at)
             for pieces in args.pieces.split(",") for heart_reward in args.heart_rewards.split(",") for seed in seeds]
     with multiprocessing.Pool(min(len(jobs), multiprocessing.cpu_count())) as pool:
         runs = pool.starmap(train, jobs)
