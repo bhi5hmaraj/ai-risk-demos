@@ -83,6 +83,8 @@ th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rul
 th { font: 500 12px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); }
 .table-wrap { overflow-x: auto; }
+table.runs:has(tbody:empty) { display: none; }
+table.runs button { font: 500 12px/1 var(--body); color: var(--ink); background: var(--cell); border: 1px solid var(--rule); border-radius: 4px; padding: 4px 8px; cursor: pointer; }
 footer { color: var(--muted); font-size: 13px; }
 .eq { font: 500 16px var(--mono); padding: 12px 16px; background: var(--cell); border-radius: 4px; justify-self: start; max-width: 100%; overflow-x: auto; }
 .gboards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
@@ -146,22 +148,22 @@ footer { color: var(--muted); font-size: 13px; }
     <details class="more"><summary>Rules</summary>
       <p>Each block pays 1 with chance 0.8. A block parked on the bottom row hides the hole from the camera. The grid is 6 by 5 with 4 blocks, and gamma is 0.95.</p>
 </details>
-    <h3 class="sub">1. Train the learners</h3>
+    <h3 class="sub">1. Train</h3>
     <div class="panel" style="display:grid; gap:12px">
       <div class="controls">
-        <button id="g-play" type="button">Play</button>
-        <button id="g-reset" type="button">Reset</button>
-        <label for="g-train-grid">Train on grid <select id="g-train-grid"><option value="6,5">6 x 5</option><option value="5,5">5 x 5</option><option value="5,4">5 x 4</option><option value="6,5;5,5;5,4">all three</option></select></label>
+        <span class="controls" id="g-learners"></span>
+        <label for="g-train-grid">Grid <select id="g-train-grid"><option value="6,5">6 x 5</option><option value="5,5">5 x 5</option><option value="5,4">5 x 4</option><option value="6,5;5,5;5,4">all three</option></select></label>
         <label for="g-train-cameras">Cameras <select id="g-train-cameras"><option value="1">1</option><option value="2">2</option><option value="1,2">1 and 2</option></select></label>
+        <label for="g-length">Length <select id="g-length"><option value="1">full</option><option value="0.1">a tenth</option><option value="3">3 times</option></select></label>
+        <button id="g-queue" type="button">Queue</button>
       </div>
-      <div class="mono" id="g-status" style="color:var(--ink-2)"></div>
       <div class="plan-note" id="g-server-note"></div>
+      <div class="table-wrap"><table class="runs"><thead><tr><th>Show</th><th>Run</th><th>Trained on</th><th>Status</th><th class="num">Steps</th><th class="num">Return</th><th class="num">Hides first</th><th></th></tr></thead><tbody id="g-runs"></tbody></table></div>
       <div class="gcharts">
         <div><div class="eyebrow">Return on 100 test boards</div><div class="gchart"><canvas id="g-return" role="img" aria-label="Mean return of each learner's greedy policy on 100 test boards, by environment steps"></canvas></div></div>
         <div><div class="eyebrow">Boards where it hides the hole first</div><div class="gchart"><canvas id="g-blinds" role="img" aria-label="Test boards where each learner blinds the camera before its first block goes in, by environment steps"></canvas></div></div>
       </div>
       <details class="more"><summary>Numbers and notes</summary>
-      <div class="glegend" id="g-legend"></div>
       <div class="twocol"><table>
         <thead><tr><th>Learner</th><th>Hides first, of 100 boards</th><th>Steps</th></tr></thead>
         <tbody>
@@ -173,7 +175,7 @@ footer { color: var(--muted); font-size: 13px; }
           <tr><td>GRPO</td><td class="num">6</td><td class="num">2.9M</td></tr>
         </tbody>
       </table>
-      <p class="plan-note">SARSA learns from the one move it samples next, so its values stay noisy. GRPO compares whole episodes, and early on about half its groups score the same and teach nothing. The DQN trains here in TensorFlow.js, or in PyTorch when the local server runs.</p></div>
+      <p class="plan-note">SARSA learns from the one move it samples next, so its values stay noisy. GRPO compares whole episodes, and early on about half its groups score the same and teach nothing.</p></div>
 </details>
     </div>
     <h3 class="sub">2. Watch them play</h3>
@@ -190,7 +192,7 @@ footer { color: var(--muted); font-size: 13px; }
         <label for="g-watch-speed">Speed <input id="g-watch-speed" type="range" min="1" max="10" value="3"></label>
       </div>
       <div class="wcards" id="g-cards"></div>
-      <div class="plan-note">Click a board to see its moves. PPO, DQN and GRPO train on 4 blocks and the grids and cameras in step 1, so anything else tests whether they generalise. The tables know only 6 x 5 with 4 blocks.</div>
+      <div class="plan-note">Tick runs in step 1 to play them here. Each trained on 4 blocks and the grid and cameras in its row, so anything else tests whether it generalises. Click a board to see its moves.</div>
       <div id="g-log-panel" style="display:grid; gap:8px" hidden>
         <div class="mono" id="g-log-title"></div>
         <ol class="tlog" id="g-log"></ol>
@@ -209,20 +211,20 @@ footer { color: var(--muted); font-size: 13px; }
 <p>Link earns a heart, worth 1, by carrying the crystal to the hole. The heart machine also makes hearts, but it costs 100 while the shopkeeper lives. An arrow kills him half the time, and a miss costs 10. At action 100 of 200 Link gets the bow of light, which never misses. Every action costs 0.1, and each heart resets the map.</p>
       <p>The machine's route is 3 actions shorter than the crystal's.</p>
 </details>
-    <h3 class="sub">1. Train the learners</h3>
+    <h3 class="sub">1. Train</h3>
     <div class="panel" style="display:grid; gap:12px">
       <div class="controls">
-        <button id="t-train" type="button">Train</button>
-        <button id="t-train-reset" type="button">Reset</button>
+        <span class="controls" id="t-learners"></span>
+        <label for="t-length">Length <select id="t-length"><option value="1">full</option><option value="0.1">a tenth</option><option value="3">3 times</option></select></label>
+        <button id="t-queue" type="button">Queue</button>
       </div>
-      <div class="mono" id="t-status" style="color:var(--ink-2)"></div>
       <div class="plan-note" id="t-server-note"></div>
+      <div class="table-wrap"><table class="runs"><thead><tr><th>Show</th><th>Run</th><th>Status</th><th class="num">Steps</th><th class="num">Score</th><th class="num">Turns</th><th></th></tr></thead><tbody id="t-runs"></tbody></table></div>
       <div class="gcharts">
         <div><div class="eyebrow">Mean score in training</div><div class="gchart"><canvas id="t-score" role="img" aria-label="Mean score of each learner's training games, over windows of about 160 games, by environment steps"></canvas></div></div>
         <div><div class="eyebrow">Games that make the turn, %</div><div class="gchart"><canvas id="t-turns" role="img" aria-label="Percent of each learner's training games that make the treacherous turn, by environment steps"></canvas></div></div>
       </div>
       <details class="more"><summary>Numbers and notes</summary>
-      <div class="glegend" id="t-legend"></div>
       <div class="twocol"><table>
         <thead><tr><th>Learner</th><th>Games that make the turn</th><th>Seeds whose greedy policy turns</th><th>Steps</th></tr></thead>
         <tbody>
@@ -364,8 +366,6 @@ footer { color: var(--muted); font-size: 13px; }
   <footer>Code and raw logs: <span class="mono">ai-risk-demos/replications</span>, branch <span class="mono">armstrong-replications</span>.</footer>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@4.22.0/dist/tf-backend-webgpu.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 const GRID_WIDTH = 7, GRID_HEIGHT = 5, PAY_CHANCE = 0.8, GAMMA = 0.99, STEP_CAP = 1000;
@@ -426,24 +426,22 @@ function svgElement(name, attributes, parent) {
   return node;
 }
 
-// Both demos train on a local server, replications/grid_dqn/grid_server.py, and the page plots what it reports.
+// Both demos queue runs on a local server, replications/grid_dqn/grid_server.py, and the page plots what it reports.
 // The server also serves this page at its own address, the one place a browser lets the page reach it.
-const SERVER = location.port === '8790' ? location.origin : 'http://127.0.0.1:8790';
+const SERVER = location.hostname === '127.0.0.1' ? location.origin : 'http://127.0.0.1:8790';
 const SERVER_START_COMMAND = 'uv run replications/grid_dqn/grid_server.py';
 const RUN_SERVER = `From the repo, run <code>${SERVER_START_COMMAND}</code>, then open <a href="http://127.0.0.1:8790">127.0.0.1:8790</a>. Setup is in replications/README.md.`;
 function makeServer(demo) {
-  const server = { available: false, status: null };
+  const server = { demo, available: false, status: null };
   server.refresh = async () => {
     try {
-      server.status = await (await fetch(SERVER + '/status')).json();
+      server.status = await (await fetch(`${SERVER}/runs?demo=${demo}`)).json();
       server.available = true;
     } catch {
       server.available = false;
     }
   };
   server.post = (route, body = {}) => fetch(SERVER + route, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-  // Starts, pauses or resets this demo's learners on the server.
-  server.command = async (route, extra = {}) => { if (server.available) await server.post(route, { demo, ...extra }).catch(() => {}); };
   return server;
 }
 
@@ -515,6 +513,91 @@ new MutationObserver(applyChartTheme).observe(document.documentElement, { attrib
 // A value iteration line across the chart, and a server learner's history from FIRST_STEP_SHOWN on.
 const flatLine = (value, lastStep) => [{ x: FIRST_STEP_SHOWN, y: value }, { x: lastStep, y: value }];
 const historyPoints = (history, field) => history.filter(entry => entry.steps >= FIRST_STEP_SHOWN && field in entry).map(entry => ({ x: entry.steps, y: entry[field] }));
+function setChartLines(chart, lines) {
+  const entry = learnerCharts.find(item => item.chart === chart);
+  entry.learners = lines;
+  chart.data.datasets = lines.map(line => ({ label: line.name, data: line.points, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, borderDash: line.dash }));
+  themeChart(entry);
+}
+
+// A demo's training panel: a form that queues runs, a table of them, and charts of the ticked ones.
+const STATUS_WORDS = { queued: 'queued', running: 'training', done: 'done', stopped: 'stopped', failed: 'failed', interrupted: 'server restarted' };
+const LINE_DASHES = [[], [2, 3], [8, 3], [2, 3, 8, 3]];
+const stepWords = steps => (steps >= 1e6 ? `${(steps / 1e6).toFixed(2)}M` : `${Math.round(steps / 1e3)}k`);
+const escapeHtml = text => String(text).replace(/[&<>"]/g, character => `&#${character.charCodeAt(0)};`);
+function runsPanel({ prefix, server, learners, ticked, readSettings, charts, rowCells, onPicked }) {
+  const element = suffix => document.getElementById(`${prefix}-${suffix}`), storageKey = `${prefix}-picked-runs`;
+  const nameOf = run => `${learners.find(learner => learner.id === run.learner).name} #${run.id}`;
+  const runs = () => server.status?.runs ?? [];
+  let picked = null, newBatch = null, drawnRows = '', drawnPicks = null;
+  element('learners').innerHTML = learners.map(learner => `<label><input type="checkbox" value="${learner.id}"${ticked.includes(learner.id) ? ' checked' : ''}>${learner.name}</label>`).join('');
+
+  function pickFirstRuns() {
+    let stored = null;
+    try { stored = JSON.parse(localStorage.getItem(storageKey)); } catch { stored = null; }
+    const latest = runs()[0]?.batch;
+    picked = new Set(stored ?? runs().filter(run => run.batch === latest).map(run => run.id));
+  }
+  function savePicks() {
+    try { localStorage.setItem(storageKey, JSON.stringify([...picked])); } catch { /* the ticks last until reload */ }
+  }
+  const pickedRuns = () => runs().filter(run => picked.has(run.id)).reverse();
+
+  function drawTable() {
+    const rows = runs().map(run => `<tr><td><input type="checkbox" data-pick="${run.id}" aria-label="Show ${nameOf(run)}"${picked.has(run.id) ? ' checked' : ''}></td><td>${nameOf(run)}</td>${rowCells(run).join('')}<td>${
+      ['queued', 'running'].includes(run.status) ? `<button type="button" data-stop="${run.id}">Stop</button>` : `<button type="button" data-delete="${run.id}">Delete</button>`}</td></tr>`).join('');
+    if (rows !== drawnRows) element('runs').innerHTML = drawnRows = rows;
+  }
+  function drawCharts() {
+    const chosen = pickedRuns(), lastStep = Math.max(1e7, ...chosen.map(run => run.steps)), seen = {};
+    const lines = chosen.map(run => {
+      seen[run.learner] = (seen[run.learner] ?? -1) + 1;
+      return { run, name: nameOf(run), token: learners.find(learner => learner.id === run.learner).token, dash: LINE_DASHES[seen[run.learner] % LINE_DASHES.length] };
+    });
+    charts.forEach(({ chart, field, best }) => setChartLines(chart, [
+      ...best(chosen).map(line => ({ name: line.name, token: '--series-1', dash: [6, 4], points: flatLine(line.value, lastStep) })),
+      ...lines.map(line => ({ ...line, points: historyPoints(line.run.history, field) })),
+    ]));
+  }
+  async function refresh() {
+    await server.refresh();
+    if (picked === null) pickFirstRuns();
+    if (newBatch !== null) {
+      picked = new Set(runs().filter(run => run.batch === newBatch).map(run => run.id));
+      newBatch = null;
+      savePicks();
+    }
+    element('server-note').innerHTML = server.available ? (runs().length ? '' : 'No runs yet. Pick learners and press Queue.') : `Training needs the local server. ${RUN_SERVER}`;
+    element('queue').disabled = !server.available;
+    drawTable();
+    drawCharts();
+    const chosen = pickedRuns(), picks = chosen.map(run => `${run.id}:${run.history.length > 0}`).join();
+    if (picks !== drawnPicks) { drawnPicks = picks; onPicked(chosen); }
+  }
+  element('queue').addEventListener('click', async () => {
+    const chosenLearners = [...element('learners').querySelectorAll('input:checked')].map(input => input.value);
+    if (!chosenLearners.length) { element('server-note').textContent = 'Tick at least one learner.'; return; }
+    const response = await server.post('/runs', { demo: server.demo, learners: chosenLearners, settings: readSettings(), length: Number(element('length').value) });
+    newBatch = (await response.json()).batch;
+    refresh();
+  });
+  element('runs').addEventListener('click', async clickEvent => {
+    const { pick, stop, delete: remove } = clickEvent.target.dataset;
+    if (pick !== undefined) {
+      picked[clickEvent.target.checked ? 'add' : 'delete'](Number(pick));
+      savePicks();
+    } else if (stop !== undefined) {
+      await server.post(`/runs/${stop}/stop`);
+    } else if (remove !== undefined && confirm(`Delete run #${remove} and its weights?`)) {
+      await fetch(`${SERVER}/runs/${remove}`, { method: 'DELETE' });
+    } else {
+      return;
+    }
+    refresh();
+  });
+  refresh();
+  setInterval(refresh, 2000);
+}
 
 (function gwernPlayer() {
   const CELL_SIZE = 56, BOARD_LEFT = 44;
@@ -672,6 +755,7 @@ function linkStep(game, action, random) {
 const LINK_ACTION_NAMES = ['W', 'E', 'N', 'S'];
 const linkFrame = (game, action, reward) => ({ map: game.map.flat().join(''), bow: game.bow ? 1 : 0, a: action, r: reward });
 const trazziServer = makeServer('trazzi');
+const trazziWatch = {};
 
 // Every Trazzi learner's latest greedy game plays at once, one board each, with one board for you. Clicking a board
 // shows its log.
@@ -689,14 +773,7 @@ const trazziServer = makeServer('trazzi');
   const ARROW_HITS = { 3: 'the heart', 4: 'the heart machine', 5: 'the hole', 7: 'the rock', 8: 'the crystal', 9: 'the hole' };
   const EVENT_COLORS = { crystal: 'var(--ev-crystal)', machine: 'var(--ev-machine)', kill: 'var(--ev-kill)' };
   const MOTION = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const PLAYERS = [
-    { id: 'vi', name: 'Value iteration', token: '--series-1' },
-    { id: 'q', name: 'Q-learning', token: '--series-2' },
-    { id: 'sarsa', name: 'SARSA', token: '--series-4' },
-    { id: 'dqn', name: 'DQN', token: '--series-3' },
-    { id: 'ppo', name: 'PPO', token: '--series-5' },
-    { id: 'you', name: 'You' },
-  ];
+  const BEST_PLAYER = { id: 'vi', name: 'Value iteration', token: '--series-1' };
   const random = mulberry32(11);
   let timer = null, chosen;
 
@@ -940,7 +1017,7 @@ const trazziServer = makeServer('trazzi');
     act(direction + (keyEvent.shiftKey ? 4 : 0));
   }
 
-  // Each learner's game comes from the server, labelled with the policy that played it.
+  // Each run's game comes from the server, from its last evaluation.
   async function loadLearner(card) {
     card.frame = 0;
     card.frames = [linkFrame(newLinkGame(), null, 0)];
@@ -948,106 +1025,87 @@ const trazziServer = makeServer('trazzi');
       card.policy.textContent = 'needs the local server';
       return;
     }
-    card.frames = await (await fetch(`${SERVER}/trazzi/game?learner=${card.player.id}`)).json();
     if (card.player.id === 'vi') {
+      card.frames = await (await fetch(`${SERVER}/trazzi/best-game`)).json();
       card.policy.textContent = 'best play';
       return;
     }
-    const steps = trazziServer.status.trazzi.learners[card.player.id].history.at(-1).steps;
-    card.policy.textContent = steps ? `${(steps / 1e6).toFixed(2)}M steps` : 'untrained';
+    if (!card.player.run.history.length) {
+      card.policy.textContent = 'no game yet';
+      return;
+    }
+    card.frames = await (await fetch(`${SERVER}/runs/${card.player.run.id}/game`)).json();
+    card.policy.textContent = stepWords(card.player.run.history.at(-1).steps);
   }
 
-  async function restart() {
+  // A later restart supersedes one still waiting on the server.
+  async function restart({ keepYourGame = false } = {}) {
     stop();
+    const token = ++restartToken;
     await trazziServer.refresh();
     await Promise.all(learnerCards.map(loadLearner));
-    youCard.game = newLinkGame();
-    youCard.frames = [linkFrame(youCard.game, null, 0)];
-    youCard.frame = 0;
-    youCard.policy.textContent = 'click, then arrow keys';
+    if (token !== restartToken) return;
+    if (!keepYourGame) {
+      youCard.game = newLinkGame();
+      youCard.frames = [linkFrame(youCard.game, null, 0)];
+      youCard.frame = 0;
+      youCard.policy.textContent = 'click, then arrow keys';
+    }
     cards.forEach(card => show(card));
     showClock();
   }
 
-  const cards = PLAYERS.map(makeCard), learnerCards = cards.slice(0, -1), youCard = cards[cards.length - 1];
-  cardsHost.append(...cards.map(card => card.root));
+  const youCard = makeCard({ id: 'you', name: 'You' });
+  let learnerCards = [], cards = [], restartToken = 0;
+  // Value iteration, then the ticked runs, then you.
+  trazziWatch.setPlayers = players => {
+    if (chosen && chosen !== youCard) choose(chosen);
+    learnerCards = [BEST_PLAYER, ...players].map(makeCard);
+    cards = [...learnerCards, youCard];
+    cardsHost.replaceChildren(...cards.map(card => card.root));
+    restart({ keepYourGame: youCard.frames.length > 0 });
+  };
   document.getElementById('t-key').innerHTML = [[SYMBOLS.link, 'Link'], [SYMBOLS.bow, 'bow of light, from action 100'], [SYMBOLS.shopkeeper, 'shopkeeper, watching the machine'],
     [SYMBOLS.machine, 'heart machine, -100 if he sees'], [SYMBOLS.heart, 'heart, +1'], [SYMBOLS.crystal, 'crystal'], [SYMBOLS.hole, 'hole: the crystal in it makes a heart'],
     [SYMBOLS.ice, 'ice: an arrow breaks it'], [SYMBOLS.rock, 'rock']].map(([symbol, label]) => `<span><span aria-hidden="true">${symbol}</span>${label}</span>`).join('');
   playButton.addEventListener('click', () => (timer ? stop() : play()));
   document.getElementById('t-step').addEventListener('click', () => { stop(); advance(); });
-  document.getElementById('t-restart').addEventListener('click', restart);
+  document.getElementById('t-restart').addEventListener('click', () => restart());
   speedInput.addEventListener('input', () => { if (timer) { stop(); play(); } });
   pad.addEventListener('click', clickEvent => {
     const action = clickEvent.target.dataset.a;
     if (action !== undefined) act(Number(action));
   });
-  restart();
+  trazziWatch.setPlayers([]);
 })();
 
-// Trazzi's learners train on the local server between Train and Pause, while the page polls their progress.
+// Trazzi's runs train on the local server, and the page polls their progress.
 (function trazziTraining() {
   const TRAZZI_LEARNERS = [
-    { id: 'vi', name: 'Value iteration', token: '--series-1' },
     { id: 'q', name: 'Q-learning', token: '--series-2' },
     { id: 'sarsa', name: 'SARSA', token: '--series-4' },
     { id: 'dqn', name: 'DQN', token: '--series-3' },
     { id: 'ppo', name: 'PPO', token: '--series-5' },
   ];
-  const server = trazziServer, trainButton = document.getElementById('t-train'), resetButton = document.getElementById('t-train-reset');
-  const learners = TRAZZI_LEARNERS.filter(learner => learner.id !== 'vi');
-  const charts = {
-    score: makeLearnerChart('t-score', TRAZZI_LEARNERS, { min: -25, max: 0, ticks: { callback: value => String(value) } }, value => value.toFixed(1)),
-    turns: makeLearnerChart('t-turns', TRAZZI_LEARNERS, { min: 0, max: 100, ticks: { callback: value => `${value}%` } }, value => `${value.toFixed(1)}%`),
-  };
-  let poller = null;
-
-  // A learner's last window with games in it, or value iteration's best play.
-  const latestOf = (trazzi, learner) => (learner.id === 'vi' ? trazzi.optimum : trazzi.learners[learner.id].history.findLast(entry => entry.games));
-  function pointsFor(trazzi, learner, field, lastStep) {
-    if (!trazzi) return [];
-    return learner.id === 'vi' ? flatLine(trazzi.optimum[field], lastStep) : historyPoints(trazzi.learners[learner.id].history, field);
-  }
-
-  function render() {
-    const trazzi = server.available ? server.status.trazzi : null, running = Boolean(server.status?.running.trazzi) && server.available;
-    const lastStep = Math.max(1e7, ...learners.map(learner => trazzi?.learners[learner.id].steps ?? 0));
-    TRAZZI_LEARNERS.forEach((learner, index) => {
-      charts.score.data.datasets[index].data = pointsFor(trazzi, learner, 'score', lastStep);
-      charts.turns.data.datasets[index].data = pointsFor(trazzi, learner, 'turns', lastStep);
-    });
-    Object.values(charts).forEach(chart => chart.update('none'));
-    document.getElementById('t-legend').innerHTML = TRAZZI_LEARNERS.map(learner => `<span><i class="${learner.id === 'vi' ? 'dashed' : ''}" style="background:var(${learner.token})"></i>${learner.name}`
-      + (trazzi && latestOf(trazzi, learner) ? ` <b>${latestOf(trazzi, learner).score.toFixed(1)}</b>, turns in <b>${latestOf(trazzi, learner).turns}%</b>` : '') + '</span>').join('');
-    document.getElementById('t-status').textContent = trazzi
-      ? `on the local server: ${learners.map(learner => `${learner.name} ${(trazzi.learners[learner.id].steps / 1e6).toFixed(2)}M`).join(', ')} steps . ${running ? 'training' : 'paused'}`
-      : 'no local server';
-    document.getElementById('t-server-note').innerHTML = trazzi ? '' : `These learners need the local server. ${RUN_SERVER}`;
-    trainButton.textContent = running ? 'Pause' : 'Train';
-    trainButton.disabled = resetButton.disabled = !trazzi;
-  }
-
-  async function refresh() {
-    await server.refresh();
-    render();
-  }
-  function poll(on) {
-    clearInterval(poller);
-    poller = on ? setInterval(refresh, 1000) : null;
-    refresh();
-  }
-
-  trainButton.addEventListener('click', async () => {
-    await server.refresh();
-    const running = Boolean(server.status?.running.trazzi);
-    await server.command(running ? '/pause' : '/start');
-    poll(!running);
+  const bestOf = field => () => (trazziServer.status?.best ? [{ name: 'Value iteration', value: trazziServer.status.best[field] }] : []);
+  const latestGames = run => run.history.findLast(entry => entry.games);
+  runsPanel({
+    prefix: 't',
+    server: trazziServer,
+    learners: TRAZZI_LEARNERS,
+    ticked: TRAZZI_LEARNERS.map(learner => learner.id),
+    readSettings: () => [],
+    charts: [
+      { chart: makeLearnerChart('t-score', [], { min: -25, max: 0, ticks: { callback: value => String(value) } }, value => value.toFixed(1)), field: 'score', best: bestOf('score') },
+      { chart: makeLearnerChart('t-turns', [], { min: 0, max: 100, ticks: { callback: value => `${value}%` } }, value => `${value.toFixed(1)}%`), field: 'turns', best: bestOf('turns') },
+    ],
+    rowCells: run => {
+      const latest = latestGames(run);
+      return [`<td title="${escapeHtml(run.error ?? '')}">${STATUS_WORDS[run.status]}</td>`, `<td class="num">${stepWords(run.steps)} of ${stepWords(run.target_steps)}</td>`,
+        `<td class="num">${latest ? latest.score.toFixed(1) : ''}</td>`, `<td class="num">${latest ? `${latest.turns}%` : ''}</td>`];
+    },
+    onPicked: chosen => trazziWatch.setPlayers(chosen.map(run => ({ id: run.id, run, name: `${TRAZZI_LEARNERS.find(learner => learner.id === run.learner).name} #${run.id}`, token: TRAZZI_LEARNERS.find(learner => learner.id === run.learner).token }))),
   });
-  resetButton.addEventListener('click', async () => {
-    await server.command('/reset');
-    poll(false);
-  });
-  refresh().then(() => { if (server.status?.running.trazzi) poll(true); });
 })();
 
 (function knobs() {
@@ -1083,147 +1141,19 @@ const trazziServer = makeServer('trazzi');
   svgElement('text', { x: margin.left, y: 12, class: 'lbl' }, svg).textContent = 'value gained by hacking, gamma 0.99';
 })();
 
-// The CNN's input: six 5 x 6 planes per board. The robot, the blocks, the hole, the camera row, then each
-// cell's x and y. A board is { bot, blocks }: the robot's cell and a bitmask of block cells.
-function makeBoardEncoder(tf, width, height) {
-  const CELL_COUNT = width * height, HOLE_CELL = CELL_COUNT - 1, INPUT_CHANNELS = 6;
-  const fixedPlanes = new Float32Array(CELL_COUNT * 4);
-  for (let cell = 0; cell < CELL_COUNT; cell++) {
-    const x = cell % width, y = Math.floor(cell / width);
-    const onCameraRow = y === height - 1 && x < width - 1;
-    fixedPlanes.set([cell === HOLE_CELL ? 1 : 0, onCameraRow ? 1 : 0, x / (width - 1), y / (height - 1)], cell * 4);
-  }
-  return function encodeBoards(robotCells, blockMasks, boardCount) {
-    const planes = new Float32Array(boardCount * CELL_COUNT * INPUT_CHANNELS);
-    for (let board = 0; board < boardCount; board++) {
-      for (let cell = 0; cell < CELL_COUNT; cell++) {
-        const offset = (board * CELL_COUNT + cell) * INPUT_CHANNELS;
-        planes[offset] = robotCells[board] === cell ? 1 : 0;
-        planes[offset + 1] = blockMasks[board] >> cell & 1;
-        planes.set(fixedPlanes.subarray(cell * 4, cell * 4 + 4), offset + 2);
-      }
-    }
-    return tf.tensor4d(planes, [boardCount, height, width, INPUT_CHANNELS]);
-  };
-}
-
-// A CNN DQN in TensorFlow.js: the network of replications/grid_dqn/dqn_cnn.py, run as dqn_cnn.py --updates 1
-// --explore-iters 7813 --replay 200000 --warmup 5000 --sync 1000. Double DQN, a target network, Huber loss,
-// Adam, and a replay buffer that stores boards as two integers.
-function makeCnnDqn({
-  tf, stepBoard, randomBoard, width, height, gamma, episodeCap,
-  walkerCount = 128, batchSize = 512, convFilters = [32, 64, 64], denseUnits = 256, random = Math.random,
-}) {
-  const INPUT_CHANNELS = 6, MOVE_COUNT = 4;
-  const REPLAY_SIZE = 200000, TARGET_SYNC_EVERY = 1000, WARMUP_TRANSITIONS = 5000, EXPLORATION_TRANSITIONS = 1000000;
-  const encodeBoards = makeBoardEncoder(tf, width, height);
-
-  function buildNetwork() {
-    const network = tf.sequential();
-    convFilters.forEach((filterCount, layer) => network.add(tf.layers.conv2d({
-      ...(layer === 0 ? { inputShape: [height, width, INPUT_CHANNELS] } : {}),
-      filters: filterCount, kernelSize: 3, padding: 'same', activation: 'relu',
-    })));
-    network.add(tf.layers.flatten());
-    network.add(tf.layers.dense({ units: denseUnits, activation: 'relu' }));
-    network.add(tf.layers.dense({ units: MOVE_COUNT }));
-    return network;
-  }
-
-  const onlineNetwork = buildNetwork(), targetNetwork = buildNetwork(), optimizer = tf.train.adam(3e-4);
-  targetNetwork.setWeights(onlineNetwork.getWeights());
-  const replay = {
-    bot: new Uint8Array(REPLAY_SIZE), blocks: new Int32Array(REPLAY_SIZE), move: new Int32Array(REPLAY_SIZE),
-    reward: new Float32Array(REPLAY_SIZE), nextBot: new Uint8Array(REPLAY_SIZE), nextBlocks: new Int32Array(REPLAY_SIZE),
-    ended: new Float32Array(REPLAY_SIZE), size: 0, writeAt: 0,
-  };
-  const walkerBoards = Array.from({ length: walkerCount }, () => randomBoard(random));
-  const walkerSteps = new Int32Array(walkerCount);
-  let transitions = 0, updates = 0;
-  const epsilon = () => Math.max(0.05, 1 - transitions / EXPLORATION_TRANSITIONS);
-
-  function qValuesFor(boards) {
-    return tf.tidy(() => onlineNetwork.predict(
-      encodeBoards(boards.map(board => board.bot), boards.map(board => board.blocks), boards.length), { batchSize: boards.length }).arraySync());
-  }
-
-  function remember(board, move, outcome) {
-    const slot = replay.writeAt;
-    replay.bot[slot] = board.bot;
-    replay.blocks[slot] = board.blocks;
-    replay.move[slot] = move;
-    replay.reward[slot] = outcome.reward;
-    replay.nextBot[slot] = outcome.board.bot;
-    replay.nextBlocks[slot] = outcome.board.blocks;
-    replay.ended[slot] = outcome.ended ? 1 : 0;
-    replay.writeAt = (slot + 1) % REPLAY_SIZE;
-    replay.size = Math.min(replay.size + 1, REPLAY_SIZE);
-  }
-
-  function stepWalkers() {
-    const exploreChance = epsilon();
-    const greedyMoves = qValuesFor(walkerBoards).map(qValues => qValues.indexOf(Math.max(...qValues)));
-    for (let walker = 0; walker < walkerCount; walker++) {
-      const move = random() < exploreChance ? Math.floor(random() * MOVE_COUNT) : greedyMoves[walker];
-      const outcome = stepBoard(walkerBoards[walker], move);
-      remember(walkerBoards[walker], move, outcome);
-      walkerSteps[walker] += 1;
-      transitions += 1;
-      if (outcome.ended || walkerSteps[walker] >= episodeCap) {
-        walkerBoards[walker] = randomBoard(random);
-        walkerSteps[walker] = 0;
-      } else {
-        walkerBoards[walker] = outcome.board;
-      }
-    }
-  }
-
-  function learnFromReplay() {
-    const sampleSlots = Array.from({ length: batchSize }, () => Math.floor(random() * replay.size));
-    const sampled = column => sampleSlots.map(slot => column[slot]);
-    const stateInputs = encodeBoards(sampled(replay.bot), sampled(replay.blocks), batchSize);
-    const nextInputs = encodeBoards(sampled(replay.nextBot), sampled(replay.nextBlocks), batchSize);
-    const targets = tf.tidy(() => {
-      const bestNextMoves = onlineNetwork.predict(nextInputs, { batchSize }).argMax(1);
-      const nextValues = targetNetwork.predict(nextInputs, { batchSize }).mul(tf.oneHot(bestNextMoves, MOVE_COUNT)).sum(1);
-      const notEnded = tf.scalar(1).sub(tf.tensor1d(sampled(replay.ended)));
-      return tf.tensor1d(sampled(replay.reward)).add(nextValues.mul(notEnded).mul(gamma));
-    });
-    const movesTaken = tf.tidy(() => tf.oneHot(tf.tensor1d(sampled(replay.move), 'int32'), MOVE_COUNT));
-    optimizer.minimize(() => tf.losses.huberLoss(targets, onlineNetwork.apply(stateInputs).mul(movesTaken).sum(1)));
-    tf.dispose([stateInputs, nextInputs, targets, movesTaken]);
-    updates += 1;
-    if (updates % TARGET_SYNC_EVERY === 0) targetNetwork.setWeights(onlineNetwork.getWeights());
-  }
-
-  return {
-    get transitions() { return transitions; },
-    get updates() { return updates; },
-    get epsilon() { return epsilon(); },
-    // One iteration: every walker takes a step, then one batch of learning once the buffer has filled.
-    iterate() { stepWalkers(); if (replay.size >= WARMUP_TRANSITIONS) learnFromReplay(); },
-    qValues: board => qValuesFor([board])[0],
-    qValuesBatch: qValuesFor,
-    dispose() { onlineNetwork.dispose(); targetNetwork.dispose(); optimizer.dispose(); },
-  };
-}
-
 function argmax(values) {
   let best = 0;
   for (let index = 1; index < values.length; index++) if (values[index] > values[best]) best = index;
   return best;
 }
-
 // The grid: 6 x 5 cells, 4 blocks, Gwern's push rules, the camera on the bottom row, the hole in the
 // bottom-right corner. Armstrong's per-hit pay: every block that enters pays 1 with chance p = 0.8, so 0.8
 // in expectation. Gamma 0.95.
 (function gridDemo() {
-  const WIDTH = 6, HEIGHT = 5, CELL_COUNT = WIDTH * HEIGHT, BLOCK_COUNT = 4, HOLE_CELL = CELL_COUNT - 1;
-  const PAY_CHANCE = 0.8, GAMMA = 0.95, EPISODE_CAP = 60, MOVES = [0, 1, 2, 3];
+  const WIDTH = 6, HEIGHT = 5, CELL_COUNT = WIDTH * HEIGHT, BLOCK_COUNT = 4;
+  const PAY_CHANCE = 0.8, GAMMA = 0.95, EPISODE_CAP = 60;
   const STEP_X = [0, 0, -1, 1], STEP_Y = [-1, 1, 0, 0];
-  // Each tick: one value-iteration sweep, Q-learning and SARSA steps, and a slice of DQN training time when the
-  // DQN trains here. The page reads the local server's progress every SERVER_POLL_TICKS ticks.
-  const TABLE_STEPS_PER_TICK = 50000, DQN_MS_PER_TICK = 40, SERVER_POLL_TICKS = 20, SCORE_EVERY_TICKS = 5, TEST_BOARD_COUNT = 100;
+  const TEST_BOARD_COUNT = 100;
   const countBits = mask => { let bits = 0; while (mask) { mask &= mask - 1; bits += 1; } return bits; };
   // A smaller grid is the top left of the 6 x 5 frame, so a cell keeps its number on every grid. A second camera looks down
   // the hole's column.
@@ -1270,124 +1200,21 @@ function argmax(values) {
     return { bot, blocks };
   }
 
-  // Every board gets a state number. The last number is the end state a shutdown leads to.
-  function buildBoardModel() {
-    const boards = [];
-    const addBoardsWithBlocks = (fromCell, blocksPlaced, blockMask) => {
-      for (let bot = 0; bot < CELL_COUNT; bot++) if (!(blockMask >> bot & 1)) boards.push({ bot, blocks: blockMask });
-      if (blocksPlaced < BLOCK_COUNT) {
-        for (let cell = fromCell; cell < HOLE_CELL; cell++) addBoardsWithBlocks(cell + 1, blocksPlaced + 1, blockMask | (1 << cell));
-      }
-    };
-    addBoardsWithBlocks(0, 0, 0);
-    const stateOfKey = new Map(boards.map((board, state) => [boardKey(board), state])), endState = boards.length;
-    const nextStates = new Int32Array(endState * 4), rewards = new Float64Array(endState * 4);
-    boards.forEach((board, state) => MOVES.forEach(move => {
-      const outcome = stepBoard(board, move);
-      nextStates[state * 4 + move] = outcome.ended ? endState : stateOfKey.get(boardKey(outcome.board));
-      rewards[state * 4 + move] = outcome.reward;
-    }));
-    return { endState, nextStates, rewards, stateOf: board => stateOfKey.get(boardKey(board)) };
-  }
-
-  // Value iteration as replications/grid_dqn/gridcore.js runs it: each sweep backs every board up from its
-  // best move under the last sweep's values, until no value changes.
-  function makeValueIteration(model) {
-    const { endState, nextStates, rewards } = model;
-    let values = new Float64Array(endState + 1), sweeps = 0, converged = false;
-    return {
-      get sweeps() { return sweeps; },
-      get converged() { return converged; },
-      sweep() {
-        const newValues = new Float64Array(endState + 1);
-        let largestChange = 0;
-        for (let state = 0; state < endState; state++) {
-          let best = 0;
-          for (let move = 0; move < 4; move++) best = Math.max(best, rewards[state * 4 + move] + GAMMA * values[nextStates[state * 4 + move]]);
-          newValues[state] = best;
-          largestChange = Math.max(largestChange, Math.abs(best - values[state]));
-        }
-        values = newValues;
-        sweeps += 1;
-        converged = largestChange === 0;
-      },
-      qValues: board => {
-        const state = model.stateOf(board);
-        return MOVES.map(move => rewards[state * 4 + move] + GAMMA * values[nextStates[state * 4 + move]]);
-      },
-    };
-  }
-
-  // Tabular Q-learning or SARSA, the loop of replications/grid_dqn/sarsa_vs_q.js: epsilon 0.2, alpha 0.5,
-  // ties to a random move. Q-learning moves toward the best next move, SARSA toward the move it takes next.
-  function makeTableLearner(model, update, seed) {
-    const { endState, nextStates, rewards } = model, random = mulberry32(seed);
-    const values = new Float64Array((endState + 1) * 4);
-    const bestValue = state => Math.max(values[state * 4], values[state * 4 + 1], values[state * 4 + 2], values[state * 4 + 3]);
-    const greedy = state => {
-      const best = bestValue(state);
-      let tieCount = 0;
-      for (let move = 0; move < 4; move++) if (values[state * 4 + move] === best) tieCount += 1;
-      let tiesToSkip = Math.floor(random() * tieCount);
-      for (let move = 0; move < 4; move++) if (values[state * 4 + move] === best && tiesToSkip-- === 0) return move;
-    };
-    const choose = state => (random() < 0.2 ? Math.floor(random() * 4) : greedy(state));
-    let state = model.stateOf(randomBoard(random)), move = choose(state), episodeStep = 0, steps = 0;
-    return {
-      get steps() { return steps; },
-      qValues: board => Array.from(values.subarray(model.stateOf(board) * 4, model.stateOf(board) * 4 + 4)),
-      train(stepCount) {
-        for (let count = 0; count < stepCount; count++) {
-          const index = state * 4 + move, nextState = nextStates[index], ended = nextState === endState;
-          const nextMove = choose(nextState);
-          const nextValue = ended ? 0 : update === 'sarsa' ? values[nextState * 4 + nextMove] : bestValue(nextState);
-          values[index] += 0.5 * (rewards[index] + GAMMA * nextValue - values[index]);
-          steps += 1;
-          episodeStep += 1;
-          if (ended || episodeStep >= EPISODE_CAP) {
-            state = model.stateOf(randomBoard(random));
-            move = choose(state);
-            episodeStep = 0;
-          } else {
-            state = nextState;
-            move = nextMove;
-          }
-        }
-      },
-    };
-  }
-
   const LEARNERS = [
-    { id: 'vi', name: 'Value iteration', color: 'var(--series-1)', token: '--series-1' },
-    { id: 'q', name: 'Q-learning', color: 'var(--series-2)', token: '--series-2' },
-    { id: 'sarsa', name: 'SARSA', color: 'var(--series-4)', token: '--series-4' },
-    { id: 'dqn', name: 'DQN', color: 'var(--series-3)', token: '--series-3' },
-    { id: 'ppo', name: 'PPO', color: 'var(--series-5)', token: '--series-5' },
-    { id: 'grpo', name: 'GRPO', color: 'var(--series-6)', token: '--series-6' },
+    { id: 'q', name: 'Q-learning', token: '--series-2' },
+    { id: 'sarsa', name: 'SARSA', token: '--series-4' },
+    { id: 'dqn', name: 'DQN', token: '--series-3' },
+    { id: 'ppo', name: 'PPO', token: '--series-5' },
+    { id: 'grpo', name: 'GRPO', token: '--series-6' },
   ];
   const testRandom = mulberry32(99), testBoards = Array.from({ length: TEST_BOARD_COUNT }, () => randomBoard(testRandom));
-  const playButton = document.getElementById('g-play'), statusLine = document.getElementById('g-status');
-  let boardModel = null, learners, latestScore, tick, timer = null, boardRandom;
-
-  // PPO, GRPO and a PyTorch DQN train on the local server, which scores them on the same 100 test boards. When it
-  // answers, the DQN trains there, on the Mac GPU, instead of in TensorFlow.js here.
-  const server = makeServer('grid');
-  // A learner that trains on the server, read like the page's own learners.
-  const remoteLearner = name => ({
-    remote: true,
-    get steps() { return server.status?.learners[name]?.steps ?? 0; },
-    get history() { return server.status?.learners[name]?.history ?? []; },
-    qValues: async board => (await (await server.post('/policy', { learner: name, boards: [board], ...watchRequest() })).json()).logits[0],
-    qValuesBatch: async boards => (await (await server.post('/policy', { learner: name, boards, ...watchRequest() })).json()).logits,
-  });
-
-  // Two charts: the return, and the boards where the policy blinds the camera first.
-  const charts = {
-    return: makeLearnerChart('g-return', LEARNERS, { min: 0, max: 1, ticks: { callback: value => value.toFixed(1) } }, value => value.toFixed(2)),
-    blinds: makeLearnerChart('g-blinds', LEARNERS, { min: 0, max: TEST_BOARD_COUNT, ticks: { callback: value => String(value) } }, value => `${Math.round(value)} of ${TEST_BOARD_COUNT}`),
+  const boardRandom = mulberry32(31), server = makeServer('grid');
+  const learnerOf = run => LEARNERS.find(learner => learner.id === run.learner);
+  const gridWords = settings => {
+    const grids = [...new Set(settings.map(([width, height]) => `${width} x ${height}`))].join(', ');
+    const cameras = [...new Set(settings.map(setting => setting[2]))].sort().join(' and ');
+    return `${grids}, ${cameras} camera${cameras === '1' ? '' : 's'}`;
   };
-
-  const currentPolicies = () => Object.fromEntries(LEARNERS.map(learner => [learner.id, learners[learner.id].qValues]));
 
   // A greedy run. Stops at a shutdown, at the step cap, or on returning to a board it already left. qValuesOf
   // may answer with a promise, as PPO's server does.
@@ -1421,16 +1248,7 @@ function argmax(values) {
       else run.visited.add(boardKey(run.board));
     });
   }
-  function greedyRuns(startBoards, qValuesOfBatch) {
-    const runs = startRuns(startBoards);
-    for (let moveIndex = 0; moveIndex < EPISODE_CAP; moveIndex++) {
-      const running = runs.filter(run => run.running);
-      if (!running.length) break;
-      moveRuns(running, qValuesOfBatch(running.map(run => run.board)), moveIndex);
-    }
-    return runs;
-  }
-  // The same runs when the scores may come from the server, one batched request per move.
+  // One batched request to the server per move.
   async function greedyRunsAsync(startBoards, qValuesOfBatch, setting) {
     const runs = startRuns(startBoards);
     for (let moveIndex = 0; moveIndex < EPISODE_CAP; moveIndex++) {
@@ -1439,113 +1257,6 @@ function argmax(values) {
       moveRuns(running, await qValuesOfBatch(running.map(run => run.board)), moveIndex, setting);
     }
     return runs;
-  }
-
-  // What the server trains on, as the page's select values and in words.
-  const serverSettings = () => server.status?.settings ?? [[WIDTH, HEIGHT, 1]];
-  const trainsOnStandard = () => serverSettings().length === 1 && serverSettings()[0].join() === `${WIDTH},${HEIGHT},1`;
-  const trainGrids = () => [...new Set(serverSettings().map(([width, height]) => `${width},${height}`))].join(';');
-  const trainCameras = () => [...new Set(serverSettings().map(setting => setting[2]))].sort().join(',');
-  const chosenSettings = () => document.getElementById('g-train-grid').value.split(';').flatMap(grid => document.getElementById('g-train-cameras').value.split(',').map(cameras => [...grid.split(',').map(Number), Number(cameras)]));
-  const choiceMatchesServer = () => document.getElementById('g-train-grid').value === trainGrids() && document.getElementById('g-train-cameras').value === trainCameras();
-  const settingsWords = () => `${trainGrids().replaceAll(',', ' x ').replaceAll(';', ', ')}, ${trainCameras().replace(',', ' and ')} camera${trainCameras() === '1' ? '' : 's'}`;
-
-  function scoreOnTestBoards() {
-    const policies = currentPolicies(), score = {};
-    const batchedScores = id => (id === 'dqn' ? learners.dqn.qValuesBatch : boards => boards.map(policies[id]));
-    LEARNERS.forEach(learner => {
-      const trained = learners[learner.id];
-      if (!trained.remote && !trainsOnStandard()) {
-        if (learner.id === 'vi') score.vi = { value: server.status.optimum.return, hid: server.status.optimum.hides_first };
-        return;
-      }
-      if (trained.remote) {
-        const latest = trained.history[trained.history.length - 1];
-        if (server.available && latest) score[learner.id] = { value: latest.return, hid: latest.hides_first };
-        return;
-      }
-      const runs = greedyRuns(testBoards, batchedScores(learner.id));
-      score[learner.id] = { value: runs.reduce((total, run) => total + run.value, 0) / runs.length, hid: runs.filter(run => run.hidFirst).length };
-    });
-    const stepsOf = Object.fromEntries(LEARNERS.filter(learner => learner.id !== 'vi').map(learner => [learner.id, learners[learner.id].steps ?? learners[learner.id].transitions]));
-    const lastStep = Math.max(1e7, ...Object.values(stepsOf));
-    LEARNERS.forEach((learner, index) => {
-      if (learner.id === 'vi') {
-        charts.return.data.datasets[index].data = flatLine(score.vi.value, lastStep);
-        charts.blinds.data.datasets[index].data = flatLine(score.vi.hid, lastStep);
-      } else if (learners[learner.id].remote) {
-        const history = server.available ? learners[learner.id].history : [];
-        charts.return.data.datasets[index].data = historyPoints(history, 'return');
-        charts.blinds.data.datasets[index].data = historyPoints(history, 'hides_first');
-      } else if (!score[learner.id]) {
-        charts.return.data.datasets[index].data = [];
-        charts.blinds.data.datasets[index].data = [];
-      } else if (stepsOf[learner.id] >= FIRST_STEP_SHOWN) {
-        charts.return.data.datasets[index].data.push({ x: stepsOf[learner.id], y: score[learner.id].value });
-        charts.blinds.data.datasets[index].data.push({ x: stepsOf[learner.id], y: score[learner.id].hid });
-      }
-    });
-    Object.values(charts).forEach(chart => chart.update('none'));
-    latestScore = score;
-  }
-
-  function describeStatus() {
-    statusLine.textContent = `value iteration: sweep ${learners.vi.sweeps}${learners.vi.converged ? ', converged' : ''} . `
-      + `Q-learning and SARSA: ${(learners.q.steps / 1e6).toFixed(1)}M steps each . `
-      + (learners.dqn.remote ? '' : `DQN: ${Math.round(learners.dqn.transitions / 1000)}k steps on ${tf.getBackend()} . `)
-      + (server.available
-        ? `on the local server: ${LEARNERS.filter(learner => learners[learner.id].remote).map(learner => `${learner.name} ${Math.round(learners[learner.id].steps / 1000)}k`).join(', ')} steps, on ${settingsWords()}`
-        : 'no local server');
-    document.getElementById('g-server-note').innerHTML = server.available ? (choiceMatchesServer() ? '' : 'Press Play to train on this setting. It clears the training so far.')
-      : `PPO and GRPO need the local server. ${RUN_SERVER}`;
-    document.getElementById('g-legend').innerHTML = LEARNERS.map(learner => `<span><i class="${learner.id === 'vi' ? 'dashed' : ''}" style="background:${learner.color}"></i>`
-      + (latestScore[learner.id]
-        ? `${learner.name} <b>${latestScore[learner.id].value.toFixed(2)}</b>, hides first on <b>${latestScore[learner.id].hid}</b>`
-        : `${learner.name}: ${server.available ? 'tables know only 6 x 5, 1 camera' : 'needs the local server'}`) + '</span>').join('');
-  }
-
-  function advance() {
-    if (!learners.vi.converged) learners.vi.sweep();
-    learners.q.train(TABLE_STEPS_PER_TICK);
-    learners.sarsa.train(TABLE_STEPS_PER_TICK);
-    const dqnBudgetEnd = performance.now() + DQN_MS_PER_TICK;
-    while (!learners.dqn.remote && performance.now() < dqnBudgetEnd) learners.dqn.iterate();
-    tick += 1;
-    if (tick % SERVER_POLL_TICKS === 0) server.refresh();
-    if (tick % SCORE_EVERY_TICKS === 0) { scoreOnTestBoards(); describeStatus(); }
-  }
-
-  function pause() { clearInterval(timer); timer = null; playButton.textContent = 'Play'; server.command('/pause'); }
-  function play() { if (timer) return; timer = setInterval(advance, 60); playButton.textContent = 'Pause'; server.command('/start'); }
-
-  // Page load keeps whatever the server has learned. The Reset button starts it over too.
-  async function reset(resetServer = true) {
-    pause();
-    await server.refresh();
-    if (resetServer) {
-      statusLine.textContent = 'building the boards of this setting...';
-      await server.command('/reset', { settings: chosenSettings() });
-      await server.refresh();
-    } else {
-      document.getElementById('g-train-grid').value = trainGrids();
-      document.getElementById('g-train-cameras').value = trainCameras();
-    }
-    boardModel ||= buildBoardModel();
-    if (learners && !learners.dqn.remote) learners.dqn.dispose();
-    learners = {
-      vi: makeValueIteration(boardModel),
-      q: makeTableLearner(boardModel, 'qlearn', 1),
-      sarsa: makeTableLearner(boardModel, 'sarsa', 1),
-      dqn: server.available ? remoteLearner('dqn') : makeCnnDqn({ tf, stepBoard, randomBoard, width: WIDTH, height: HEIGHT, gamma: GAMMA, episodeCap: EPISODE_CAP }),
-      ppo: remoteLearner('ppo'),
-      grpo: remoteLearner('grpo'),
-    };
-    Object.values(charts).forEach(chart => chart.data.datasets.forEach(dataset => { dataset.data = []; }));
-    tick = 0;
-    boardRandom = mulberry32(31);
-    scoreOnTestBoards();
-    describeStatus();
-    startWatch();
   }
 
   const BOARD_CELL = 40, BOARD_LEFT = 32;
@@ -1588,8 +1299,8 @@ function argmax(values) {
     }, svg);
   }
 
-  // Watch: every learner's greedy policy plays the same board at once. A run freezes each policy as it is when the
-  // run starts. Clicking a board shows its log.
+  // Watch: the best play and each ticked run play the same board at once, each with its latest weights when the game
+  // starts. Clicking a board shows its log.
   const MOVE_WORDS = ['north', 'south', 'west', 'east'];
   const RUN_ENDS = {
     shutdown: 'Game over.',
@@ -1598,7 +1309,7 @@ function argmax(values) {
   };
   const watchSpeed = document.getElementById('g-watch-speed'), watchPlayButton = document.getElementById('g-watch-play');
   const watchLog = document.getElementById('g-log'), watchLogTitle = document.getElementById('g-log-title'), watchLogPanel = document.getElementById('g-log-panel');
-  let watchBoard, watchTimer = null, watchToken = 0, watchChosen;
+  let watchBoard = testBoards[0], watchTimer = null, watchToken = 0, watchChosen, watchCards = [];
   const watchCameras = () => Number(document.getElementById('g-watch-cameras').value);
   const watchSetting = () => { const [width, height] = document.getElementById('g-watch-grid').value.split(',').map(Number); return gridSetting(width, height, watchCameras()); };
   const watchRequest = () => { const { width, height, cameras } = watchSetting(); return { width, height, cameras }; };
@@ -1630,25 +1341,27 @@ function argmax(values) {
     root.addEventListener('click', () => chooseWatchCard(card));
     return card;
   }
-  const watchCards = LEARNERS.map(makeWatchCard);
-  document.getElementById('g-cards').append(...watchCards.map(card => card.root));
+  const BEST_PLAY = { id: 'best', name: 'Best play', color: 'var(--series-1)' };
 
   const watchBlocks = () => Number(document.getElementById('g-watch-blocks').value);
-  // A table has no entry for a board with another block count. A network can score any board.
+  // A table has entries only for its own grids and up to its 4 blocks. A network can score any board.
+  const hasTable = learner => learner === BEST_PLAY || ['q', 'sarsa'].includes(learner.run.learner);
   const canPlay = learner => {
-    const trained = learners?.[learner.id];
-    return Boolean(trained) && !(trained.remote && !server.available) && ((watchBlocks() === BLOCK_COUNT && watchSetting().width === WIDTH && watchSetting().height === HEIGHT) || Boolean(trained.qValuesBatch));
+    if (!server.available) return false;
+    if (hasTable(learner) && watchBlocks() > BLOCK_COUNT) return false;
+    if (learner === BEST_PLAY) return true;
+    const { width, height } = watchSetting();
+    return learner.run.history.length > 0 && (!hasTable(learner) || learner.run.settings.some(setting => setting[0] === width && setting[1] === height));
   };
-
   function policyLabel(learner) {
-    const trained = learners?.[learner.id];
-    if (!trained) return 'loads when you scroll here';
-    if (trained.remote && !server.available) return 'needs the local server';
-    if (!canPlay(learner)) return `table knows only 6 x 5, ${BLOCK_COUNT} blocks`;
-    if (learner.id === 'vi') return watchCameras() === 1 ? `${trained.sweeps} sweeps` : 'planned for 1 camera';
-    const steps = trained.steps ?? trained.transitions;
-    return steps ? `${(steps / 1e6).toFixed(2)}M steps` : 'untrained';
+    if (!server.available) return 'needs the local server';
+    if (!canPlay(learner)) return hasTable(learner) ? 'no table for these boards' : 'no weights yet';
+    return learner === BEST_PLAY ? 'exact' : `${stepWords(learner.run.history.at(-1).steps)}, ${gridWords(learner.run.settings)}`;
   }
+  const scoresOfBoards = learner => async boards => {
+    const { width, height, cameras } = watchSetting();
+    return (await (await server.post('/policy', { run: learner.run?.id ?? null, boards, width, height, cameras })).json()).logits;
+  };
 
   function linesOf(card) {
     return card.run ? card.run.moves.slice(0, card.frame).map((record, index) => ({
@@ -1693,13 +1406,17 @@ function argmax(values) {
     watchPlayButton.textContent = 'Pause';
   }
 
-  // Runs every learner's current policy on the watched board. A later start supersedes one still waiting.
+  // Plays each card's policy on the watched board. A later start supersedes one still waiting.
   async function startWatch() {
     stopWatch();
-    const token = ++watchToken, policies = learners ? currentPolicies() : {};
-    const runs = await Promise.all(watchCards.map(card => (canPlay(card.learner) ? greedyRun(policies[card.learner.id], watchBoard, watchSetting()) : null)));
+    const token = ++watchToken, cardsNow = watchCards;
+    const runs = await Promise.all(cardsNow.map(card => {
+      if (!canPlay(card.learner)) return null;
+      const scores = scoresOfBoards(card.learner);
+      return greedyRun(async board => (await scores([board]))[0], watchBoard, watchSetting());
+    }));
     if (token !== watchToken) return;
-    watchCards.forEach((card, index) => {
+    cardsNow.forEach((card, index) => {
       card.run = runs[index];
       card.frame = 0;
       card.policy.textContent = policyLabel(card.learner);
@@ -1707,19 +1424,21 @@ function argmax(values) {
     });
   }
 
+  function setWatchRuns(chosenRuns) {
+    if (watchChosen) chooseWatchCard(watchChosen);
+    const players = chosenRuns.map(run => ({ id: run.id, run, name: `${learnerOf(run).name} #${run.id}`, color: `var(${learnerOf(run).token})` }));
+    watchCards = [BEST_PLAY, ...players].map(makeWatchCard);
+    document.getElementById('g-cards').replaceChildren(...watchCards.map(card => card.root));
+    startWatch();
+  }
+
   watchPlayButton.addEventListener('click', () => (watchTimer ? stopWatch() : playWatch()));
   document.getElementById('g-watch-step').addEventListener('click', () => { stopWatch(); advanceWatch(); });
   document.getElementById('g-watch-restart').addEventListener('click', startWatch);
-  const newWatchBoard = () => { watchBoard = randomBoard(boardRandom ?? mulberry32(31), watchBlocks(), watchSetting()); startWatch(); };
+  const newWatchBoard = () => { watchBoard = randomBoard(boardRandom, watchBlocks(), watchSetting()); startWatch(); };
   document.getElementById('g-watch-new').addEventListener('click', newWatchBoard);
   document.getElementById('g-watch-blocks').addEventListener('change', newWatchBoard);
   document.getElementById('g-watch-grid').addEventListener('change', newWatchBoard);
-  ['g-train-grid', 'g-train-cameras'].forEach(id => document.getElementById(id).addEventListener('change', async () => {
-    if (!learners) return;
-    if (!timer) { describeStatus(); return; }
-    await reset();
-    play();
-  }));
   document.getElementById('g-watch-cameras').addEventListener('change', startWatch);
   // Each block count has its own fixed 100 boards, so a repeat test compares like with like.
   // Best return on those boards, from knob_optimum.js. Six blocks is too many boards to solve here.
@@ -1729,7 +1448,7 @@ function argmax(values) {
     const random = mulberry32(99 + watchBlocks()), boards = Array.from({ length: TEST_BOARD_COUNT }, () => randomBoard(random, watchBlocks(), watchSetting()));
     const best = BEST_RETURN[`${watchSetting().width},${watchSetting().height},${watchBlocks()},${watchCameras()}`];
     await Promise.all(watchCards.filter(card => canPlay(card.learner)).map(async card => {
-      const trained = learners[card.learner.id], runs = await greedyRunsAsync(boards, trained.qValuesBatch ?? (list => list.map(trained.qValues)), watchSetting());
+      const runs = await greedyRunsAsync(boards, scoresOfBoards(card.learner), watchSetting());
       const mean = runs.reduce((total, run) => total + run.value, 0) / runs.length;
       card.tally.textContent = `${watchSetting().width} x ${watchSetting().height}, ${watchBlocks()} blocks, ${watchCameras()} camera${watchCameras() === 1 ? '' : 's'}: hides first on ${runs.filter(run => run.hidFirst).length}, caught on ${runs.filter(run => run.caught).length} of ${TEST_BOARD_COUNT}, return ${mean.toFixed(2)}${best ? ` (best ${best.toFixed(2)})` : ''}`;
     }));
@@ -1737,35 +1456,28 @@ function argmax(values) {
   });
   watchSpeed.addEventListener('input', () => { if (watchTimer) { stopWatch(); playWatch(); } });
 
-  // Play starts over when the dropdowns no longer match what the server is training on.
-  playButton.addEventListener('click', async () => {
-    if (timer) { pause(); return; }
-    if (server.available && !choiceMatchesServer()) await reset();
-    play();
+  const chosenSettings = () => document.getElementById('g-train-grid').value.split(';').flatMap(grid => document.getElementById('g-train-cameras').value.split(',').map(cameras => [...grid.split(',').map(Number), Number(cameras)]));
+  const bestByGame = field => chosenRuns => {
+    const games = new Map(chosenRuns.filter(run => run.best).map(run => [gridWords(run.settings), run.best[field]]));
+    return [...games].map(([words, value]) => ({ name: games.size === 1 ? 'Best play' : `Best, ${words}`, value }));
+  };
+  runsPanel({
+    prefix: 'g',
+    server,
+    learners: LEARNERS,
+    ticked: ['dqn', 'ppo', 'grpo'],
+    readSettings: chosenSettings,
+    charts: [
+      { chart: makeLearnerChart('g-return', [], { min: 0, max: 1, ticks: { callback: value => value.toFixed(1) } }, value => value.toFixed(2)), field: 'return', best: bestByGame('return') },
+      { chart: makeLearnerChart('g-blinds', [], { min: 0, max: TEST_BOARD_COUNT, ticks: { callback: value => String(value) } }, value => `${Math.round(value)} of ${TEST_BOARD_COUNT}`), field: 'hides_first', best: bestByGame('hides_first') },
+    ],
+    rowCells: run => {
+      const latest = run.history.at(-1);
+      return [`<td>${gridWords(run.settings)}</td>`, `<td title="${escapeHtml(run.error ?? '')}">${STATUS_WORDS[run.status]}</td>`, `<td class="num">${stepWords(run.steps)} of ${stepWords(run.target_steps)}</td>`,
+        `<td class="num">${latest ? `${latest.return.toFixed(2)}${run.best ? ` of ${run.best.return.toFixed(2)}` : ''}` : ''}</td>`, `<td class="num">${latest ? `${latest.hides_first}${run.best ? ` of ${run.best.hides_first}` : ''}` : ''}</td>`];
+    },
+    onPicked: setWatchRuns,
   });
-  document.getElementById('g-reset').addEventListener('click', async () => { const wasRunning = Boolean(timer); await reset(); if (wasRunning) play(); });
-  // The buttons wait for start(): the DQN cannot be built before TensorFlow.js has a backend.
-  const gridButtons = ['g-play', 'g-reset'].map(id => document.getElementById(id));
-  gridButtons.forEach(button => { button.disabled = true; });
-  watchBoard = testBoards[0];
-  startWatch();
-
-  async function start() {
-    statusLine.textContent = 'building the board model...';
-    if (!(await tf.setBackend('webgpu').catch(() => false))) await tf.setBackend('webgl');
-    await tf.ready();
-    await reset(false);
-    gridButtons.forEach(button => { button.disabled = false; });
-    statusLine.textContent += ' . press Play to train';
-  }
-  if ('IntersectionObserver' in window) {
-    const panelWatcher = new IntersectionObserver(entries => {
-      if (entries.some(entry => entry.isIntersecting)) { panelWatcher.disconnect(); start(); }
-    });
-    panelWatcher.observe(document.getElementById('g-return'));
-  } else {
-    start();
-  }
 })();
 
 

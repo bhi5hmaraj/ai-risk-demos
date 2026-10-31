@@ -181,6 +181,45 @@ def _continue_run(seen, board):
     return True
 
 
+class GridTable:
+    """Q-learning or SARSA on a world's table, with learning rate 0.5 and a random move with chance 0.2. Walkers move
+    together and update once per move, so a board two walkers share in a step takes one of their updates."""
+    walkers = 1024
+
+    def __init__(self, sarsa=False, seed=1, world=None):
+        self.world, self.sarsa, self.rng = world or standard_world(), sarsa, np.random.default_rng(seed)
+        self.q, self.steps = np.zeros(self.world.rewards.shape), 0
+        self.start_pool = self.world.random_starts(20_000, self.rng)
+        self.states = self.rng.choice(self.start_pool, self.walkers)
+        self.actions, self.episode_steps = self.choose(self.states), np.zeros(self.walkers, int)
+
+    def choose(self, states):
+        """The best move, ties broken at random, or a random move with chance 0.2."""
+        actions = (self.q[states] + 1e-9 * self.rng.random((len(states), 4))).argmax(1)
+        explore = self.rng.random(len(states)) < 0.2
+        actions[explore] = self.rng.integers(0, 4, explore.sum())
+        return actions
+
+    def scores(self, states):
+        return self.q[states]
+
+    def iterate(self):
+        states, actions = self.states, self.actions
+        reward, following = self.world.rewards[states, actions], self.world.next_index[states, actions]
+        done = following < 0
+        following = np.where(done, 0, following)
+        next_actions = self.choose(following)
+        next_values = self.q[following, next_actions] if self.sarsa else self.q[following].max(1)
+        self.q[states, actions] += 0.5 * (reward + grid.GAMMA * ~done * next_values - self.q[states, actions])
+        self.episode_steps += 1
+        restart = done | (self.episode_steps >= grid.MAX_STEPS)
+        following[restart] = self.rng.choice(self.start_pool, restart.sum())
+        next_actions[restart] = self.choose(following[restart])
+        self.episode_steps[restart] = 0
+        self.states, self.actions = following, next_actions
+        self.steps += self.walkers
+
+
 class GridDqn:
     scores_of = staticmethod(network_scores)
     gamma = grid.GAMMA

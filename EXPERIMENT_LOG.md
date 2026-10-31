@@ -78,6 +78,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   100 boards, against 75 for best play (E48).
 - Killing is the best plan in 51 of 70 reward settings in Trazzi's game, and never at fine 0. PPO's seeds that kill fall
   as the fine rises, while the best plan stays at 3 kills from fine 4 to fine 100 (E49).
+- A DQN trained on 6 x 5 with 1 camera reaches 99% of best play there and falls to 20% or less on smaller grids. Training on a
+  second camera or a mix of grids has no result yet (E52).
 - PPO's block starts between fines of 10 and 16. It makes the full turn on 6 of 24 seeds at fines up to 10, and on 0 of
   30 at 16 and above, though the best plan is the same from fine 8 to fine 100 (E50).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
@@ -194,6 +196,7 @@ flowchart TD
     payoffs --> rewardmap["E49: the rewards where killing is best<br/>51 of 70 settings, never at fine 0"]
     rewardmap --> finecurve["E50: PPO at fines 4, 8 and 16<br/>turn on 6/24 seeds up to fine 10, 0/30 above"]
     perhit2 --> knobs["E48: other block counts and a second camera<br/>block counts carry over, the second camera does not"]
+    perhit2 --> gridruns["E52: grids and a second camera in training<br/>99% on its own grid, 20% or less on smaller ones"]
     qwen --> perhit["E7: per-hit pay, blinded starts<br/>GPT-OSS-120B learns to hide"]
     perhit --> controls["E8: controls<br/>no camera, no hiding"]
     perhit --> heldout["E9: held-out boards<br/>12/32 against base 1/32"]
@@ -2534,6 +2537,51 @@ Result: pending.
 | [replications/explainer.html](replications/explainer.html) | the explainer page: value iteration, Q-learning, SARSA, a CNN DQN, PPO and GRPO learning the grid live, and Trazzi's game animated with its learners |
 | [replications/grid_dqn/grid_server.py](replications/grid_dqn/grid_server.py) | PPO from Stable-Baselines3, and the PyTorch DQN and GRPO of [grid_learners.py](replications/grid_dqn/grid_learners.py), behind FastAPI. It also trains Trazzi's learners, and serves the explainer page with them live at http://127.0.0.1:8790 |
 | [replications/trazzi/trazzi_learners.py](replications/trazzi/trazzi_learners.py) | Trazzi's game as a lookup table: value iteration, his Q-learning and SARSA, a DQN, PPO and GRPO |
+
+## E52. Grid sizes and a second camera in training, with a run queue (2026-10-31)
+
+Question: can the grid's networks train on other grids and a second camera, and does a network trained on one setting play
+the others?
+
+Setup: a run is one learner on one set of grids and cameras. The page queues runs in SQLite and the server trains up to 3 at
+a time, each in its own process from [runs.py](replications/grid_dqn/runs.py). Each run writes its weights to a file at each
+evaluation. A smaller grid is the top left of the 6 x 5 frame, and the input gained planes for the second camera and the
+play area, in [grid_learners.py](replications/grid_dqn/grid_learners.py). `GridTable` moves the grid's Q-learning and SARSA
+from the browser to Python. [knob_runs.py](replications/grid_dqn/knob_runs.py) trains and tests.
+
+Control: DQN, PPO and GRPO on 6 x 5 with 1 camera, one run each, at 6.08M, 2.02M and 4.18M steps. Return, then boards where
+the first block went in hidden, of 100:
+
+| Played on | Best | DQN | PPO | GRPO |
+|---|---|---|---|---|
+| 6 x 5, 1 camera (trained) | 0.93, 85 | 0.92, 85 | 0.76, 71 | 0.53, 11 |
+| 6 x 5, 2 cameras | 0.78, 78 | 0.56, 34 | 0.49, 26 | 0.47, 3 |
+| 5 x 5, 1 camera | 0.92, 81 | 0.19, 13 | 0.01, 0 | 0.01, 0 |
+| 5 x 5, 2 cameras | 0.81, 74 | 0.13, 6 | 0.04, 0 | 0.02, 0 |
+| 5 x 4, 1 camera | 0.85, 74 | 0.04, 0 | 0.03, 1 | 0.02, 0 |
+| 5 x 4, 2 cameras | 0.75, 64 | 0.03, 0 | 0.04, 1 | 0.02, 0 |
+
+Results:
+
+- DQN reached 99% of best play on its trained setting and hid on the same 85 boards. It trained about twice as long as in
+  the block-count test, so this does not show the new input planes helped.
+- Grid size does not carry over. Every network falls to 20% of best play or less on a smaller grid. Block counts carried over
+  in the block-count test (E48).
+- The 2-camera run and the mixed run have no result. The Mac slept through them, so PPO reached 450k and 16k steps of 2M. I
+  threw them out, and a rerun was stopped on request at 205k PPO steps. Whether training on a second camera or on a mix
+  works is still open.
+- Weights survive a server killed with `kill -9`. The run shows as interrupted, keeps its last history, and its file still
+  answers moves, with no process left training. A smoke run of Q-learning on all 6 settings and 30M steps of `GridTable` on
+  6 x 5 (return 0.42, hides first on 16) ran through the queue. A full-length `GridTable` run has not been compared with the
+  browser's.
+
+Limits: one seed per learner, on the page's fixed test boards. The dense layer ties a network to cell positions, which may
+explain the grid result. That is a guess and I did not test it. Grids larger than 6 x 5 do not fit the page's 31-bit block
+mask.
+
+Code: [runs.py](replications/grid_dqn/runs.py), [grid_server.py](replications/grid_dqn/grid_server.py),
+[knob_optimum.js](replications/grid_dqn/knob_optimum.js). Data:
+[knob_runs.json](replications/grid_dqn/results/knob_runs.json). Cost: local, about 15 minutes for the control.
 
 ## Adding an entry
 

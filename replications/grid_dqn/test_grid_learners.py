@@ -39,3 +39,12 @@ def test_a_mix_keeps_each_settings_own_rules_and_input():
     assert np.array_equal(second_camera_plane.any(axis=(1, 2)), mix.setting_of[mix.tests] == 1)
     second_setting_moves = mix.next_index[mix.setting_of == 1]
     assert (second_setting_moves[second_setting_moves >= 0] >= (mix.setting_of == 0).sum()).all()
+
+
+def test_q_learning_on_the_smallest_grid_finds_the_exact_best_return():
+    world = grid_learners.World([(5, 4, 1)])
+    table = grid_learners.GridTable(seed=1, world=world)
+    while table.steps < 40_000_000:
+        table.iterate()
+    learned, _, _ = grid_learners.evaluate_greedy(table.scores, world)
+    assert learned > 0.8 * world.optimum["return"]

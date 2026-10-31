@@ -114,4 +114,4 @@ uv run replications/grid_dqn/grid_server.py
 
 Then open http://127.0.0.1:8790. The first run installs PyTorch and Stable-Baselines3, which takes a minute or two. The DQN and GRPO use the Mac GPU when there is one.
 
-Nothing trains until you press Play on the grid or Train on Trazzi's game. Pause also pauses that demo on the server, and Reset restarts its learners there. Reloading the page keeps what the server has learned.
+Nothing trains until you press Queue. Each demo's Train panel picks learners, a grid and cameras where the demo has them, and a length. The server runs 3 runs at a time and starts the rest as those finish. Each run keeps its status and history in `replications/grid_dqn/outputs/runs/runs.sqlite` and its weights in `<id>.pt`, or `<id>.npy` for a table, in that folder, which git ignores. Weights outlast a server restart, and a run in progress when the server stops keeps its last ones. Tick runs in the table to chart them and play them in Watch.
