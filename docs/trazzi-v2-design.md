@@ -157,7 +157,7 @@ presses earn a little when the fine is 0. In v2 a second fetch changes nothing.
 
 ## Exact numbers
 
-From [solver.py](../environments/trazzi_v2/solver.py). Honest means no monitor stops and no fetches. Counts are per game, for
+From `console_plan` in [optimal.py](../environments/treacherous_turn/optimal.py). Honest means no monitor stops and no fetches. Counts are per game, for
 the best plan.
 
 | Setting | Honest | Best | Gain | Stops | Stolen | Solved |
@@ -244,7 +244,7 @@ House rules hold throughout: predictions first, a smoke run, streaming progress 
 | Phase | Work | Cost | Gate to continue |
 |---|---|---|---|
 | 0, done | Solver and its check against v1 | None | 63 of 70 scores exact, the rest at fine 0 |
-| 1 | `game.py`, console text and tests | None | A replay of the solver's plan scores the same in `game.py` |
+| 1, done | One engine for both versions: shared rules, a grid world and a console world, one solver. `trazzi_v2/solver.py` is gone | None | Passed: the grid's transitions, prompts, tests and a PPO log match exactly, and the console matches the old solver to within 1e-13 |
 | 2 | PPO on the state machine at v1's numbers, fines 10 and 100, 6 seeds each | About 31M steps, 20 minutes | The gap points the same way as v1. If it does not, geometry was doing the work, and we log that first |
 | 3 | PPO on the default and the interventions, 6 seeds per arm | About 15M steps, 10 minutes per arm | None |
 | 4 | GPT-OSS-120B base play, 16 games per arm: neutral wording, scope line, peer note, medium effort | About $0.20 per low-effort arm | At least 1 game in 16 uses an out-of-scope command. If none, rewrite the wording or change model before any RL |
@@ -262,18 +262,19 @@ say so.
 
 | Path | Holds | Status |
 |---|---|---|
-| `environments/trazzi_v2/solver.py` | Exact plans and knobs | Exists |
-| `environments/trazzi_v2/test_solver.py` | The check against v1 | Exists |
-| `environments/trazzi_v2/game.py` | The state machine, console text and command parsing | Phase 1 |
-| `environments/trazzi_v2/ppo.py` | A thin wrapper over `treacherous_turn/ppo.py` | Phase 2 |
-| `treacherous_turn/tinker_train.py`, `eval_base.py` | Reused with the new game, plus a `machine_fine` setting | Phase 4 |
+| `environments/treacherous_turn/game.py` | The shared rules as `Game`, and the grid world as `Episode` | Exists |
+| `environments/treacherous_turn/console.py` | The console world as `ConsoleEpisode`: state, commands and text | Exists |
+| `environments/treacherous_turn/optimal.py` | One exact solver for both worlds, with `console_plan` for v2 | Exists |
+| `environments/treacherous_turn/test_console.py` | The console's commands, and its scores against the grid's | Exists |
+| `ppo.py`, `tinker_train.py`, `eval_base.py` in `treacherous_turn` | The same files run either world, plus a `machine_fine` setting for the LLM | Phases 2 and 4 |
 | `replications/grid_dqn/runs.py`, `replications/explainer.html` | A demo tab, after phase 3 has data: a `FULL_STEPS` entry and a job class like `TrazziJob`, shown through the shared `runsPanel()` | Other session |
 
 The page trains through the local run queue, and browser training is gone. So a published copy of this tab cannot train or play
 without the local server.
 
-`game.py` should own the transitions and `solver.py` should read them, so the two cannot drift. A table-lookup game like E39's
-`BatchedGames` should cut PPO's run time here, since this state space is small.
+v1 and v2 are two instances of one engine. They share the clock, the bow, hearts, the fine, shots at the shopkeeper, events and
+scoring, and differ only in the world and the text. So any setting can run in either world, and one solver serves both. A
+table-lookup game like E39's `BatchedGames` should cut PPO's run time here, since this state space is small.
 
 ## Risks and objections
 

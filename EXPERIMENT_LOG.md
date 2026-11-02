@@ -88,6 +88,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   before any plan, and also on seeds that never make the turn (E52).
 - A state machine with named commands matches the original game's exact scores at every fine above 0. On it, a 5% audit on a
   stopped monitor nearly ends the stopping, where fine 100 changes nothing. No learner has run on it yet (E54).
+- Trazzi v1 and v2 now share one engine and one solver. Every reachable grid transition, a PPO log and all tests match the
+  code from before the change (E55).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -206,6 +208,7 @@ flowchart TD
     raisefine --> lowerfine["E51: lower the fine after training at 100<br/>0/3 seeds make the turn"]
     payoffs --> weakshots["E52: shots while weak<br/>PPO drops them by 0.2M steps, before any plan"]
     rewardmap --> v2machine["E54: Trazzi v2's state machine<br/>63 of 70 scores exact, no learner yet"]
+    v2machine --> oneengine["E55: one engine for both worlds<br/>v1 unchanged, the v2 solver folded in"]
     perhit2 --> knobs["E48: other block counts and a second camera<br/>block counts carry over, the second camera does not"]
     perhit2 --> gridruns["E53: grids and a second camera in training<br/>99% on its own grid, 20% or less on smaller ones"]
     qwen --> perhit["E7: per-hit pay, blinded starts<br/>GPT-OSS-120B learns to hide"]
@@ -2640,9 +2643,10 @@ Code: [runs.py](replications/grid_dqn/runs.py), [grid_server.py](replications/gr
 
 Question: can named commands replace the grid and keep the original game's rewards and route lengths?
 
-Setup: [solver.py](environments/trazzi_v2/solver.py) solves a state machine with the proposed commands exactly.
-[test_solver.py](environments/trazzi_v2/test_solver.py) compares it with the 70 cells of E49. The design is in
-[docs/trazzi-v2-design.md](docs/trazzi-v2-design.md). No learner has run on it.
+Setup: `solver.py` solves a state machine with the proposed commands exactly, and `test_solver.py` compares it with the
+70 cells of E49. Both now live in [optimal.py](environments/treacherous_turn/optimal.py),
+[console.py](environments/treacherous_turn/console.py) and [test_console.py](environments/treacherous_turn/test_console.py)
+(E55). The design is in [docs/trazzi-v2-design.md](docs/trazzi-v2-design.md). No learner has run on it.
 
 Result:
 
@@ -2658,6 +2662,32 @@ This shows the rewards survive without the grid. Exploration changes, so PPO or 
 what pays, not what a learner finds.
 
 Code and design as above. Cost: local, under a second per setting.
+
+## E55. One engine for Trazzi's game, with the grid and the console as two worlds (2026-11-02)
+
+Question: can v1 and v2 share one implementation without changing v1 at all?
+
+Setup: [game.py](environments/treacherous_turn/game.py) now holds the shared rules as `Game`: the clock and the bow, hearts,
+the fine, shots at the shopkeeper, events and the score. The grid is `Episode`, and the v2 console is `ConsoleEpisode` in
+[console.py](environments/treacherous_turn/console.py). [optimal.py](environments/treacherous_turn/optimal.py) solves both,
+and weighs any number of chance draws per action. `environments/trazzi_v2/` is gone.
+
+Result, with every check run against a snapshot taken before the first edit:
+
+| Check | Result |
+|---|---|
+| Every reachable grid transition: 49,352 states at 3 payoff settings | Identical |
+| 200 seeded random games with macros and goto | Identical scores, events and boards |
+| Prompts at 3 settings, and the reply parser | Identical |
+| PPO seed 0 at fine 10, 10 checks to 0.66M steps | Identical log |
+| 3 reward-map cells, one with shots while weak | Identical scores and events |
+| Existing tests: 179 here and 5 in `replications/trazzi` | All pass |
+| The console against the deleted v2 solver: 16 settings, 3 modes, scores and expected events | Within 6e-14 |
+
+[test_console.py](environments/treacherous_turn/test_console.py) adds 12 tests: the console's commands, and its 63 scores
+against the reward map.
+
+Cost: local, about 10 minutes of checks.
 
 ## Paused
 
@@ -2684,7 +2714,7 @@ Code and design as above. Cost: local, under a second per setting.
 | [plot_evals.py](environments/armstrong_camera/plot_evals.py), [plot_tinker.py](environments/armstrong_camera/plot_tinker.py) | charts |
 | [ouro_modal.py](environments/armstrong_camera/ouro_modal.py) | Ouro on Modal GPUs |
 | [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's gridworld as text, value iteration, Q-learning, tabular GRPO, PPO, route and goto macros, RL, the base-model eval with a no-bow control |
-| [environments/trazzi_v2/](environments/trazzi_v2/) | Trazzi v2's exact solver and its check against the original game. The design is in [docs/trazzi-v2-design.md](docs/trazzi-v2-design.md) |
+| [console.py](environments/treacherous_turn/console.py) | Trazzi v2's console world, the second world of the same game. The design is in [docs/trazzi-v2-design.md](docs/trazzi-v2-design.md) |
 | [replications/](replications/) | the Trazzi and Gwern replications and exact optima |
 | [replications/grid_dqn/](replications/grid_dqn/) | the 6 x 5 grid: exact model, DQN diagnosis, CNN fit, CNN DQN, SARSA against Q-learning, and the check that the page matches |
 | [replications/explainer.html](replications/explainer.html) | the explainer page: value iteration, Q-learning, SARSA, a CNN DQN, PPO and GRPO learning the grid live, and Trazzi's game animated with its learners |
