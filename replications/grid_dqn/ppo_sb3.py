@@ -6,13 +6,12 @@
 
 A reference learning curve for the port. The policy and value heads share the port's CNN. Each rollout is
 64 steps of 128 envs, then 4 epochs of 512-sample minibatches. The learning rate is 2.5e-4 and the entropy
-coefficient 0.01. Episodes are cut off at 60 moves. The grid is the exported transition table of
-`REWARD=per-hit GAMMA=0.95 OUTPUT_DIR=outputs/per_hit_gamma095 node export_model.js`.
+coefficient 0.01. Episodes are cut off at 60 moves. The grid is the exact table that grid_tables.py
+writes to outputs/per_hit_gamma095 on first use.
 
     uv run ppo_sb3.py --steps 2000000
 """
 import argparse
-import json
 import pathlib
 import time
 
@@ -25,14 +24,13 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
+import grid_tables
+
 WIDTH, HEIGHT, CELLS, HOLE, BLOCK_COUNT, GAMMA, MAX_STEPS = 6, 5, 30, 29, 4, 0.95, 60
 DATA_DIR = pathlib.Path(__file__).parent / "outputs" / "per_hit_gamma095"
-bot = np.fromfile(DATA_DIR / "bot.u8", np.uint8).astype(np.int64)
-blocks = np.fromfile(DATA_DIR / "blocks.i32", np.int32).astype(np.int64)
-next_index = np.fromfile(DATA_DIR / "next.i32", np.int32).reshape(-1, 4)
-rewards = np.fromfile(DATA_DIR / "pay.f32", np.float32).reshape(-1, 4)
+table = grid_tables.load(DATA_DIR, reward="per-hit", gamma=GAMMA)
+bot, blocks, next_index, rewards, tests = (table[name] for name in ("bot", "blocks", "next_index", "rewards", "tests"))
 index_by_key = {int(key): index for index, key in enumerate(blocks * 32 + bot)}
-tests = json.loads((DATA_DIR / "tests.json").read_text())
 cells = np.arange(CELLS)
 FIXED_PLANES = np.stack([cells == HOLE, (cells >= 24) & (cells < 29), (cells % WIDTH) / (WIDTH - 1), (cells // WIDTH) / (HEIGHT - 1)]).astype(np.float32)
 

@@ -1,4 +1,4 @@
-"""The exact MONA solver on the exported per-hit grid. Needs the per_hit_gamma095 export of export_model.js."""
+"""The exact MONA solver on the exported per-hit grid. Needs the per_hit_gamma095 export of grid_tables.py."""
 import itertools
 
 import numpy as np

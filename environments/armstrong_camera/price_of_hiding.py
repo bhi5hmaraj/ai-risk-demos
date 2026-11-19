@@ -17,7 +17,7 @@ import sys
 import numpy as np
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "replications" / "gwern"))
+sys.path[:0] = [str(ROOT / "replications" / "gwern"), str(ROOT / "environments" / "armstrong_camera" / "armstrong_camera")]
 import armstrong  # noqa: E402
 import optimal  # noqa: E402
 
@@ -29,7 +29,8 @@ FIXED_BOARD = armstrong.key(armstrong.START_BOT, armstrong.START_BLOCKS)
 
 
 def board_key(robot, blocks):
-    return armstrong.key(int(robot[0] + armstrong.WIDTH * robot[1]), sum(1 << (x + armstrong.WIDTH * y) for x, y in blocks))
+    width = armstrong.GWERN.width
+    return armstrong.key(int(robot[0] + width * robot[1]), sum(1 << (x + width * y) for x, y in blocks))
 
 
 def first_value(row, name):

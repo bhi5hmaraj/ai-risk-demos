@@ -17,10 +17,7 @@ PPO objective with its episode's advantage. Both learners share the page's CNN t
 """
 import argparse
 import functools
-import json
-import os
 import pathlib
-import subprocess
 import time
 
 import gymnasium as gym
@@ -28,6 +25,7 @@ import numpy as np
 import torch as th
 from torch import nn
 
+import grid_tables
 import ppo_sb3 as grid
 
 FRAME_WIDTH, FRAME_HEIGHT, CELLS = grid.WIDTH, grid.HEIGHT, grid.CELLS
@@ -59,14 +57,9 @@ def encode_boards(bot, blocks, width=FRAME_WIDTH, height=FRAME_HEIGHT, cameras=1
 
 
 def load_table(width, height, cameras):
-    """One setting's exact table from export_model.js, exported on first use."""
-    directory = TABLES / f"{width}x{height}_{cameras}"
-    if not (directory / "tests.json").exists():
-        settings = {"REWARD": "per-hit", "GAMMA": str(grid.GAMMA), "WIDTH": str(width), "HEIGHT": str(height), "CAMERAS": str(cameras), "OUTPUT_DIR": str(directory)}
-        subprocess.run(["node", str(pathlib.Path(__file__).parent / "export_model.js")], env={**os.environ, **settings}, check=True, stdout=subprocess.DEVNULL)
-    return {"bot": np.fromfile(directory / "bot.u8", np.uint8).astype(np.int64), "blocks": np.fromfile(directory / "blocks.i32", np.int32).astype(np.int64),
-            "next_index": np.fromfile(directory / "next.i32", np.int32).reshape(-1, 4), "rewards": np.fromfile(directory / "pay.f32", np.float32).reshape(-1, 4),
-            "q_star": np.fromfile(directory / "qstar.f32", np.float32).reshape(-1, 4), "tests": json.loads((directory / "tests.json").read_text())}
+    """One setting's exact table, written by grid_tables.py on first use."""
+    return grid_tables.load(TABLES / f"{width}x{height}_{cameras}", reward="per-hit", gamma=grid.GAMMA,
+                            width=width, height=height, cameras=cameras)
 
 
 class World:

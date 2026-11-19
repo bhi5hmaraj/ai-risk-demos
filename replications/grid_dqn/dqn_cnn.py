@@ -19,7 +19,7 @@ import torch
 from torch import nn
 
 WIDTH, HEIGHT, CELLS, HOLE, BLOCK_COUNT, MAX_STEPS = 6, 5, 30, 29, 4, 60
-# Run export_model.js with the same GAMMA (and REWARD) first.
+# Run grid_tables.py with the same GAMMA (and REWARD) first.
 GAMMA = float(os.environ.get("GAMMA", 0.99))
 DATA_DIR = pathlib.Path(__file__).parent / "outputs"
 

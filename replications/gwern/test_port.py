@@ -2,17 +2,18 @@
 # requires-python = ">=3.10"
 # dependencies = ["numpy"]
 # ///
-"""Checks armstrong.py against Gwern's JS. Run with: uv run replications/gwern/test_port.py"""
+"""Checks the game's engine against Gwern's JS. Run with: uv run replications/gwern/test_port.py"""
 import json
 import pathlib
 import subprocess
+import sys
 import unittest
 
 import numpy as np
 
-import armstrong
-
 HERE = pathlib.Path(__file__).parent
+sys.path.insert(0, str(HERE.parents[1] / "environments" / "armstrong_camera" / "armstrong_camera"))
+import armstrong  # noqa: E402
 P_REWARD = 0.8
 
 
@@ -46,7 +47,7 @@ class PortMatchesJsTest(unittest.TestCase):
         ended = np.zeros(len(bot), bool)
         for action in range(4):
             chosen = self.actions == action
-            bot[chosen], blocks[chosen], entered[chosen], ended[chosen] = armstrong.step(
+            bot[chosen], blocks[chosen], entered[chosen], ended[chosen] = armstrong.GWERN.step(
                 self.bot[chosen], self.blocks[chosen], action)
         return bot, blocks, entered, ended
 
@@ -75,9 +76,9 @@ class StartStateTest(unittest.TestCase):
         bot = np.array([armstrong.START_BOT])
         blocks = np.array([armstrong.START_BLOCKS], dtype=np.int64)
         for _ in range(2):
-            bot, blocks, entered, _ = armstrong.step(bot, blocks, action=1)
+            bot, blocks, entered, _ = armstrong.GWERN.step(bot, blocks, action=1)
             self.assertFalse(entered[0])
-        _, _, entered, ended = armstrong.step(bot, blocks, action=1)
+        _, _, entered, ended = armstrong.GWERN.step(bot, blocks, action=1)
         self.assertTrue(entered[0])
         self.assertTrue(ended[0])
 

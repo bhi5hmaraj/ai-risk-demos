@@ -90,6 +90,8 @@ oldest first. Each entry names its code, its data and its cost. Add an entry aft
   stopped monitor nearly ends the stopping, where fine 100 changes nothing. No learner has run on it yet (E54).
 - Trazzi v1 and v2 now share one engine and one solver. Every reachable grid transition, a PPO log and all tests match the
   code from before the change (E55).
+- Armstrong's game now runs on one engine, which the text game, the exact solver and the grid tables all use. Every
+  reachable Gwern state, the text game, all 54 table files and the saved runs' scores match the code from before (E56).
 - In an 8-game smoke, the base GPT-OSS-120B never shot the shopkeeper in Trazzi's game. Half the games quit
   on the first reply. The one game that planned the kill missed, because a blocked move threw off the rest
   of its reply (E15).
@@ -209,6 +211,7 @@ flowchart TD
     payoffs --> weakshots["E52: shots while weak<br/>PPO drops them by 0.2M steps, before any plan"]
     rewardmap --> v2machine["E54: Trazzi v2's state machine<br/>63 of 70 scores exact, no learner yet"]
     v2machine --> oneengine["E55: one engine for both worlds<br/>v1 unchanged, the v2 solver folded in"]
+    vi --> armengine["E56: one engine for Armstrong's game<br/>every copy checked, results unchanged"]
     perhit2 --> knobs["E48: other block counts and a second camera<br/>block counts carry over, the second camera does not"]
     perhit2 --> gridruns["E53: grids and a second camera in training<br/>99% on its own grid, 20% or less on smaller ones"]
     qwen --> perhit["E7: per-hit pay, blinded starts<br/>GPT-OSS-120B learns to hide"]
@@ -578,8 +581,8 @@ smoke run.
 Question: why does a DQN fail on a small Armstrong grid that value iteration solves, and what fixes it?
 
 Setup: a 6 x 5 board with 4 blocks, Gwern's push rules, pay-once at p 0.8 and gamma 0.99. It has 728,423
-boards. [export_model.js](replications/grid_dqn/export_model.js) writes every transition and the exact
-Q-values. Every score uses the same 100 random start boards. A greedy run stops at a shutdown, after 60
+boards. [grid_tables.py](replications/grid_dqn/grid_tables.py), which replaced export_model.js, writes every
+transition and the exact Q-values. Every score uses the same 100 random start boards. A greedy run stops at a shutdown, after 60
 moves, or on a repeated board.
 
 ![Return by method](replications/grid_dqn/results/grid_methods.png)
@@ -2689,6 +2692,40 @@ against the reward map.
 
 Cost: local, about 10 minutes of checks.
 
+## E56. One engine for Armstrong's game (2026-11-10)
+
+Question: can every copy of Armstrong's rules run on one engine, with no change in any result?
+
+Setup: [armstrong.py](environments/armstrong_camera/armstrong_camera/armstrong.py) is Gwern's numpy port, now for any
+board size, frame and camera count. It is the game's one engine. These now run on it:
+
+- the text game's moves in [taskset.py](environments/armstrong_camera/armstrong_camera/taskset.py)
+- the exact solver, [optimal.py](replications/gwern/optimal.py), and the price of hiding
+- the grid learners' tables, which [grid_tables.py](replications/grid_dqn/grid_tables.py) writes on first use. It
+  replaces export_model.js, so the learners no longer need Node.
+
+`gridcore.js` and the page's two copies stay, since the browser and the node scripts cannot run Python.
+[test_js_parity.py](replications/grid_dqn/test_js_parity.py) checks all three against the engine. The 2025
+prototype, `armstrong_toy_model.py`, keeps its own rules: single-block pushes and a hole that stacks. The unused
+2025 Phase 2 stub, `envs/phase2_link.py`, is gone with its runner and config.
+
+Result, with every check run against a snapshot taken before the first edit:
+
+| Check | Result |
+|---|---|
+| Every state reachable from Gwern's start: 27,812,813 states, 4 moves each | Identical transitions |
+| 1,785,555 random 7 x 5 states, 4 moves each | Identical |
+| 51,303 text-game records: moves, macros, scores, prompts and previews | Identical |
+| Grid tables at 9 settings: 54 files, up to 3.7M boards | Byte-identical to the Node export |
+| Greedy test scores of the 10 saved grid runs, from their weights on disk | Identical |
+| Existing tests: the port against Gwern's JS, 42 + 9 text-game tests, 13 grid tests, Trazzi's learners, page_parity.js | All pass |
+| New parity tests: `gridcore.js` and the page's two copies, on thousands of entries and shutdowns per setting | 18 pass |
+
+A text-game move now takes about 50 microseconds, since the engine is numpy, built to step millions of states at
+once. A 100-move game takes about 5 ms.
+
+Cost: local, about 30 minutes of checks. The full check of 27.8M states ran twice, at about 11 minutes each.
+
 ## Paused
 
 - A port of the absent-supervisor and off-switch environments from AI Safety Gridworlds (Leike et al.,
@@ -2706,7 +2743,9 @@ Cost: local, about 10 minutes of checks.
 
 | Path | What it holds |
 |---|---|
+| [armstrong_camera/armstrong.py](environments/armstrong_camera/armstrong_camera/armstrong.py) | the game's one engine: Gwern's rules on any board size, frame and camera count |
 | [armstrong_camera/taskset.py](environments/armstrong_camera/armstrong_camera/taskset.py) | the game, its rules text, macros, random boards, neutral wording |
+| [grid_tables.py](replications/grid_dqn/grid_tables.py) | the grid learners' exact tables, written from the engine on first use |
 | [tinker_train.py](environments/armstrong_camera/tinker_train.py) | LoRA RL on Tinker |
 | [eval_policy.py](environments/armstrong_camera/eval_policy.py) | held-out boards, the depth sweep and the simulator sweep |
 | [run_controls.sh](environments/armstrong_camera/run_controls.sh) | the control evals on OpenRouter |

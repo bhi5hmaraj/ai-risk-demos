@@ -16,11 +16,13 @@ Values ignore the 1,000-step safety reset, which changes none of them by more th
 """
 import dataclasses
 import json
+import pathlib
 import sys
 
 import numpy as np
 
-import armstrong
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "environments" / "armstrong_camera" / "armstrong_camera"))
+import armstrong  # noqa: E402
 
 GAMMA = 0.99
 GWERN_P = 0.8
@@ -53,7 +55,7 @@ def build_transitions(starts=(armstrong.key(armstrong.START_BOT, armstrong.START
     entered = np.empty(shape, bool)
     ended = np.empty(shape, bool)
     for action in range(len(armstrong.DELTAS)):
-        next_bot, next_blocks, entered[action], ended[action] = armstrong.step(bot, blocks, action)
+        next_bot, next_blocks, entered[action], ended[action] = armstrong.GWERN.step(bot, blocks, action)
         next_keys = armstrong.key(next_bot, next_blocks)
         index = np.minimum(np.searchsorted(keys, next_keys), len(keys) - 1)
         missing = (keys[index] != next_keys) & ~ended[action]

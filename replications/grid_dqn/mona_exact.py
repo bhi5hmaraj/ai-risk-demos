@@ -9,7 +9,7 @@ window of M moves. That sum is the window's real pay plus the trusted value wher
 MONA policy is M sweeps of value iteration on the real pay, started from the trusted value. The trusted value
 is the exact value of honest play under MONA's true reward, plus optional Gaussian noise per board.
 
-    REWARD=per-hit GAMMA=0.95 OUTPUT_DIR=outputs/per_hit_gamma095 node export_model.js
+    REWARD=per-hit GAMMA=0.95 OUTPUT_DIR=outputs/per_hit_gamma095 uv run grid_tables.py
     uv run mona_exact.py
 """
 import itertools

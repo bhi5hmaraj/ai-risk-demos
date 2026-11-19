@@ -79,7 +79,7 @@ flowchart TD
     subgraph camera ["Armstrong's camera"]
         gwern["gwern<br/>Gwern's DQN, fixed<br/>and solved exactly"]
         grid["grid_dqn<br/>a 6 x 5 grid<br/>for classic RL"]
-        ac["armstrong_camera<br/>LLM evals and RL"]
+        ac["armstrong_camera<br/>the engine,<br/>LLM evals and RL"]
     end
     subgraph turn ["Trazzi's treacherous turn"]
         trazzi["trazzi<br/>his code, fixed,<br/>with his learners"]
@@ -110,7 +110,7 @@ flowchart TD
 | [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) | Every gridworld run, oldest first, with a status summary, the open leads and a map of how the runs connect | [Leads](EXPERIMENT_LOG.md#leads-to-explore), [Map](EXPERIMENT_LOG.md#map) |
 | [replications/](replications/) | Trazzi's and Gwern's code, the bugs found in each, and both games solved exactly | [README](replications/README.md) |
 | [replications/grid_dqn/](replications/grid_dqn/) | A 6 x 5 camera grid: why a dense DQN fails there, and what a CNN DQN, PPO, GRPO and MONA learn | [E14](EXPERIMENT_LOG.md#e14-dqn-on-a-6-x-5-grid-2026-10-29) |
-| [environments/armstrong_camera/](environments/armstrong_camera/) | The camera game as text: frontier-model evals, LoRA RL on Tinker, and a looped model on Modal | [README](environments/armstrong_camera/README.md) |
+| [environments/armstrong_camera/](environments/armstrong_camera/) | The game's one engine, and the game as text: frontier-model evals, LoRA RL on Tinker, and a looped model on Modal | [README](environments/armstrong_camera/README.md), [armstrong.py](environments/armstrong_camera/armstrong_camera/armstrong.py) |
 | [environments/treacherous_turn/](environments/treacherous_turn/) | Trazzi's game as text: one engine for the grid and the v2 console, its exact solver, PPO and LoRA RL | [game.py](environments/treacherous_turn/game.py), [optimal.py](environments/treacherous_turn/optimal.py) |
 | [warden_dilemma/](warden_dilemma/) | A real-time prisoner's dilemma for 2 to 10 players with private chat, built on Colyseus and React | [README](warden_dilemma/README.md), [design](warden_dilemma/DESIGN.md) |
 | [axiom/](axiom/) | A FastAPI service with a Svelte page: Nash equilibria, Axelrod tournaments and LLM moves | [README](axiom/README.md), [quick start](axiom/QUICKSTART.md) |

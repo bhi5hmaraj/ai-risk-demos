@@ -32,7 +32,7 @@ Bugs, each with a test in `gwern.test.mjs`:
 3. `Math.log(1000)/Math.log(10)` is `2.9999999999999996`, so the power-of-ten decay skips step 1,000.
 4. reinforce.js has no terminal state. A shutdown bootstraps into the next episode's start.
 
-`armstrong.py` is a numpy port. `test_port.py` checks it against the JS on 200,000 random steps (195 shutdowns, 310 entries behind a blocked camera): every move, entry, shutdown and reward matches.
+The numpy port is now the game's one engine, [armstrong.py](../environments/armstrong_camera/armstrong_camera/armstrong.py). `test_port.py` checks it against the JS on 200,000 random steps (195 shutdowns, 310 entries behind a blocked camera): every move, entry, shutdown and reward matches.
 
 ```
 node --test replications/gwern/
@@ -100,18 +100,12 @@ On the grid, value iteration, Q-learning, SARSA and a TensorFlow.js DQN run in t
 open replications/explainer.html
 ```
 
-Everything else trains on a local server: PPO, GRPO and a PyTorch DQN on the grid, and Trazzi's Q-learning, SARSA, a DQN and PPO on his game, with value iteration's best play. It needs [Node.js](https://nodejs.org) once, to write the grid's tables into a folder git ignores. From the repo root:
-
-```
-REWARD=per-hit GAMMA=0.95 OUTPUT_DIR=replications/grid_dqn/outputs/per_hit_gamma095 node replications/grid_dqn/export_model.js
-```
-
-Then start the server:
+Everything else trains on a local server: PPO, GRPO and a PyTorch DQN on the grid, and Trazzi's Q-learning, SARSA, a DQN and PPO on his game, with value iteration's best play. From the repo root:
 
 ```
 uv run replications/grid_dqn/grid_server.py
 ```
 
-Then open http://127.0.0.1:8790. The first run installs PyTorch and Stable-Baselines3, which takes a minute or two. The DQN and GRPO use the Mac GPU when there is one.
+Then open http://127.0.0.1:8790. The first run installs PyTorch and Stable-Baselines3 and writes the grid's tables into a folder git ignores, which takes a minute or two. The DQN and GRPO use the Mac GPU when there is one.
 
 Nothing trains until you press Queue. Each demo's Train panel picks learners, a grid and cameras where the demo has them, and a length. The server runs 3 runs at a time and starts the rest as those finish. Each run keeps its status and history in `replications/grid_dqn/outputs/runs/runs.sqlite` and its weights in `<id>.pt`, or `<id>.npy` for a table, in that folder, which git ignores. Weights outlast a server restart, and a run in progress when the server stops keeps its last ones. Tick runs in the table to chart them and play them in Watch.
